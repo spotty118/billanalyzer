@@ -1,36 +1,45 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useState } from "react";
-import { plans } from "@/data/verizonPlans";
+import { useState, useMemo } from "react";
+import { devices, addons, Device, Addon } from "@/data/devices";
 
 export function CommissionCalculator() {
-  const [selectedPlan, setSelectedPlan] = useState("");
-  const [lines, setLines] = useState("");
-  const [commission, setCommission] = useState(0);
+  const [selectedDevice, setSelectedDevice] = useState<string>("");
+  const [selectedAddons, setSelectedAddons] = useState<string[]>([]);
 
-  const calculateCommission = () => {
-    const linesNum = parseInt(lines) || 0;
-    const plan = plans.find(p => p.id === selectedPlan);
-    
-    if (plan) {
-      // Commission rates vary by plan
-      let commissionRate;
-      switch (plan.name) {
-        case 'Unlimited Ultimate':
-          commissionRate = 15; // 15% commission
-          break;
-        case 'Unlimited Plus':
-          commissionRate = 12; // 12% commission
-          break;
-        default:
-          commissionRate = 10; // 10% commission
-      }
-      
-      setCommission((plan.price * linesNum * commissionRate) / 100);
+  // Calculate total commission
+  const commission = useMemo(() => {
+    let total = 0;
+
+    // Add device base commission
+    const device = devices.find(d => d.id === selectedDevice);
+    if (device) {
+      total += device.baseCommission;
     }
-  };
+
+    // Add addon commissions
+    selectedAddons.forEach(addonId => {
+      const addon = addons.find(a => a.id === addonId);
+      if (addon) {
+        total += addon.commission;
+      }
+    });
+
+    return total;
+  }, [selectedDevice, selectedAddons]);
+
+  // Group addons by category for better organization
+  const groupedAddons = useMemo(() => {
+    const groups: Record<string, Addon[]> = {};
+    addons.forEach(addon => {
+      if (!groups[addon.category]) {
+        groups[addon.category] = [];
+      }
+      groups[addon.category].push(addon);
+    });
+    return groups;
+  }, []);
 
   return (
     <Card>
@@ -38,40 +47,74 @@ export function CommissionCalculator() {
         <CardTitle>Commission Calculator</CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="space-y-4">
-          <div>
-            <label className="text-sm font-medium">Select Plan</label>
-            <Select onValueChange={setSelectedPlan} value={selectedPlan}>
+        <div className="space-y-6">
+          {/* Device Selection */}
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Select Device</label>
+            <Select value={selectedDevice} onValueChange={setSelectedDevice}>
               <SelectTrigger>
-                <SelectValue placeholder="Choose a plan" />
+                <SelectValue placeholder="Choose a device" />
               </SelectTrigger>
               <SelectContent>
-                {plans.map((plan) => (
-                  <SelectItem key={plan.id} value={plan.id}>
-                    {plan.name}
+                {devices.map((device) => (
+                  <SelectItem key={device.id} value={device.id}>
+                    <div className="flex justify-between items-center w-full">
+                      <span>{device.name}</span>
+                      <span className="text-sm text-muted-foreground">
+                        ${device.baseCommission}
+                      </span>
+                    </div>
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </div>
-          <div>
-            <label className="text-sm font-medium">Number of Lines</label>
-            <Input
-              type="number"
-              value={lines}
-              onChange={(e) => setLines(e.target.value)}
-              placeholder="Enter number of lines"
-            />
-          </div>
-          <Button onClick={calculateCommission} className="w-full">
-            Calculate Commission
-          </Button>
+
+          {/* Addons Selection */}
+          {selectedDevice && (
+            <div className="space-y-4">
+              <label className="text-sm font-medium">Add Features</label>
+              {Object.entries(groupedAddons).map(([category, categoryAddons]) => (
+                <div key={category} className="space-y-2">
+                  <label className="text-sm font-medium capitalize">{category}</label>
+                  <div className="space-y-2">
+                    {categoryAddons.map((addon) => (
+                      <div key={addon.id} className="flex items-center space-x-2">
+                        <Checkbox
+                          id={addon.id}
+                          checked={selectedAddons.includes(addon.id)}
+                          onCheckedChange={(checked) => {
+                            if (checked) {
+                              setSelectedAddons([...selectedAddons, addon.id]);
+                            } else {
+                              setSelectedAddons(selectedAddons.filter(id => id !== addon.id));
+                            }
+                          }}
+                        />
+                        <label
+                          htmlFor={addon.id}
+                          className="text-sm flex-1 flex justify-between items-center"
+                        >
+                          <span>{addon.name}</span>
+                          <span className="text-muted-foreground">+${addon.commission}</span>
+                        </label>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Commission Display */}
           {commission > 0 && (
-            <div className="mt-4 text-center">
-              <p className="text-sm text-gray-500">Estimated Commission</p>
-              <p className="text-2xl font-bold text-verizon-red">
-                ${commission.toFixed(2)}
-              </p>
+            <div className="pt-4 border-t">
+              <div className="text-center">
+                <p className="text-sm text-muted-foreground">Total Commission</p>
+                <p className="text-3xl font-bold text-primary">
+                  ${commission.toFixed(2)}
+                </p>
+              </div>
             </div>
           )}
         </div>

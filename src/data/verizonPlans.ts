@@ -1,7 +1,13 @@
 export interface Plan {
   id: string;
   name: string;
-  price: number;
+  basePrice: number;
+  multiLineDiscounts: {
+    lines2: number;
+    lines3: number;
+    lines4: number;
+    lines5Plus: number;
+  };
   features: string[];
   type: 'consumer' | 'business';
 }
@@ -19,36 +25,58 @@ export const plans: Plan[] = [
   {
     id: '1',
     name: 'Unlimited Welcome',
-    price: 65,
+    basePrice: 65,
+    multiLineDiscounts: {
+      lines2: 55,
+      lines3: 40,
+      lines4: 30,
+      lines5Plus: 30
+    },
     features: [
       '5G Nationwide',
       'Unlimited talk & text',
       'Unlimited data',
-      'DVD-quality streaming'
+      'DVD-quality streaming (480p)',
+      'Mobile hotspot not included'
     ],
     type: 'consumer'
   },
   {
     id: '2',
     name: 'Unlimited Plus',
-    price: 75,
+    basePrice: 80,
+    multiLineDiscounts: {
+      lines2: 70,
+      lines3: 55,
+      lines4: 45,
+      lines5Plus: 45
+    },
     features: [
       '5G Ultra Wideband',
       'Unlimited Premium Data',
-      'HD streaming',
-      '25GB mobile hotspot'
+      'HD streaming (720p)',
+      '30GB premium mobile hotspot',
+      'International texting to 200+ countries'
     ],
     type: 'consumer'
   },
   {
     id: '3',
     name: 'Unlimited Ultimate',
-    price: 85,
+    basePrice: 90,
+    multiLineDiscounts: {
+      lines2: 80,
+      lines3: 65,
+      lines4: 55,
+      lines5Plus: 55
+    },
     features: [
       '5G Ultra Wideband',
       'Unlimited Premium Data',
-      '4K UHD streaming',
-      '50GB mobile hotspot'
+      '4K UHD streaming where available',
+      '60GB premium mobile hotspot',
+      'International texting to 200+ countries',
+      'Global data in 210+ countries'
     ],
     type: 'consumer'
   }

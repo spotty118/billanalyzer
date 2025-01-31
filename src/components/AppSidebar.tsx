@@ -1,3 +1,4 @@
+import { Link } from "react-router-dom";
 import {
   Sidebar,
   SidebarContent,
@@ -8,7 +9,7 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
-import { Calculator, DollarSign, Percent, Home } from "lucide-react";
+import { Calculator, DollarSign, Percent, Home, User, List, FileText } from "lucide-react";
 
 const items = [
   {
@@ -19,17 +20,27 @@ const items = [
   {
     title: "Plan Quotes",
     icon: Calculator,
-    url: "#quotes",
+    url: "/quotes",
   },
   {
     title: "Commissions",
     icon: DollarSign,
-    url: "#commissions",
+    url: "/commissions",
   },
   {
     title: "Promotions",
     icon: Percent,
-    url: "#promotions",
+    url: "/promotions",
+  },
+  {
+    title: "Admin Login",
+    icon: User,
+    url: "/admin-login",
+  },
+  {
+    title: "Admin Dashboard",
+    icon: List,
+    url: "/admin-dashboard",
   },
 ];
 
@@ -48,10 +59,10 @@ export function AppSidebar() {
               {items.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton asChild>
-                    <a href={item.url} className="flex items-center gap-2">
+                    <Link to={item.url} className="flex items-center gap-2">
                       <item.icon className="h-4 w-4" />
                       <span>{item.title}</span>
-                    </a>
+                    </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               ))}
