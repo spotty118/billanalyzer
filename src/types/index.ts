@@ -10,6 +10,13 @@ export interface Plan {
   };
   features: string[];
   type: 'consumer' | 'business';
+  dataAllowance?: {
+    premium: number;
+    hotspot?: number;
+  };
+  streamingQuality?: '480p' | '720p' | '1080p' | '4K';
+  version?: string;
+  lastUpdated?: string;
 }
 
 export interface Promotion {
@@ -19,12 +26,22 @@ export interface Promotion {
   expires: string;
   type: 'device' | 'plan' | 'trade-in';
   value: string;
+  terms?: string[];
+  eligiblePlans?: string[];
+  stackable?: boolean;
+  version?: string;
 }
 
 export interface QuoteCalculation {
   linePrice: number;
   total: number;
   hasDiscount: boolean;
+  annualSavings: number;
+  breakdown: {
+    subtotal: number;
+    discount: number;
+    total: number;
+  };
 }
 
 export interface ApiError {

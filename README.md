@@ -1,69 +1,154 @@
-# Welcome to your Lovable project
+# VeriPlan Quotient
 
-## Project info
+A comprehensive plan management and quotation system for Verizon mobile plans.
 
-**URL**: https://lovable.dev/projects/4de43462-509a-491d-8815-ea05be122ef1
+## Recent Improvements
 
-## How can I edit this code?
+### Data Structure and Validation
+- Implemented Zod schemas for runtime data validation
+- Enhanced plan data structure with detailed features
+- Added versioning system for plans and promotions
+- Improved promotion model with eligibility rules
+- Added data consistency checks
 
-There are several ways of editing your application.
+### Performance Optimizations
+- Added memoization to quote calculations
+- Implemented API response caching
+- Optimized plan filtering and calculations
+- Added request retry mechanism
+- Enhanced React component efficiency
 
-**Use Lovable**
+### Error Handling
+- Comprehensive error boundaries implementation
+- Enhanced API error handling with detailed messages
+- Improved input validation across components
+- Added file upload sanitization
+- Structured error responses
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/4de43462-509a-491d-8815-ea05be122ef1) and start prompting.
+### Security Improvements
+- CSRF protection for API requests
+- File validation and sanitization
+- Session handling improvements
+- Request rate limiting
+- Input sanitization
 
-Changes made via Lovable will be committed automatically to this repo.
+## Architecture
 
-**Use your preferred IDE**
+### Core Components
+- `QuoteCalculator`: Main component for plan pricing calculations
+- `BillAnalyzer`: Bill analysis and comparison tool
+- `PromotionsOverview`: Promotion management system
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+### Data Layer
+- Structured plan data with versioning
+- Type-safe interfaces
+- Runtime validation using Zod
+- Cached API responses
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+### API Layer
+- Singleton API service
+- Request/response interceptors
+- Error handling middleware
+- File upload sanitization
+- Response caching
 
-Follow these steps:
+## Usage
 
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
+### Quote Calculator
+```typescript
+import { QuoteCalculator } from '@/components/QuoteCalculator';
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
+// Basic usage
+<QuoteCalculator />
 
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
-npm run dev
+// The calculator handles:
+// - Plan selection
+// - Line quantity
+// - Price calculations
+// - Multi-line discounts
+// - Annual savings
 ```
 
-**Edit a file directly in GitHub**
+### Bill Analysis
+```typescript
+import { apiService } from '@/services/api';
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+// Analyze bill
+const result = await apiService.analyzeBill(file);
+```
 
-**Use GitHub Codespaces**
+## Plan Data Structure
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+```typescript
+interface Plan {
+  id: string;
+  name: string;
+  basePrice: number;
+  multiLineDiscounts: {
+    lines2: number;
+    lines3: number;
+    lines4: number;
+    lines5Plus: number;
+  };
+  features: string[];
+  type: 'consumer' | 'business';
+  dataAllowance: {
+    premium: number;
+    hotspot?: number;
+  };
+  streamingQuality: '480p' | '720p' | '1080p' | '4K';
+  version: string;
+  lastUpdated: string;
+}
+```
 
-## What technologies are used for this project?
+## Future Improvements
 
-This project is built with .
+1. Data Layer
+   - Implement real-time plan updates
+   - Add data migration system
+   - Enhanced caching strategies
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+2. Performance
+   - Add service worker for offline support
+   - Implement progressive loading
+   - Add request batching
 
-## How can I deploy this project?
+3. Features
+   - Advanced plan comparison
+   - Custom plan builder
+   - Historical pricing analysis
 
-Simply open [Lovable](https://lovable.dev/projects/4de43462-509a-491d-8815-ea05be122ef1) and click on Share -> Publish.
+4. Security
+   - Add rate limiting per user
+   - Implement audit logging
+   - Enhanced session management
 
-## I want to use a custom domain - is that possible?
+## Best Practices
 
-We don't support custom domains (yet). If you want to deploy your project under your own domain then we recommend using Netlify. Visit our docs for more details: [Custom domains](https://docs.lovable.dev/tips-tricks/custom-domain/)
+1. Data Management
+   - Always validate data at runtime
+   - Use versioning for data changes
+   - Implement proper error boundaries
+
+2. Performance
+   - Memoize expensive calculations
+   - Cache API responses
+   - Optimize component renders
+
+3. Security
+   - Sanitize all inputs
+   - Validate file uploads
+   - Implement proper CSRF protection
+
+4. Error Handling
+   - Use structured error responses
+   - Implement retry mechanisms
+   - Provide clear error messages
+
+## Contributing
+
+1. Follow the TypeScript styleguide
+2. Add tests for new features
+3. Update documentation
+4. Maintain backward compatibility

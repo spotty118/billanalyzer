@@ -1,118 +1,120 @@
-export interface Plan {
-  id: string;
-  name: string;
-  basePrice: number;
-  multiLineDiscounts: {
-    lines2: number;
-    lines3: number;
-    lines4: number;
-    lines5Plus: number;
-  };
-  features: string[];
-  type: 'consumer' | 'business';
+import { z } from 'zod';
+
+export const StreamingQuality = z.enum(['480p', '720p', '1080p', '4K']);
+export type StreamingQuality = z.infer<typeof StreamingQuality>;
+
+export const PlanType = z.enum(['consumer', 'business']);
+export type PlanType = z.infer<typeof PlanType>;
+
+export const PromotionType = z.enum(['device', 'plan', 'trade-in']);
+export type PromotionType = z.infer<typeof PromotionType>;
+
+export const PlanSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  basePrice: z.number(),
+  multiLineDiscounts: z.object({
+    lines2: z.number(),
+    lines3: z.number(),
+    lines4: z.number(),
+    lines5Plus: z.number(),
+  }),
+  features: z.array(z.string()),
+  type: PlanType,
+  dataAllowance: z.object({
+    premium: z.number(),
+    hotspot: z.number().optional(),
+  }),
+  streamingQuality: StreamingQuality,
+});
+
+export type Plan = z.infer<typeof PlanSchema>;
+
+export const PromotionSchema = z.object({
+  id: z.string(),
+  title: z.string(),
+  description: z.string(),
+  value: z.string(),
+  expires: z.string(),
+  type: PromotionType,
+  terms: z.array(z.string()).optional(),
+  eligiblePlans: z.array(z.string()).optional(),
+  stackable: z.boolean().optional(),
+  version: z.string().optional(),
+});
+
+export type Promotion = z.infer<typeof PromotionSchema>;
+
+class VerizonDataManager {
+  private static instance: VerizonDataManager;
+  private plans: Plan[] | null = null;
+  private promotions: Promotion[] | null = null;
+
+  private constructor() {}
+
+  public static getInstance(): VerizonDataManager {
+    if (!VerizonDataManager.instance) {
+      VerizonDataManager.instance = new VerizonDataManager();
+    }
+    return VerizonDataManager.instance;
+  }
+
+  private async fetchPlans(): Promise<Plan[]> {
+    const response = await fetch('/api/mcp/verizon-data-server/fetch_plans');
+    const data = await response.json();
+    return data.map((plan: unknown) => PlanSchema.parse(plan));
+  }
+
+  private async fetchPromotions(): Promise<Promotion[]> {
+    const response = await fetch('/api/mcp/verizon-data-server/fetch_promotions');
+    const data = await response.json();
+    return data.map((promo: unknown) => PromotionSchema.parse(promo));
+  }
+
+  public async getPlans(): Promise<Plan[]> {
+    if (!this.plans) {
+      this.plans = await this.fetchPlans();
+    }
+    return this.plans;
+  }
+
+  public async getPromotions(): Promise<Promotion[]> {
+    if (!this.promotions) {
+      this.promotions = await this.fetchPromotions();
+    }
+    return this.promotions;
+  }
+
+  public async getPlanById(planId: string): Promise<Plan | null> {
+    const plans = await this.getPlans();
+    return plans.find(p => p.id === planId) || null;
+  }
+
+  public clearCache(): void {
+    this.plans = null;
+    this.promotions = null;
+  }
 }
 
-export interface Promotion {
-  id: string;
-  title: string;
-  description: string;
-  expires: string;
-  type: 'device' | 'plan' | 'trade-in';
-  value: string;
+export const verizonData = VerizonDataManager.getInstance();
+
+// Export async functions for easier usage
+export async function getPlans(): Promise<Plan[]> {
+  return verizonData.getPlans();
 }
 
-export const plans: Plan[] = [
-  {
-    id: '1',
-    name: 'Unlimited Welcome',
-    basePrice: 65,
-    multiLineDiscounts: {
-      lines2: 55,
-      lines3: 40,
-      lines4: 30,
-      lines5Plus: 30
-    },
-    features: [
-      '5G Nationwide',
-      'Unlimited talk & text',
-      'Unlimited data',
-      'DVD-quality streaming (480p)',
-      'Mobile hotspot not included'
-    ],
-    type: 'consumer'
-  },
-  {
-    id: '2',
-    name: 'Unlimited Plus',
-    basePrice: 80,
-    multiLineDiscounts: {
-      lines2: 70,
-      lines3: 55,
-      lines4: 45,
-      lines5Plus: 45
-    },
-    features: [
-      '5G Ultra Wideband',
-      'Unlimited Premium Data',
-      'HD streaming (720p)',
-      '30GB premium mobile hotspot',
-      'International texting to 200+ countries'
-    ],
-    type: 'consumer'
-  },
-  {
-    id: '3',
-    name: 'Unlimited Ultimate',
-    basePrice: 90,
-    multiLineDiscounts: {
-      lines2: 80,
-      lines3: 65,
-      lines4: 55,
-      lines5Plus: 55
-    },
-    features: [
-      '5G Ultra Wideband',
-      'Unlimited Premium Data',
-      '4K UHD streaming where available',
-      '60GB premium mobile hotspot',
-      'International texting to 200+ countries',
-      'Global data in 210+ countries'
-    ],
-    type: 'consumer'
-  }
-];
+export async function getPromotions(): Promise<Promotion[]> {
+  return verizonData.getPromotions();
+}
 
-export const promotions: Promotion[] = [
-  {
-    id: '1',
-    title: 'New Line Special',
-    description: 'Get $500 off when adding a new line with any 5G plan',
-    expires: '2024-05-01',
-    type: 'plan',
-    value: '$500 off'
-  },
-  {
-    id: '2',
-    title: 'Trade-In Bonus',
-    description: 'Up to $1000 trade-in value for eligible devices',
-    expires: '2024-04-15',
-    type: 'trade-in',
-    value: 'Up to $1000'
-  },
-  {
-    id: '3',
-    title: 'Family Plan Discount',
-    description: 'Save $25/line when adding 4+ lines',
-    expires: '2024-06-30',
-    type: 'plan',
-    value: '$25/line'
-  },
-  {
-    id: '4',
-    title: 'Device Upgrade Special',
-    description: 'Get up to $800 off select 5G phones with eligible trade-in',
-    expires: '2024-05-15',
-    type: 'device',
-    value: 'Up to $800'
-  }
-];
+export async function getPlanById(planId: string): Promise<Plan | null> {
+  return verizonData.getPlanById(planId);
+}
+
+// Utility function to format currency
+export const formatCurrency = (amount: number): string => {
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
+  }).format(amount);
+};

@@ -1,54 +1,126 @@
-import { AppSidebar } from "@/components/AppSidebar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { useQuery } from "@tanstack/react-query";
-import { scrapeVerizonPromotions, fetchVerizonPlans } from "@/utils/scraper";
+import { getPlans, getPromotions } from "@/data/verizonPlans";
+import { RefreshCw } from "lucide-react";
 
-export default function AdminDashboard() {
-  const { data: promotions } = useQuery({
+function Dashboard() {
+  const { 
+    data: promotions, 
+    isLoading: loadingPromotions,
+    refetch: refetchPromotions
+  } = useQuery({
     queryKey: ["promotions"],
-    queryFn: scrapeVerizonPromotions
+    queryFn: getPromotions
   });
 
-  const { data: plans } = useQuery({
+  const { 
+    data: plans, 
+    isLoading: loadingPlans,
+    refetch: refetchPlans
+  } = useQuery({
     queryKey: ["plans"],
-    queryFn: fetchVerizonPlans
+    queryFn: getPlans
   });
+
+  const handleRefreshData = async () => {
+    await Promise.all([
+      refetchPlans(),
+      refetchPromotions()
+    ]);
+  };
+
+  // Calculate plan type counts
+  const planTypeCounts = plans?.reduce((acc, plan) => {
+    acc[plan.type] = (acc[plan.type] || 0) + 1;
+    return acc;
+  }, {} as Record<string, number>) || {};
 
   return (
-    <div className="flex h-screen">
-      <AppSidebar />
-      <main className="flex-1 overflow-y-auto p-8">
-        <h1 className="text-3xl font-bold mb-6">Admin Dashboard</h1>
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Active Promotions</CardTitle>
-            </CardHeader>
-            <CardContent>
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <h1 className="text-3xl font-bold">Admin Dashboard</h1>
+        <Button 
+          onClick={handleRefreshData}
+          className="flex items-center gap-2"
+        >
+          <RefreshCw className="h-4 w-4" />
+          Refresh Data
+        </Button>
+      </div>
+      
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <Card>
+          <CardHeader>
+            <CardTitle>Active Promotions</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {loadingPromotions ? (
+              <p className="text-gray-500">Loading...</p>
+            ) : (
               <p className="text-2xl font-bold">{promotions?.length || 0}</p>
-            </CardContent>
-          </Card>
+            )}
+          </CardContent>
+        </Card>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Available Plans</CardTitle>
-            </CardHeader>
-            <CardContent>
+        <Card>
+          <CardHeader>
+            <CardTitle>Available Plans</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {loadingPlans ? (
+              <p className="text-gray-500">Loading...</p>
+            ) : (
               <p className="text-2xl font-bold">{plans?.length || 0}</p>
-            </CardContent>
-          </Card>
+            )}
+          </CardContent>
+        </Card>
 
-          <Card className="md:col-span-2">
-            <CardHeader>
-              <CardTitle>Recent Activity</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-gray-500">No recent activity</p>
-            </CardContent>
-          </Card>
-        </div>
-      </main>
+        <Card className="md:col-span-2">
+          <CardHeader>
+            <CardTitle>Plan Types</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {loadingPlans ? (
+              <p className="text-gray-500">Loading...</p>
+            ) : (
+              <div className="space-y-2">
+                {Object.entries(planTypeCounts).map(([type, count]) => (
+                  <div key={type} className="flex justify-between items-center">
+                    <span className="capitalize">{type}</span>
+                    <span className="font-medium">{count} plans</span>
+                  </div>
+                ))}
+                {Object.keys(planTypeCounts).length === 0 && (
+                  <p className="text-gray-500">No plans available</p>
+                )}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card className="md:col-span-2">
+          <CardHeader>
+            <CardTitle>Quick Actions</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              <Button 
+                variant="outline" 
+                className="w-full justify-start" 
+                onClick={handleRefreshData}
+              >
+                <RefreshCw className="h-4 w-4 mr-2" />
+                Refresh All Data
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
+}
+
+export default function AdminDashboard() {
+  return <Dashboard />;
 }

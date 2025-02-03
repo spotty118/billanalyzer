@@ -7,52 +7,94 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { promotions } from "@/data/promotions";
-import { useMemo, useState } from "react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Skeleton } from "@/components/ui/skeleton";
+import { getPromotions, PromotionType } from "@/data/verizonPlans";
+import { useMemo, useState, useEffect } from "react";
+import { Promotion } from "@/types";
+
+type FilterType = PromotionType | 'All';
+
+const LoadingState = () => (
+  <div className="space-y-4">
+    <Skeleton className="h-[200px] w-full" />
+    <Skeleton className="h-[200px] w-full" />
+  </div>
+);
 
 export function PromotionsOverview() {
-  // Group similar promo types
-  const promoGroups = useMemo(() => {
-    const deviceTypes = ["Tablets/Connected Devices", "AllPhones"];
-    const tradeTypes = ["Trade in", "BYOD"];
-    const serviceTypes = ["Fios", "FWA", "Entertainment", "International"];
-    const otherTypes = ["Prepaid", "Price Plan", "Port In", "Other"];
+  const [promotions, setPromotions] = useState<Promotion[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [selectedType, setSelectedType] = useState<FilterType>("All");
 
-    const types = Array.from(new Set(promotions.map(p => p.promoType)));
-    const grouped = [
-      "All",
-      ...deviceTypes.filter(t => types.includes(t)),
-      ...tradeTypes.filter(t => types.includes(t)),
-      ...serviceTypes.filter(t => types.includes(t)),
-      ...otherTypes.filter(t => types.includes(t))
-    ];
-
-    return grouped;
+  useEffect(() => {
+    const fetchPromotions = async () => {
+      try {
+        const data = await getPromotions();
+        setPromotions(data);
+        setLoading(false);
+      } catch (err) {
+        setError('Failed to load promotions. Please try again later.');
+        setLoading(false);
+      }
+    };
+    fetchPromotions();
   }, []);
 
-  const [selectedType, setSelectedType] = useState("All");
+  // Group promotion types with "All" option
+  const promoGroups: FilterType[] = useMemo(() => {
+    const types = Array.from(new Set(promotions.map(p => p.type)));
+    return ["All", ...types];
+  }, [promotions]);
 
   // Filter promotions based on active tab
   const filteredPromotions = useMemo(() => {
     if (selectedType === "All") return promotions;
-    return promotions.filter(p => p.promoType === selectedType);
-  }, [selectedType]);
+    return promotions.filter(p => p.type === selectedType);
+  }, [selectedType, promotions]);
 
   // Get count for each tab
   const tabCounts = useMemo(() => {
-    const counts: Record<string, number> = { All: promotions.length };
+    const counts = new Map<FilterType, number>([["All", promotions.length]]);
     promotions.forEach(p => {
-      counts[p.promoType] = (counts[p.promoType] || 0) + 1;
+      const currentCount = counts.get(p.type) || 0;
+      counts.set(p.type, currentCount + 1);
     });
     return counts;
-  }, []);
+  }, [promotions]);
+
+  if (loading) {
+    return (
+      <Card>
+        <CardContent className="p-6">
+          <LoadingState />
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (error) {
+    return (
+      <Card>
+        <CardContent className="p-6">
+          <Alert variant="destructive">
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <Card>
       <CardContent className="p-0">
         <div className="flex items-center justify-between border-b px-4 py-3">
           <h2 className="text-lg font-semibold">Promotions</h2>
-          <Select value={selectedType} onValueChange={setSelectedType}>
+          <Select 
+            value={selectedType} 
+            onValueChange={(value: string) => setSelectedType(value as FilterType)}
+          >
             <SelectTrigger className="w-[280px]">
               <SelectValue placeholder="All Promotions" />
             </SelectTrigger>
@@ -62,7 +104,7 @@ export function PromotionsOverview() {
                   <div className="flex items-center justify-between w-full">
                     <span className="capitalize">{type.replace(/([A-Z])/g, ' $1').trim()}</span>
                     <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded-full">
-                      {tabCounts[type]}
+                      {tabCounts.get(type)}
                     </span>
                   </div>
                 </SelectItem>
@@ -72,53 +114,69 @@ export function PromotionsOverview() {
         </div>
 
         <div className="p-4 md:p-6">
-            <div className="grid gap-6">
-              {filteredPromotions.map((promo) => (
-                <Card key={promo.id}>
-                  <CardContent className="p-6">
-                    <div className="space-y-4">
-                      <div className="flex items-center justify-between">
-                        <h3 className="font-medium text-lg text-gray-900">
-                          {promo.title}
-                        </h3>
-                        <span className="text-sm text-gray-500">
-                          Start: {new Date(promo.startDate).toLocaleDateString()}
-                        </span>
-                      </div>
+          <div className="grid gap-6">
+            {filteredPromotions.map((promo) => (
+              <Card key={promo.id}>
+                <CardContent className="p-6">
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <h3 className="font-medium text-lg text-gray-900">
+                        {promo.title}
+                      </h3>
+                      <span className="text-sm text-gray-500">
+                        Expires: {new Date(promo.expires).toLocaleDateString()}
+                      </span>
+                    </div>
 
-                      <div className="flex gap-2">
-                        <Badge variant="outline" className="capitalize">
-                          {promo.partnerType}
-                        </Badge>
-                        <Badge variant="outline" className="capitalize">
-                          {promo.promoType}
-                        </Badge>
-                      </div>
+                    <div className="flex gap-2">
+                      <Badge variant="outline" className="capitalize">
+                        {promo.value}
+                      </Badge>
+                      <Badge variant="outline" className="capitalize">
+                        {promo.type}
+                      </Badge>
+                    </div>
 
+                    <div>
+                      <p className="text-sm text-gray-600">{promo.description}</p>
+                    </div>
+
+                    {promo.terms && promo.terms.length > 0 && (
                       <div>
-                        <h4 className="font-medium text-sm text-gray-700 mb-2">Key Points:</h4>
+                        <h4 className="font-medium text-sm text-gray-700 mb-2">Terms:</h4>
                         <ul className="list-disc pl-5 space-y-1">
-                          {promo.keyPoints.map((point, idx) => (
-                            <li key={`${promo.id}-point-${idx}`} className="text-sm text-gray-600">{point}</li>
+                          {promo.terms.map((term, idx) => (
+                            <li key={`${promo.id}-term-${idx}`} className="text-sm text-gray-600">
+                              {term}
+                            </li>
                           ))}
                         </ul>
                       </div>
+                    )}
 
-                      {promo.eligibility.length > 0 && (
-                        <div>
-                          <h4 className="font-medium text-sm text-gray-700 mb-2">Eligibility:</h4>
-                          <ul className="list-disc pl-5 space-y-1">
-                            {promo.eligibility.map((item, idx) => (
-                              <li key={`${promo.id}-eligibility-${idx}`} className="text-sm text-gray-600">{item}</li>
-                            ))}
-                          </ul>
+                    {promo.eligiblePlans && promo.eligiblePlans.length > 0 && (
+                      <div>
+                        <h4 className="font-medium text-sm text-gray-700 mb-2">Eligible Plans:</h4>
+                        <div className="flex flex-wrap gap-2">
+                          {promo.eligiblePlans.map((plan) => (
+                            <Badge key={plan} variant="secondary">
+                              {plan}
+                            </Badge>
+                          ))}
                         </div>
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
+                      </div>
+                    )}
+
+                    {promo.stackable && (
+                      <Badge variant="outline" className="bg-green-50">
+                        Stackable with other promotions
+                      </Badge>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
         </div>
       </CardContent>
     </Card>

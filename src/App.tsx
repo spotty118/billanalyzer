@@ -1,104 +1,125 @@
-import React, { Suspense } from "react";
-import { Toaster } from "@/components/ui/toaster";
-import { Toaster as Sonner } from "@/components/ui/sonner";
-import { TooltipProvider } from "@/components/ui/tooltip";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
-import { SidebarProvider } from "@/components/ui/sidebar";
-import { ErrorBoundary } from "@/components/ui/error-boundary";
+import { Suspense, lazy } from 'react';
+import './App.css';
+import { AppSidebar } from './components/AppSidebar';
+import { Card, CardContent } from './components/ui/card';
+import { Alert, AlertDescription } from './components/ui/alert';
+import { ErrorBoundary } from './components/ui/error-boundary';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 
 // Lazy load components
-const Index = React.lazy(() => import("./pages/Index"));
-const AdminLogin = React.lazy(() => import("./pages/AdminLogin"));
-const AdminDashboard = React.lazy(() => import("./pages/AdminDashboard"));
-const PlanQuotes = React.lazy(() => import("./pages/PlanQuotes"));
-const Commissions = React.lazy(() => import("./pages/Commissions"));
-const Promotions = React.lazy(() => import("./pages/Promotions"));
-
-// Configure React Query client
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      retry: 2,
-      staleTime: 1000 * 60 * 5, // 5 minutes
-      refetchOnWindowFocus: false,
-    },
-  },
-});
+const QuoteCalculator = lazy(() => import('./components/QuoteCalculator').then(mod => ({ default: mod.QuoteCalculator })));
+const BillAnalyzer = lazy(() => import('./components/BillAnalyzer').then(mod => ({ default: mod.BillAnalyzer })));
+const CommissionCalculator = lazy(() => import('./components/CommissionCalculator').then(mod => ({ default: mod.CommissionCalculator })));
+const PromotionsOverview = lazy(() => import('./components/PromotionsOverview').then(mod => ({ default: mod.PromotionsOverview })));
+const AdminLogin = lazy(() => import('./pages/AdminLogin'));
+const AdminDashboard = lazy(() => import('./pages/AdminDashboard'));
 
 const LoadingFallback = () => (
-  <div className="flex items-center justify-center min-h-screen">
-    <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-gray-900" />
-  </div>
+  <Card>
+    <CardContent className="p-6">
+      <div>Loading...</div>
+    </CardContent>
+  </Card>
 );
 
-const App = () => {
+const ErrorFallback = ({ error }: { error: Error }) => (
+  <Card>
+    <CardContent className="p-6">
+      <Alert variant="destructive">
+        <AlertDescription>
+          {error.message || 'An error occurred while loading the component'}
+        </AlertDescription>
+      </Alert>
+    </CardContent>
+  </Card>
+);
+
+function MainLayout({ children }: { children: React.ReactNode }) {
   return (
-    <React.StrictMode>
-      <ErrorBoundary>
-        <QueryClientProvider client={queryClient}>
-          <BrowserRouter>
-            <TooltipProvider>
-              <SidebarProvider>
-                <Toaster />
-                <Sonner />
-                <Routes>
-                  <Route
-                    path="/"
-                    element={
-                      <Suspense fallback={<LoadingFallback />}>
-                        <Index />
-                      </Suspense>
-                    }
-                  />
-                  <Route
-                    path="/quotes"
-                    element={
-                      <Suspense fallback={<LoadingFallback />}>
-                        <PlanQuotes />
-                      </Suspense>
-                    }
-                  />
-                  <Route
-                    path="/commissions"
-                    element={
-                      <Suspense fallback={<LoadingFallback />}>
-                        <Commissions />
-                      </Suspense>
-                    }
-                  />
-                  <Route
-                    path="/promotions"
-                    element={
-                      <Suspense fallback={<LoadingFallback />}>
-                        <Promotions />
-                      </Suspense>
-                    }
-                  />
-                  <Route
-                    path="/admin-login"
-                    element={
-                      <Suspense fallback={<LoadingFallback />}>
-                        <AdminLogin />
-                      </Suspense>
-                    }
-                  />
-                  <Route
-                    path="/admin-dashboard"
-                    element={
-                      <Suspense fallback={<LoadingFallback />}>
-                        <AdminDashboard />
-                      </Suspense>
-                    }
-                  />
-                </Routes>
-              </SidebarProvider>
-            </TooltipProvider>
-          </BrowserRouter>
-        </QueryClientProvider>
-      </ErrorBoundary>
-    </React.StrictMode>
+    <div className="flex">
+      <AppSidebar />
+      <main className="flex-1 p-6">
+        <div className="mx-auto max-w-5xl space-y-6">
+          <Suspense fallback={<LoadingFallback />}>
+            {children}
+          </Suspense>
+        </div>
+      </main>
+    </div>
   );
-};
+}
+
+function Dashboard() {
+  return (
+    <section className="grid gap-6">
+      <QuoteCalculator />
+      <BillAnalyzer />
+      <CommissionCalculator />
+      <PromotionsOverview />
+    </section>
+  );
+}
+
+function App() {
+  return (
+    <div className="min-h-screen bg-gray-100 dark:bg-gray-900">
+      <ErrorBoundary>
+        <Router>
+            <Routes>
+              <Route
+                path="/"
+                element={
+                  <MainLayout>
+                    <Dashboard />
+                  </MainLayout>
+                }
+              />
+              <Route
+                path="/quotes"
+                element={
+                  <MainLayout>
+                    <QuoteCalculator />
+                  </MainLayout>
+                }
+              />
+              <Route
+                path="/commissions"
+                element={
+                  <MainLayout>
+                    <CommissionCalculator />
+                  </MainLayout>
+                }
+              />
+              <Route
+                path="/promotions"
+                element={
+                  <MainLayout>
+                    <PromotionsOverview />
+                  </MainLayout>
+                }
+              />
+              <Route 
+                path="/admin-login" 
+                element={
+                  <Suspense fallback={<LoadingFallback />}>
+                    <AdminLogin />
+                  </Suspense>
+                } 
+              />
+              <Route 
+                path="/admin-dashboard" 
+                element={
+                  <Suspense fallback={<LoadingFallback />}>
+                    <AdminDashboard />
+                  </Suspense>
+                } 
+              />
+              <Route path="*" element={<Navigate to="/" replace />} />
+            </Routes>
+        </Router>
+      </ErrorBoundary>
+    </div>
+  );
+}
 
 export default App;

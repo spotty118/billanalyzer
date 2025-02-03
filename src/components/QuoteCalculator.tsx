@@ -1,75 +1,147 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Plan } from "@/types";
-import { plans } from "@/data/verizonPlans";
+import { getPlans, formatCurrency } from "@/data/verizonPlans";
 import { useQuoteCalculator } from "@/hooks/use-quote-calculator";
 import { ErrorBoundary } from "@/components/ui/error-boundary";
+
+interface PlanSelectorProps {
+  selectedPlan: string;
+  onPlanChange: (value: string) => void;
+  plans: Plan[];
+}
 
 const PlanSelector = ({
   selectedPlan,
   onPlanChange,
-}: {
-  selectedPlan: string;
-  onPlanChange: (value: string) => void;
-}) => (
-  <div>
-    <label className="text-sm font-medium">Select Plan</label>
-    <Select onValueChange={onPlanChange} value={selectedPlan}>
-      <SelectTrigger>
-        <SelectValue placeholder="Choose a plan" />
-      </SelectTrigger>
-      <SelectContent>
-        {plans.map((plan) => (
-          <SelectItem key={plan.id} value={plan.id}>
-            {plan.name} - ${plan.basePrice}/mo
-          </SelectItem>
-        ))}
-      </SelectContent>
-    </Select>
-  </div>
-);
+  plans,
+}: PlanSelectorProps) => {
+  const consumerPlans = plans.filter(plan => plan.type === 'consumer');
+
+  return (
+    <div className="space-y-2">
+      <label className="text-sm font-medium">Select Plan</label>
+      <Select onValueChange={onPlanChange} value={selectedPlan}>
+        <SelectTrigger>
+          <SelectValue placeholder="Choose a plan" />
+        </SelectTrigger>
+        <SelectContent>
+          {consumerPlans.map((plan) => (
+            <SelectItem key={plan.id} value={plan.id}>
+              {plan.name} - {formatCurrency(plan.basePrice)}/mo
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+      {selectedPlan && (
+        <div className="text-xs text-gray-500">
+          {plans.find(p => p.id === selectedPlan)?.features.join(' • ')}
+        </div>
+      )}
+    </div>
+  );
+};
+
+interface QuoteResultProps {
+  linePrice: number;
+  total: number;
+  hasDiscount: boolean;
+  lines: number;
+  annualSavings: number;
+  breakdown: {
+    subtotal: number;
+    discount: number;
+    total: number;
+  };
+}
 
 const QuoteResult = ({
   linePrice,
   total,
   hasDiscount,
   lines,
-}: {
-  linePrice: number;
-  total: number;
-  hasDiscount: boolean;
-  lines: number;
-}) => (
-  <div className="mt-4 text-center space-y-2">
-    <div>
-      <p className="text-sm text-gray-500">Price Per Line</p>
-      <p className="text-xl font-bold text-verizon-red">
-        ${linePrice.toFixed(2)}/mo
-      </p>
+  annualSavings,
+  breakdown,
+}: QuoteResultProps) => (
+  <div className="mt-4 space-y-4">
+    <div className="grid grid-cols-2 gap-4">
+      <div className="text-center">
+        <p className="text-sm text-gray-500">Price Per Line</p>
+        <p className="text-xl font-bold text-verizon-red">
+          {formatCurrency(linePrice)}/mo
+        </p>
+      </div>
+      <div className="text-center">
+        <p className="text-sm text-gray-500">Total Monthly Cost</p>
+        <p className="text-2xl font-bold text-verizon-red">
+          {formatCurrency(total)}/mo
+        </p>
+      </div>
     </div>
-    <div>
-      <p className="text-sm text-gray-500">Total Monthly Cost</p>
-      <p className="text-2xl font-bold text-verizon-red">
-        ${total.toFixed(2)}/mo
-      </p>
-    </div>
-    {hasDiscount && parseInt(lines.toString()) >= 2 && (
-      <p className="text-sm text-green-600">
-        Includes multi-line discount!
-      </p>
+
+    {hasDiscount && lines >= 2 && (
+      <Alert>
+        <AlertDescription>
+          <div className="space-y-1">
+            <p className="font-medium text-green-600">
+              Multi-line discount applied!
+            </p>
+            <p className="text-sm">
+              Monthly savings: {formatCurrency(breakdown.discount)}
+            </p>
+            <p className="text-sm">
+              Annual savings: {formatCurrency(annualSavings)}
+            </p>
+          </div>
+        </AlertDescription>
+      </Alert>
     )}
+
+    <div className="text-sm space-y-1 border-t pt-2">
+      <div className="flex justify-between">
+        <span>Subtotal</span>
+        <span>{formatCurrency(breakdown.subtotal)}</span>
+      </div>
+      {hasDiscount && (
+        <div className="flex justify-between text-green-600">
+          <span>Multi-line Discount</span>
+          <span>-{formatCurrency(breakdown.discount)}</span>
+        </div>
+      )}
+      <div className="flex justify-between font-medium">
+        <span>Total</span>
+        <span>{formatCurrency(breakdown.total)}</span>
+      </div>
+    </div>
   </div>
 );
 
 export function QuoteCalculator() {
   const [selectedPlanId, setSelectedPlanId] = useState("");
   const [lines, setLines] = useState("");
+  const [availablePlans, setAvailablePlans] = useState<Plan[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   
-  const selectedPlan = plans.find(p => p.id === selectedPlanId) || null;
-  const calculation = useQuoteCalculator(selectedPlan, parseInt(lines) || 0);
+  useEffect(() => {
+    const fetchPlans = async () => {
+      try {
+        const plans = await getPlans();
+        setAvailablePlans(plans);
+        setLoading(false);
+      } catch (err) {
+        setError('Failed to load plans. Please try again later.');
+        setLoading(false);
+      }
+    };
+    fetchPlans();
+  }, []);
+
+  const selectedPlan = availablePlans.find(p => p.id === selectedPlanId) || null;
+  const { calculation, error: calculationError } = useQuoteCalculator(selectedPlan, parseInt(lines) || 0);
 
   const handleLineChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
@@ -79,6 +151,24 @@ export function QuoteCalculator() {
       setLines(value);
     }
   };
+
+  if (loading) {
+    return <Card>
+      <CardContent className="p-6">
+        <div>Loading plans...</div>
+      </CardContent>
+    </Card>;
+  }
+
+  if (error) {
+    return <Card>
+      <CardContent className="p-6">
+        <Alert variant="destructive">
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      </CardContent>
+    </Card>;
+  }
 
   return (
     <ErrorBoundary>
@@ -91,8 +181,9 @@ export function QuoteCalculator() {
             <PlanSelector
               selectedPlan={selectedPlanId}
               onPlanChange={setSelectedPlanId}
+              plans={availablePlans}
             />
-            <div>
+            <div className="space-y-2">
               <label className="text-sm font-medium">Number of Lines</label>
               <Input
                 type="number"
@@ -100,16 +191,25 @@ export function QuoteCalculator() {
                 max="12"
                 value={lines}
                 onChange={handleLineChange}
-                placeholder="Enter number of lines"
+                placeholder="Enter number of lines (1-12)"
                 className="mt-1"
               />
             </div>
-            {calculation && (
+
+            {calculationError && (
+              <Alert variant="destructive">
+                <AlertDescription>{calculationError.message}</AlertDescription>
+              </Alert>
+            )}
+
+            {calculation && parseInt(lines) > 0 && (
               <QuoteResult
                 linePrice={calculation.linePrice}
                 total={calculation.total}
                 hasDiscount={calculation.hasDiscount}
                 lines={parseInt(lines)}
+                annualSavings={calculation.annualSavings}
+                breakdown={calculation.breakdown}
               />
             )}
           </div>
