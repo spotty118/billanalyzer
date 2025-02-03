@@ -3,7 +3,7 @@ import { Input } from "@/components/ui/input";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useState, useEffect } from "react";
-import { Plan } from "@/types";
+import { Plan, ApiError } from "@/types";
 import { getPlans, formatCurrency } from "@/data/verizonPlans";
 import { useQuoteCalculator } from "@/hooks/use-quote-calculator";
 import { ErrorBoundary } from "@/components/ui/error-boundary";
@@ -124,21 +124,46 @@ export function QuoteCalculator() {
   const [lines, setLines] = useState("");
   const [availablePlans, setAvailablePlans] = useState<Plan[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<ApiError | null>(null);
+  const [retryCount, setRetryCount] = useState(0);
   
   useEffect(() => {
     const fetchPlans = async () => {
       try {
+        console.log('Fetching plans...');
+        setLoading(true);
+        setError(null);
+        
         const plans = await getPlans();
+        console.log('Plans fetched successfully:', plans);
+        
+        if (!Array.isArray(plans)) {
+          throw new Error('Invalid response format');
+        }
+        
         setAvailablePlans(plans);
         setLoading(false);
       } catch (err) {
-        setError('Failed to load plans. Please try again later.');
+        console.error('Error fetching plans:', err);
+        const apiError: ApiError = {
+          message: 'Failed to load plans. Please try again later.',
+          details: err instanceof Error ? err.message : 'Unknown error occurred'
+        };
+        setError(apiError);
         setLoading(false);
+        
+        // Retry up to 3 times with increasing delay
+        if (retryCount < 3) {
+          const delay = Math.pow(2, retryCount) * 1000;
+          setTimeout(() => {
+            setRetryCount(prev => prev + 1);
+          }, delay);
+        }
       }
     };
+
     fetchPlans();
-  }, []);
+  }, [retryCount]);
 
   const selectedPlan = availablePlans.find(p => p.id === selectedPlanId) || null;
   const { calculation, error: calculationError } = useQuoteCalculator(selectedPlan, parseInt(lines) || 0);
@@ -153,21 +178,35 @@ export function QuoteCalculator() {
   };
 
   if (loading) {
-    return <Card>
-      <CardContent className="p-6">
-        <div>Loading plans...</div>
-      </CardContent>
-    </Card>;
+    return (
+      <Card>
+        <CardContent className="p-6">
+          <div className="flex items-center justify-center space-x-2">
+            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-900"></div>
+            <div>Loading plans...</div>
+          </div>
+        </CardContent>
+      </Card>
+    );
   }
 
   if (error) {
-    return <Card>
-      <CardContent className="p-6">
-        <Alert variant="destructive">
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
-      </CardContent>
-    </Card>;
+    return (
+      <Card>
+        <CardContent className="p-6">
+          <Alert variant="destructive">
+            <AlertDescription>
+              <div className="space-y-2">
+                <p>{error.message}</p>
+                {error.details && (
+                  <p className="text-sm text-gray-500">{error.details}</p>
+                )}
+              </div>
+            </AlertDescription>
+          </Alert>
+        </CardContent>
+      </Card>
+    );
   }
 
   return (

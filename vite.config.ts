@@ -12,7 +12,8 @@ export default defineConfig(({ mode }) => ({
       '/api/mcp': {
         target: 'http://localhost:3001',
         changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/api\/mcp/, '/mcp'),
+        secure: false,
+        ws: true
       },
     },
   },

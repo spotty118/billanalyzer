@@ -10,13 +10,11 @@ export interface Plan {
   };
   features: string[];
   type: 'consumer' | 'business';
-  dataAllowance?: {
-    premium: number;
+  dataAllowance: {
+    premium: number | 'unlimited';
     hotspot?: number;
   };
-  streamingQuality?: '480p' | '720p' | '1080p' | '4K';
-  version?: string;
-  lastUpdated?: string;
+  streamingQuality: '480p' | '720p' | '1080p' | '4K';
 }
 
 export interface Promotion {
@@ -46,6 +44,7 @@ export interface QuoteCalculation {
 
 export interface ApiError {
   message: string;
+  details?: string;
   code?: string;
   status?: number;
 }
