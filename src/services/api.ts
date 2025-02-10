@@ -36,6 +36,8 @@ class ApiService {
   private readonly CACHE_TTL = 3600000; // 1 hour
   private readonly MAX_RETRIES = 3;
   private readonly RETRY_DELAY = 1000;
+  private readonly SERVER_STARTUP_DELAY = 500;
+  private readonly SERVER_STARTUP_MAX_RETRIES = 5;
 
   private constructor() {
     this.api = axios.create({
@@ -74,31 +76,40 @@ class ApiService {
 
     this.api.interceptors.response.use(
       (response: AxiosResponse) => {
-        const config = response.config as RequestConfig;
-        if (config.cache && config.cacheKey) {
-          this.setCachedData(config.cacheKey, response.data);
-        }
-        return response;
+      const config = response.config as RequestConfig;
+      if (config.cache && config.cacheKey) {
+        this.setCachedData(config.cacheKey, response.data);
+      }
+      return response;
       },
       async (error: AxiosError | { cachedData: unknown }) => {
-        if ('cachedData' in error) {
-          return Promise.resolve({ data: error.cachedData });
-        }
+      if ('cachedData' in error) {
+        return Promise.resolve({ data: error.cachedData });
+      }
 
-        const config = (error as AxiosError).config as RequestConfig;
-        const currentRetryCount = config?.retryCount || 0;
-        
-        if (config?.retry && currentRetryCount < this.MAX_RETRIES) {
-          config.retryCount = currentRetryCount + 1;
-          
-          await new Promise(resolve => 
-            setTimeout(resolve, config.retryDelay || this.RETRY_DELAY * config.retryCount!)
-          );
-          
-          return this.api.request(config);
+      const config = (error as AxiosError).config as RequestConfig;
+      const currentRetryCount = config?.retryCount || 0;
+      
+      // Handle server startup issues
+      if (error.response?.status === 503) {
+        if (currentRetryCount < this.SERVER_STARTUP_MAX_RETRIES) {
+        config.retryCount = currentRetryCount + 1;
+        const delay = this.SERVER_STARTUP_DELAY * Math.pow(2, currentRetryCount);
+        console.log(`Server starting up, waiting ${delay}ms...`);
+        await new Promise(resolve => setTimeout(resolve, delay));
+        return this.api.request(config);
         }
+      }
+      
+      // Handle other retries
+      if (config?.retry && currentRetryCount < this.MAX_RETRIES) {
+        config.retryCount = currentRetryCount + 1;
+        const delay = config.retryDelay || this.RETRY_DELAY * Math.pow(2, currentRetryCount);
+        await new Promise(resolve => setTimeout(resolve, delay));
+        return this.api.request(config);
+      }
 
-        return Promise.reject(error);
+      return Promise.reject(error);
       }
     );
   }

@@ -43,107 +43,68 @@ export async function scrapeGridPromotions(): Promise<Promotion[]> {
     const $ = cheerio.load(data.html);
     const promotions: Promotion[] = [];
 
-    // Wait longer for dynamic content to load
-    await new Promise(resolve => setTimeout(resolve, 5000));
+    // Look for promotion elements with different selectors
+    const promoSelectors = [
+      '.promo-grid .promo-item',
+      '.deals-grid .deal-item',
+      '.promotion-card',
+      '[data-testid="promotion-item"]',
+      'table tr:not(:first-child)',
+      '[role="row"]:not([role="columnheader"])'
+    ];
 
-    // Fixed column indices based on actual table structure
-    const COLUMNS = {
-      PROMO_TYPE: 0,
-      TITLE: 1,
-      START_DATE: 2,
-      KEY_POINTS: 3,
-      ELIGIBILITY: 4
-    };
-
-    // Use table analysis to find promotion tables
-    let $rows;
-    if (data.tableAnalysis) {
-      // Find tables with promotion-related headers
-      const promotionTables = data.tableAnalysis.filter(table => 
-        table.structure.headers.some(header => 
-          header.toLowerCase().includes('promotion') ||
-          header.toLowerCase().includes('promo') ||
-          header.toLowerCase().includes('key points')
-        )
-      );
-
-      if (promotionTables.length > 0) {
-        const table = promotionTables[0];
-        const tableSelector = table.id ? `#${table.id}` : 
-                            table.className ? `.${table.className.split(' ')[0]}` : 
-                            `${table.tag}[role="${table.role}"]`;
+    promoSelectors.forEach(selector => {
+      $(selector).each((index, element) => {
+        const $el = $(element);
         
-        console.log('Found promotion table with selector:', tableSelector);
-        $rows = $(tableSelector).find('tr, [role="row"]');
-      }
-    }
+        // Extract title from various possible elements
+        const title = $el.find('.title, .promo-title, .deal-title, h2, h3').first().text().trim() ||
+                     $el.find('td').eq(1).text().trim();
 
-    // If no rows found through table analysis, fall back to DOM searching
-    if (!$rows || $rows.length === 0) {
-      const $tables = $('table, [role="grid"], [role="table"], .grid, .table').filter((_, el) => {
-        const $el = $(el);
-        const headers = $el.find('th').map((_, th) => $(th).text().toLowerCase()).get();
-        return headers.some(header => 
-          header.includes('promotion') ||
-          header.includes('key points')
-        );
+        // Extract date from various possible elements
+        const startDate = $el.find('.date, .start-date, time').first().text().trim() ||
+                         $el.find('td').eq(2).text().trim() ||
+                         new Date().toISOString();
+
+        // Extract key points
+        const keyPoints = $el.find('.details, .description, .key-points, td').eq(3)
+          .text()
+          .split(/[•\n]/)
+          .map(point => point.trim())
+          .filter(point => point.length > 0);
+
+        // Extract eligibility
+        const eligibility = $el.find('.eligibility, .requirements, td').eq(4)
+          .text()
+          .split(/[•\n]/)
+          .map(item => item.trim())
+          .filter(item => item.length > 0);
+
+        // Extract promo type
+        const promoType = $el.find('.type, .category, td').first()
+          .text()
+          .split(/[/\n]/)
+          .map(type => type.trim())
+          .filter(Boolean)
+          .join('/') || 'Other';
+
+        if (title) {
+          promotions.push({
+            id: $el.attr('id') || String(index),
+            title,
+            startDate,
+            keyPoints,
+            eligibility,
+            partnerType: 'Verizon',
+            promoType
+          });
+        }
       });
-
-      $rows = $tables.find('tr, [role="row"]');
-    }
-
-    console.log(`Found ${$rows?.length || 0} potential promotion rows`);
-    
-    // Process each row
-    $rows?.each((index, row) => {
-      const $row = $(row);
-      const $cells = $row.find('td');
-
-      // Skip header row and rows without enough cells
-      if ($cells.length < 4) return;
-
-      const cellTexts = $cells.map((_, cell) => $(cell).text().trim()).get();
-      
-      // Extract title and remove any OST numbers
-      const title = cellTexts[COLUMNS.TITLE].replace(/\s*\([^)]*\)\s*$/, '').trim();
-      
-      // Parse key points, handling nested bullet points
-      const keyPointsText = cellTexts[COLUMNS.KEY_POINTS];
-      const keyPoints = keyPointsText
-        .split(/(?=•)/)  // Split on bullet points while keeping the bullet
-        .map(point => point.replace(/^[•\s-]+/, '').trim()) // Remove bullet and whitespace
-        .filter(point => point.length > 0);
-
-      // Parse eligibility, handling multiple formats
-      const eligibilityText = cellTexts[COLUMNS.ELIGIBILITY];
-      const eligibility = eligibilityText
-        .split(/\n/)
-        .map(item => item.replace(/^[•\s-]+/, '').trim())
-        .filter(item => item.length > 0);
-
-      // Parse promo type, handling multiple values
-      const promoType = cellTexts[COLUMNS.PROMO_TYPE]
-        .split(/[/\n]/)
-        .map(type => type.trim())
-        .filter(Boolean)
-        .join('/');
-
-      const promotion: Promotion = {
-        id: String(index),
-        title,
-        startDate: cellTexts[COLUMNS.START_DATE],
-        keyPoints,
-        eligibility,
-        partnerType: 'Verizon',  // Default since not explicitly in table
-        promoType
-      };
-
-      console.log('Extracted promotion:', promotion);
-      promotions.push(promotion);
     });
 
     console.log(`Found ${promotions.length} promotions`);
     return promotions;
+
   } catch (error) {
     console.error('Error scraping Grid promotions:', error);
     return [];

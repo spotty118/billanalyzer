@@ -48,11 +48,16 @@ export type Promotion = z.infer<typeof PromotionSchema>;
 class VerizonDataManager {
   private static instance: VerizonDataManager;
   private plans: Plan[] | null = null;
+  private lastPlansFetch: number = 0;
   private promotions: Promotion[] | null = null;
-  private lastFetch: number = 0;
+  private lastPromotionsFetch: number = 0;
   private readonly CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
   private readonly BASE_URL = '/api/mcp/verizon-data';
-  private isRetrying: boolean = false;
+  private readonly serverStartupDelay = 500; // Add delay between concurrent requests
+  private isRetryingPlans: boolean = false;
+  private isRetryingPromotions: boolean = false;
+  private retryPromise: Promise<Plan[]> | null = null;
+  private retryPromotionsPromise: Promise<Promotion[]> | null = null;
 
   private constructor() {}
 
@@ -72,6 +77,11 @@ class VerizonDataManager {
     
     for (let attempt = 1; attempt <= retries; attempt++) {
       try {
+        // Add delay before request to allow server startup
+        if (attempt > 1) {
+          await this.delay(this.serverStartupDelay);
+        }
+
         console.log(`[Attempt ${attempt}/${retries}] Fetching ${url}`);
         
         const response = await fetch(url, {
@@ -84,6 +94,13 @@ class VerizonDataManager {
         });
         
         console.log(`Response status: ${response.status}`);
+        
+        // Handle server startup issues
+        if (response.status === 503) {
+          console.log('Server starting up, waiting...');
+          await this.delay(this.serverStartupDelay * 2);
+          throw new Error('Server starting up');
+        }
         
         if (!response.ok) {
           const text = await response.text();
@@ -116,87 +133,87 @@ class VerizonDataManager {
     throw new Error('All retry attempts failed');
   }
 
-  private shouldRefetch(): boolean {
-    return !this.lastFetch || Date.now() - this.lastFetch > this.CACHE_DURATION;
+  private shouldRefetch(lastFetch: number): boolean {
+    return !lastFetch || Date.now() - lastFetch > this.CACHE_DURATION;
   }
 
   private async fetchPlans(): Promise<Plan[]> {
-    if (this.isRetrying) {
-      console.log('Already retrying, waiting...');
-      await this.delay(1000);
-      return this.getPlans();
+    if (this.retryPromise) {
+      return this.retryPromise;
     }
 
     try {
-      this.isRetrying = true;
-      console.log('Fetching plans from MCP server...');
-      const data = await this.fetchWithRetry<unknown[]>('fetch_plans');
-      
-      if (!Array.isArray(data)) {
-        console.error('Invalid response format:', data);
-        throw new Error('Invalid response format: expected an array of plans');
-      }
-
-      const plans = data.map((plan, index) => {
-        try {
-          return PlanSchema.parse(plan);
-        } catch (err) {
-          console.error(`Invalid plan data at index ${index}:`, err);
-          throw new Error('Invalid plan data received from server');
+      this.isRetryingPlans = true;
+      this.retryPromise = (async () => {
+        console.log('Fetching plans from MCP server...');
+        const data = await this.fetchWithRetry<unknown[]>('fetch_plans');
+        
+        if (!Array.isArray(data)) {
+          console.error('Invalid response format:', data);
+          throw new Error('Invalid response format: expected an array of plans');
         }
-      });
 
-      console.log('Successfully fetched and parsed plans:', plans);
-      return plans;
-    } catch (error) {
-      console.error('Error fetching plans:', error);
-      throw new Error('Failed to fetch plans. Please try again later.');
+        const plans = data.map((plan, index) => {
+          try {
+            return PlanSchema.parse(plan);
+          } catch (err) {
+            console.error(`Invalid plan data at index ${index}:`, err);
+            throw new Error('Invalid plan data received from server');
+          }
+        });
+
+        console.log('Successfully fetched and parsed plans');
+        return plans;
+      })();
+      return await this.retryPromise;
     } finally {
-      this.isRetrying = false;
+      this.isRetryingPlans = false;
+      this.retryPromise = null;
     }
+
   }
 
   private async fetchPromotions(): Promise<Promotion[]> {
-    if (this.isRetrying) {
-      console.log('Already retrying, waiting...');
-      await this.delay(1000);
-      return this.getPromotions();
+    if (this.retryPromotionsPromise) {
+      return this.retryPromotionsPromise;
     }
 
     try {
-      this.isRetrying = true;
-      console.log('Fetching promotions from MCP server...');
-      const data = await this.fetchWithRetry<unknown[]>('fetch_promotions');
-      
-      if (!Array.isArray(data)) {
-        console.error('Invalid response format:', data);
-        throw new Error('Invalid response format: expected an array of promotions');
-      }
-
-      const promotions = data.map((promo, index) => {
-        try {
-          return PromotionSchema.parse(promo);
-        } catch (err) {
-          console.error(`Invalid promotion data at index ${index}:`, err);
-          throw new Error('Invalid promotion data received from server');
+      this.isRetryingPromotions = true;
+      this.retryPromotionsPromise = (async () => {
+        console.log('Fetching promotions from MCP server...');
+        const data = await this.fetchWithRetry<unknown[]>('fetch_promotions');
+        
+        if (!Array.isArray(data)) {
+          console.error('Invalid response format:', data);
+          throw new Error('Invalid response format: expected an array of promotions');
         }
-      });
 
-      console.log('Successfully fetched and parsed promotions:', promotions);
-      return promotions;
-    } catch (error) {
-      console.error('Error fetching promotions:', error);
-      throw new Error('Failed to fetch promotions. Please try again later.');
+        const promotions = data.map((promo, index) => {
+          try {
+            return PromotionSchema.parse(promo);
+          } catch (err) {
+            console.error(`Invalid promotion data at index ${index}:`, err);
+            throw new Error('Invalid promotion data received from server');
+          }
+        });
+
+        console.log('Successfully fetched and parsed promotions');
+        return promotions;
+      })();
+      return await this.retryPromotionsPromise;
     } finally {
-      this.isRetrying = false;
+      this.isRetryingPromotions = false;
+      this.retryPromotionsPromise = null;
     }
+
   }
 
   public async getPlans(): Promise<Plan[]> {
-    if (!this.plans || this.shouldRefetch()) {
+    if (!this.plans || this.shouldRefetch(this.lastPlansFetch)) {
       try {
         this.plans = await this.fetchPlans();
-        this.lastFetch = Date.now();
+        this.lastPlansFetch = Date.now();
       } catch (error) {
         console.error('Error in getPlans:', error);
         throw error;
@@ -206,10 +223,10 @@ class VerizonDataManager {
   }
 
   public async getPromotions(): Promise<Promotion[]> {
-    if (!this.promotions || this.shouldRefetch()) {
+    if (!this.promotions || this.shouldRefetch(this.lastPromotionsFetch)) {
       try {
         this.promotions = await this.fetchPromotions();
-        this.lastFetch = Date.now();
+        this.lastPromotionsFetch = Date.now();
       } catch (error) {
         console.error('Error in getPromotions:', error);
         throw error;
@@ -231,8 +248,12 @@ class VerizonDataManager {
   public clearCache(): void {
     this.plans = null;
     this.promotions = null;
-    this.lastFetch = 0;
-    this.isRetrying = false;
+    this.lastPlansFetch = 0;
+    this.lastPromotionsFetch = 0;
+    this.isRetryingPlans = false;
+    this.isRetryingPromotions = false;
+    this.retryPromise = null;
+    this.retryPromotionsPromise = null;
     console.log('Cache cleared');
   }
 }

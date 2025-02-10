@@ -125,8 +125,6 @@ export function QuoteCalculator() {
   const [availablePlans, setAvailablePlans] = useState<Plan[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<ApiError | null>(null);
-  const [retryCount, setRetryCount] = useState(0);
-  
   useEffect(() => {
     const fetchPlans = async () => {
       try {
@@ -135,7 +133,6 @@ export function QuoteCalculator() {
         setError(null);
         
         const plans = await getPlans();
-        console.log('Plans fetched successfully:', plans);
         
         if (!Array.isArray(plans)) {
           throw new Error('Invalid response format');
@@ -151,19 +148,12 @@ export function QuoteCalculator() {
         };
         setError(apiError);
         setLoading(false);
-        
-        // Retry up to 3 times with increasing delay
-        if (retryCount < 3) {
-          const delay = Math.pow(2, retryCount) * 1000;
-          setTimeout(() => {
-            setRetryCount(prev => prev + 1);
-          }, delay);
-        }
       }
     };
 
     fetchPlans();
-  }, [retryCount]);
+  }, []);
+
 
   const selectedPlan = availablePlans.find(p => p.id === selectedPlanId) || null;
   const { calculation, error: calculationError } = useQuoteCalculator(selectedPlan, parseInt(lines) || 0);
@@ -182,7 +172,10 @@ export function QuoteCalculator() {
       <Card>
         <CardContent className="p-6">
           <div className="flex items-center justify-center space-x-2">
-            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-900"></div>
+            <div 
+              className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-900"
+              data-testid="loading-spinner"
+            ></div>
             <div>Loading plans...</div>
           </div>
         </CardContent>

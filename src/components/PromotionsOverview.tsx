@@ -31,11 +31,13 @@ export function PromotionsOverview() {
   useEffect(() => {
     const fetchPromotions = async () => {
       try {
+        setLoading(true);
+        setError(null);
         const data = await getPromotions();
         setPromotions(data);
-        setLoading(false);
       } catch (err) {
         setError('Failed to load promotions. Please try again later.');
+      } finally {
         setLoading(false);
       }
     };

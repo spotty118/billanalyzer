@@ -11,7 +11,9 @@ function Dashboard() {
     refetch: refetchPromotions
   } = useQuery({
     queryKey: ["promotions"],
-    queryFn: getPromotions
+    queryFn: getPromotions,
+    retry: false, // Let VerizonDataManager handle retries
+    staleTime: 5 * 60 * 1000, // Match VerizonDataManager's cache duration
   });
 
   const { 
@@ -20,7 +22,9 @@ function Dashboard() {
     refetch: refetchPlans
   } = useQuery({
     queryKey: ["plans"],
-    queryFn: getPlans
+    queryFn: getPlans,
+    retry: false, // Let VerizonDataManager handle retries
+    staleTime: 5 * 60 * 1000, // Match VerizonDataManager's cache duration
   });
 
   const handleRefreshData = async () => {
