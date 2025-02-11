@@ -519,48 +519,54 @@ app.get('/api/grid', async (req, res) => {
   try {
     logger.info('Starting grid scraping...');
     const { browser, page } = await launchBrowser();
-
     
-    // Navigate to the deals page
-    await page.goto('https://www.verizon.com/deals/', {
-      waitUntil: 'networkidle0',
-      timeout: 30000
-    });
+    try {
+      // Navigate to the plans page
+      await page.goto('https://www.verizon.com/plans/', {
+        waitUntil: 'networkidle0',
+        timeout: 30000
+      });
 
-    // Wait for any of these selectors and scroll
-    await Promise.race([
-      page.waitForSelector('.vz-promo-card', { timeout: 5000 }).catch(() => null),
-      page.waitForSelector('.gnav20-deal-card', { timeout: 5000 }).catch(() => null),
-      page.waitForSelector('.c-card-deals', { timeout: 5000 }).catch(() => null)
-    ]);
+      // Wait for plan elements
+      await Promise.race([
+        page.waitForSelector('.plan-card', { timeout: 5000 }).catch(() => null),
+        page.waitForSelector('.vz-plan-card', { timeout: 5000 }).catch(() => null),
+        page.waitForSelector('.plan-pricing-table', { timeout: 5000 }).catch(() => null)
+      ]);
 
-    // Scroll to load dynamic content
-    await page.evaluate(() => {
-      window.scrollTo(0, document.body.scrollHeight);
-    });
+      // Scroll to load dynamic content
+      await page.evaluate(() => {
+        window.scrollTo(0, document.body.scrollHeight);
+      });
 
-    // Additional wait for dynamic content
-    await page.waitForTimeout(2000);
+      // Additional wait for dynamic content
+      await page.waitForTimeout(2000);
 
-    // Get the page content and structure
-    const html = await page.content();
-    const tableAnalysis = await page.evaluate(() => {
-      const elements = document.querySelectorAll('.vz-promo-card, .gnav20-deal-card, .c-card-deals');
-      return Array.from(elements).map(el => ({
-        tag: el.tagName.toLowerCase(),
-        id: el.id,
-        className: el.className,
-        role: el.getAttribute('role'),
-        structure: {
-          title: el.querySelector('.vz-promo-title, .gnav20-deal-title')?.textContent?.trim() || '',
-          description: el.querySelector('.vz-promo-description, .gnav20-deal-description')?.textContent?.trim() || '',
-          terms: el.querySelector('.vz-promo-terms, .gnav20-deal-terms')?.textContent?.trim() || ''
-        }
-      }));
-    });
+      // Get the page content and structure
+      const html = await page.content();
+      
+      // Extract plan details
+      const planAnalysis = await page.evaluate(() => {
+        const elements = document.querySelectorAll('.plan-card, .vz-plan-card, .plan-pricing-table tr');
+        return Array.from(elements).map(el => ({
+          tag: el.tagName.toLowerCase(),
+          id: el.id,
+          className: el.className,
+          structure: {
+            name: el.querySelector('.plan-name, .plan-title')?.textContent?.trim() || '',
+            price: el.querySelector('.price, .base-price')?.textContent?.trim() || '',
+            features: Array.from(el.querySelectorAll('.features li, .plan-features li'))
+              .map(feature => feature.textContent?.trim() || '')
+          }
+        }));
+      });
 
-    await browser.close();
-    res.json({ html, tableAnalysis });
+      res.json({ html, planAnalysis });
+    } finally {
+      if (browser) {
+        await browser.close().catch(err => logger.error('Error closing browser:', err));
+      }
+    }
   } catch (error) {
     logger.error('Grid scraping error:', error);
     res.status(500).json({ 
