@@ -1,6 +1,6 @@
 import axios from 'axios';
 import * as cheerio from 'cheerio';
-import type { Cheerio, Element } from 'cheerio';
+import type { Cheerio, CheerioAPI, AnyNode } from 'cheerio';
 import type { Promotion } from '@/types';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -153,12 +153,12 @@ export async function scrapeVerizonPlans(): Promise<VerizonPlanDetails[]> {
 }
 
 // Helper functions
-function extractPrice($element: Cheerio<Element>): number {
+function extractPrice($element: Cheerio<AnyNode>): number {
   const priceText = $element.text().trim();
   return parseFloat(priceText.replace(/[^0-9.]/g, '')) || 0;
 }
 
-function extractHotspotData($element: Cheerio<Element>): number | undefined {
+function extractHotspotData($element: Cheerio<AnyNode>): number | undefined {
   const hotspotText = $element.find('.hotspot-data, .mobile-hotspot').first().text().trim();
   const hotspotGB = parseInt(hotspotText.match(/\d+/)?.[0] || '0');
   return hotspotGB || undefined;
@@ -171,7 +171,7 @@ function determineStreamingQuality(text: string): '480p' | '720p' | '1080p' | '4
   return '480p';
 }
 
-function extractDiscount($element: Cheerio<Element>, type: 'autopay' | 'paperless'): number | undefined {
+function extractDiscount($element: Cheerio<AnyNode>, type: 'autopay' | 'paperless'): number | undefined {
   const discountText = $element.find(`.${type}-discount, .${type}-billing`).first().text().trim();
   const discount = parseFloat(discountText.replace(/[^0-9.]/g, ''));
   return discount || undefined;
