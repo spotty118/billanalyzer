@@ -1,7 +1,7 @@
-
 import axios from 'axios';
 import * as cheerio from 'cheerio';
-import type { Cheerio, CheerioAPI, AnyNode, Element } from 'cheerio';
+import type { Cheerio, CheerioAPI } from 'cheerio';
+import type { Element } from 'domhandler';
 import type { Promotion } from '@/types';
 import { supabase } from '@/integrations/supabase/client';
 
