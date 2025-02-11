@@ -19,19 +19,32 @@ export async function scrapeVerizonPlans(): Promise<VerizonPlanDetails[]> {
     const plans: VerizonPlanDetails[] = [];
     
     for (const planData of data.planAnalysis) {
-      if (planData.structure?.name) {
+      try {
+        if (!planData.structure?.name) {
+          console.log('Skipping invalid plan data:', planData);
+          continue;
+        }
+
+        // Extract and validate the price
+        const rawPrice = planData.structure.price?.replace(/[^0-9.]/g, '') || '0';
+        const basePrice = parseFloat(rawPrice);
+        if (isNaN(basePrice)) {
+          console.log('Invalid price format:', planData.structure.price);
+          continue;
+        }
+
         const plan: VerizonPlanDetails = {
           external_id: planData.id || `plan-${planData.structure.name.toLowerCase().replace(/\s+/g, '-')}`,
           name: planData.structure.name,
-          base_price: parseFloat(planData.structure.price?.replace(/[^0-9.]/g, '') || '0'),
+          base_price: basePrice,
           multi_line_discounts: {
             lines2: 0,
             lines3: 0,
             lines4: 0,
             lines5Plus: 0
           },
-          features: planData.structure.features || [],
-          type: 'consumer' as const, // Explicitly set as "consumer" type
+          features: Array.isArray(planData.structure.features) ? planData.structure.features : [],
+          type: 'consumer' as const,
           data_allowance: {
             premium: 'unlimited',
             hotspot: undefined
@@ -40,32 +53,40 @@ export async function scrapeVerizonPlans(): Promise<VerizonPlanDetails[]> {
         };
 
         // Update the plan in the database
-        const { data: existingPlan } = await supabase
-          .from('verizon_plans')
-          .select('id')
-          .eq('external_id', plan.external_id)
-          .maybeSingle();
-
-        if (existingPlan) {
-          const { error: updateError } = await supabase
+        try {
+          const { data: existingPlan } = await supabase
             .from('verizon_plans')
-            .update(plan)
-            .eq('external_id', plan.external_id);
+            .select('id')
+            .eq('external_id', plan.external_id)
+            .maybeSingle();
 
-          if (updateError) {
-            console.error('Error updating plan:', updateError);
-          }
-        } else {
-          const { error: insertError } = await supabase
-            .from('verizon_plans')
-            .insert(plan);
+          if (existingPlan) {
+            const { error: updateError } = await supabase
+              .from('verizon_plans')
+              .update(plan)
+              .eq('external_id', plan.external_id);
 
-          if (insertError) {
-            console.error('Error inserting plan:', insertError);
+            if (updateError) {
+              console.error('Error updating plan:', updateError);
+            }
+          } else {
+            const { error: insertError } = await supabase
+              .from('verizon_plans')
+              .insert(plan);
+
+            if (insertError) {
+              console.error('Error inserting plan:', insertError);
+            }
           }
+
+          plans.push(plan);
+        } catch (dbError) {
+          console.error('Database operation failed:', dbError);
+          continue;
         }
-
-        plans.push(plan);
+      } catch (planError) {
+        console.error('Error processing plan:', planError);
+        continue;
       }
     }
 

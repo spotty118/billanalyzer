@@ -21,16 +21,21 @@ export async function scrapeGridPromotions(): Promise<Promotion[]> {
     const promoElements = data.html.match(/<div[^>]*class="[^"]*promo[^"]*"[^>]*>[\s\S]*?<\/div>/g) || [];
     
     for (const element of promoElements) {
-      // Extract promotion details using regex patterns
-      const titleMatch = element.match(/<h\d[^>]*>(.*?)<\/h\d>/);
-      const descMatch = element.match(/<p[^>]*>(.*?)<\/p>/);
-      const valueMatch = element.match(/\$[\d,]+(\.\d{2})?/);
-      
-      if (titleMatch) {
+      try {
+        // Extract promotion details using regex patterns
+        const titleMatch = element.match(/<h\d[^>]*>(.*?)<\/h\d>/);
+        const descMatch = element.match(/<p[^>]*>(.*?)<\/p>/);
+        const valueMatch = element.match(/\$[\d,]+(\.\d{2})?/);
+        
+        if (!titleMatch) {
+          console.log('Skipping promotion without title');
+          continue;
+        }
+
         const title = titleMatch[1].trim();
         const promo_id = `promo-${title.toLowerCase().replace(/\s+/g, '-')}`;
         
-        const promotionData = {
+        const promotionData: Promotion = {
           id: '', // Will be set by Supabase
           external_id: promo_id,
           title,
@@ -41,35 +46,43 @@ export async function scrapeGridPromotions(): Promise<Promotion[]> {
           stackable: false
         };
 
-        // Update promotion in database
-        const { data: existingPromo } = await supabase
-          .from('verizon_promotions')
-          .select('id')
-          .eq('external_id', promo_id)
-          .maybeSingle();
-
-        const { id, ...dataToUpsert } = promotionData;
-
-        if (existingPromo) {
-          const { error: updateError } = await supabase
+        try {
+          // Update promotion in database
+          const { data: existingPromo } = await supabase
             .from('verizon_promotions')
-            .update(dataToUpsert)
-            .eq('external_id', promo_id);
+            .select('id')
+            .eq('external_id', promo_id)
+            .maybeSingle();
 
-          if (updateError) {
-            console.error('Error updating promotion:', updateError);
-          }
-        } else {
-          const { error: insertError } = await supabase
-            .from('verizon_promotions')
-            .insert(dataToUpsert);
+          const { id, ...dataToUpsert } = promotionData;
 
-          if (insertError) {
-            console.error('Error inserting promotion:', insertError);
+          if (existingPromo) {
+            const { error: updateError } = await supabase
+              .from('verizon_promotions')
+              .update(dataToUpsert)
+              .eq('external_id', promo_id);
+
+            if (updateError) {
+              console.error('Error updating promotion:', updateError);
+            }
+          } else {
+            const { error: insertError } = await supabase
+              .from('verizon_promotions')
+              .insert(dataToUpsert);
+
+            if (insertError) {
+              console.error('Error inserting promotion:', insertError);
+            }
           }
+
+          promotions.push(promotionData);
+        } catch (dbError) {
+          console.error('Database operation failed:', dbError);
+          continue;
         }
-
-        promotions.push(promotionData);
+      } catch (promoError) {
+        console.error('Error processing promotion:', promoError);
+        continue;
       }
     }
 
