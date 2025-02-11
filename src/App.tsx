@@ -1,3 +1,4 @@
+
 import { Suspense, lazy } from 'react';
 import './App.css';
 import { AppSidebar } from './components/AppSidebar';
@@ -5,6 +6,7 @@ import { Card, CardContent } from './components/ui/card';
 import { Alert, AlertDescription } from './components/ui/alert';
 import { ErrorBoundary } from './components/ui/error-boundary';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import Index from './pages/Index';
 
 // Lazy load components
 const QuoteCalculator = lazy(() => import('./components/QuoteCalculator').then(mod => ({ default: mod.QuoteCalculator })));
@@ -49,17 +51,6 @@ function MainLayout({ children }: { children: React.ReactNode }) {
   );
 }
 
-function Dashboard() {
-  return (
-    <section className="grid gap-6">
-      <QuoteCalculator />
-      <BillAnalyzer />
-      <CommissionCalculator />
-      <PromotionsOverview />
-    </section>
-  );
-}
-
 function App() {
   return (
     <div className="min-h-screen bg-gray-100 dark:bg-gray-900">
@@ -68,11 +59,7 @@ function App() {
             <Routes>
               <Route
                 path="/"
-                element={
-                  <MainLayout>
-                    <Dashboard />
-                  </MainLayout>
-                }
+                element={<Index />}
               />
               <Route
                 path="/quotes"
