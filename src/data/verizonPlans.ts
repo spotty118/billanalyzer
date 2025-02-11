@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { scrapeVerizonPlans, scrapeGridPromotions } from '@/utils/scraper';
 
 export const StreamingQuality = z.enum(['480p', '720p', '1080p', '4K']);
 export type StreamingQuality = z.infer<typeof StreamingQuality>;
@@ -52,8 +53,6 @@ class VerizonDataManager {
   private promotions: Promotion[] | null = null;
   private lastPromotionsFetch: number = 0;
   private readonly CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
-  private readonly BASE_URL = '/api/mcp/verizon-data';
-  private readonly serverStartupDelay = 500; // Add delay between concurrent requests
   private retryPromise: Promise<Plan[]> | null = null;
   private retryPromotionsPromise: Promise<Promotion[]> | null = null;
 
@@ -66,75 +65,6 @@ class VerizonDataManager {
     return VerizonDataManager.instance;
   }
 
-  private delay(ms: number): Promise<void> {
-    return new Promise(resolve => setTimeout(resolve, ms));
-  }
-
-  private async fetchWithRetry<T>(endpoint: string, retries = 3, initialDelay = 1000): Promise<T> {
-    const url = `${this.BASE_URL}/${endpoint}`;
-    
-    for (let attempt = 1; attempt <= retries; attempt++) {
-      try {
-        // Add delay before request to allow server startup
-        if (attempt > 1) {
-          await this.delay(this.serverStartupDelay);
-        }
-
-        console.log(`[Attempt ${attempt}/${retries}] Fetching ${url}`);
-        
-        const response = await fetch(url, {
-          method: 'GET',
-          headers: {
-            'Accept': 'application/json',
-            'Cache-Control': 'no-cache',
-            'Pragma': 'no-cache'
-          }
-        });
-        
-        console.log(`Response status: ${response.status}`);
-        
-        // Handle server startup issues
-        if (response.status === 503) {
-          console.log('Server starting up, waiting...');
-          await this.delay(this.serverStartupDelay * 2);
-          throw new Error('Server starting up');
-        }
-        
-        if (!response.ok) {
-          const text = await response.text();
-          console.error(`HTTP error! status: ${response.status}, body:`, text);
-          throw new Error(`HTTP ${response.status}: ${text}`);
-        }
-        
-        const contentType = response.headers.get('content-type');
-        console.log('Content-Type:', contentType);
-        
-        if (!contentType || !contentType.includes('application/json')) {
-          throw new Error(`Unexpected content type: ${contentType}`);
-        }
-        
-        const data = await response.json();
-        console.log('Response data:', data);
-        return data;
-      } catch (error) {
-        console.error(`Attempt ${attempt} failed:`, error);
-        
-        if (attempt === retries) {
-          throw error;
-        }
-        
-        const delayMs = initialDelay * Math.pow(2, attempt - 1);
-        console.log(`Waiting ${delayMs}ms before retry...`);
-        await this.delay(delayMs);
-      }
-    }
-    throw new Error('All retry attempts failed');
-  }
-
-  private shouldRefetch(lastFetch: number): boolean {
-    return !lastFetch || Date.now() - lastFetch > this.CACHE_DURATION;
-  }
-
   private async fetchPlans(): Promise<Plan[]> {
     if (this.retryPromise) {
       return this.retryPromise;
@@ -142,17 +72,24 @@ class VerizonDataManager {
 
     try {
       this.retryPromise = (async () => {
-        console.log('Fetching plans from MCP server...');
-        const data = await this.fetchWithRetry<unknown[]>('fetch_plans');
+        console.log('Fetching plans from Grid API...');
+        const plans = await scrapeVerizonPlans();
         
-        if (!Array.isArray(data)) {
-          console.error('Invalid response format:', data);
+        if (!Array.isArray(plans)) {
+          console.error('Invalid response format:', plans);
           throw new Error('Invalid response format: expected an array of plans');
         }
 
-        const plans = data.map((plan, index) => {
+        const validatedPlans = plans.map((plan, index) => {
           try {
-            return PlanSchema.parse(plan);
+            return PlanSchema.parse({
+              ...plan,
+              id: plan.external_id,
+              basePrice: plan.base_price,
+              multiLineDiscounts: plan.multi_line_discounts,
+              dataAllowance: plan.data_allowance,
+              streamingQuality: plan.streaming_quality
+            });
           } catch (err) {
             console.error(`Invalid plan data at index ${index}:`, err);
             throw new Error('Invalid plan data received from server');
@@ -160,13 +97,12 @@ class VerizonDataManager {
         });
 
         console.log('Successfully fetched and parsed plans');
-        return plans;
+        return validatedPlans;
       })();
       return await this.retryPromise;
     } finally {
       this.retryPromise = null;
     }
-
   }
 
   private async fetchPromotions(): Promise<Promotion[]> {
@@ -176,17 +112,23 @@ class VerizonDataManager {
 
     try {
       this.retryPromotionsPromise = (async () => {
-        console.log('Fetching promotions from MCP server...');
-        const data = await this.fetchWithRetry<unknown[]>('fetch_promotions');
+        console.log('Fetching promotions from Grid API...');
+        const promotions = await scrapeGridPromotions();
         
-        if (!Array.isArray(data)) {
-          console.error('Invalid response format:', data);
+        if (!Array.isArray(promotions)) {
+          console.error('Invalid response format:', promotions);
           throw new Error('Invalid response format: expected an array of promotions');
         }
 
-        const promotions = data.map((promo, index) => {
+        const validatedPromotions = promotions.map((promo, index) => {
           try {
-            return PromotionSchema.parse(promo);
+            return PromotionSchema.parse({
+              ...promo,
+              id: promo.external_id,
+              stackable: promo.stackable || false,
+              terms: promo.terms || [],
+              eligiblePlans: promo.eligible_plans || []
+            });
           } catch (err) {
             console.error(`Invalid promotion data at index ${index}:`, err);
             throw new Error('Invalid promotion data received from server');
@@ -194,13 +136,12 @@ class VerizonDataManager {
         });
 
         console.log('Successfully fetched and parsed promotions');
-        return promotions;
+        return validatedPromotions;
       })();
       return await this.retryPromotionsPromise;
     } finally {
       this.retryPromotionsPromise = null;
     }
-
   }
 
   public async getPlans(): Promise<Plan[]> {
@@ -227,6 +168,10 @@ class VerizonDataManager {
       }
     }
     return this.promotions;
+  }
+
+  private shouldRefetch(lastFetch: number): boolean {
+    return !lastFetch || Date.now() - lastFetch > this.CACHE_DURATION;
   }
 
   public async getPlanById(planId: string): Promise<Plan | null> {
