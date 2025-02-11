@@ -1,3 +1,4 @@
+
 import { useMemo } from 'react';
 import { Plan, QuoteCalculation } from '@/types';
 import { z } from 'zod';
@@ -14,6 +15,8 @@ const QuoteInputSchema = z.object({
     }),
   }),
   lines: z.number().int().min(1).max(12),
+  streamingBill: z.number().optional(),
+  selectedPerks: z.array(z.string()).optional(),
 });
 
 interface QuoteError {
@@ -22,7 +25,12 @@ interface QuoteError {
 }
 
 // Non-hook calculation function
-const calculateQuote = (plan: Plan, lines: number): QuoteCalculation | null => {
+const calculateQuote = (
+  plan: Plan, 
+  lines: number, 
+  streamingBill: number = 0,
+  selectedPerks: string[] = []
+): QuoteCalculation | null => {
   if (!plan || lines <= 0) return null;
 
   const getLinePrice = (numLines: number): number => {
@@ -37,27 +45,39 @@ const calculateQuote = (plan: Plan, lines: number): QuoteCalculation | null => {
   const monthlyTotal = lines * linePrice;
   const hasDiscount = lines > 1;
 
+  // Calculate perks value
+  const perksValue = selectedPerks.length * 10; // $10 value per perk
+  const streamingSavings = streamingBill;
+  
   // Calculate annual savings if applicable
   const annualSavings = hasDiscount
     ? (plan.basePrice * lines * 12) - (monthlyTotal * 12)
     : 0;
+
+  // Calculate total savings including streaming and perks
+  const totalSavings = annualSavings + (streamingSavings * 12) + (perksValue * 12);
 
   return {
     linePrice,
     total: monthlyTotal,
     hasDiscount,
     annualSavings,
+    selectedPerks,
     breakdown: {
       subtotal: plan.basePrice * lines,
       discount: hasDiscount ? (plan.basePrice * lines) - monthlyTotal : 0,
       total: monthlyTotal,
+      streamingSavings,
+      totalSavings,
     },
   };
 };
 
 export const useQuoteCalculator = (
   selectedPlan: Plan | null,
-  lines: number
+  lines: number,
+  streamingBill: number = 0,
+  selectedPerks: string[] = []
 ): { calculation: QuoteCalculation | null; error: QuoteError | null } => {
   return useMemo(() => {
     // Early return if no data
@@ -70,9 +90,11 @@ export const useQuoteCalculator = (
       QuoteInputSchema.parse({
         plan: selectedPlan,
         lines,
+        streamingBill,
+        selectedPerks,
       });
 
-      const calculation = calculateQuote(selectedPlan, lines);
+      const calculation = calculateQuote(selectedPlan, lines, streamingBill, selectedPerks);
       
       return {
         calculation,
@@ -97,7 +119,14 @@ export const useQuoteCalculator = (
         },
       };
     }
-  }, [selectedPlan?.id, selectedPlan?.basePrice, selectedPlan?.multiLineDiscounts, lines]);
+  }, [
+    selectedPlan?.id, 
+    selectedPlan?.basePrice, 
+    selectedPlan?.multiLineDiscounts, 
+    lines,
+    streamingBill,
+    selectedPerks
+  ]);
 };
 
 // Utility function to format currency
@@ -112,10 +141,12 @@ export const formatCurrency = (amount: number): string => {
 export const calculatePlanSavings = (
   currentPlan: Plan,
   newPlan: Plan,
-  lines: number
+  lines: number,
+  streamingBill: number = 0,
+  selectedPerks: string[] = []
 ): number => {
   const currentCalc = calculateQuote(currentPlan, lines);
-  const newCalc = calculateQuote(newPlan, lines);
+  const newCalc = calculateQuote(newPlan, lines, streamingBill, selectedPerks);
 
   if (!currentCalc || !newCalc) return 0;
 

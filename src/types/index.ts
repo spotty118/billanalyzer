@@ -1,4 +1,3 @@
-
 export interface Plan {
   id: string;
   name: string;
@@ -18,6 +17,8 @@ export interface Plan {
   streamingQuality: '480p' | '720p' | '1080p' | '4K';
   autopayDiscount?: number;
   paperlessDiscount?: number;
+  planLevel?: 'welcome' | 'plus' | 'unlimited';
+  perks?: string[];
 }
 
 export interface Promotion {
@@ -42,7 +43,10 @@ export interface QuoteCalculation {
     subtotal: number;
     discount: number;
     total: number;
+    streamingSavings?: number;
+    totalSavings?: number;
   };
+  selectedPerks?: string[];
 }
 
 export interface ApiError {
