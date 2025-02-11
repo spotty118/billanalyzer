@@ -42,7 +42,7 @@ export async function scrapeGridPromotions(): Promise<Promotion[]> {
           external_id: promo_id,
           title,
           description: descMatch?.[1]?.trim() || '',
-          expires: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+          expires: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(), // 30 days from now
           type: determinePromotionType(title, descMatch?.[1] || ''),
           value: valueMatch?.[0] || 'Contact for details',
           stackable: false,
@@ -132,4 +132,3 @@ function determinePromotionType(title: string, description: string): 'device' | 
 export async function scrapeVerizonPromotions(): Promise<Promotion[]> {
   return scrapeGridPromotions();
 }
-

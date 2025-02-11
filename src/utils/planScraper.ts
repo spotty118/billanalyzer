@@ -98,4 +98,3 @@ export async function scrapeVerizonPlans(): Promise<VerizonPlanDetails[]> {
     return [];
   }
 }
-
