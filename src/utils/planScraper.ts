@@ -1,8 +1,9 @@
+
 import axios from 'axios';
 import * as cheerio from 'cheerio';
 import type { VerizonPlanDetails } from './types';
 import { supabase } from '@/integrations/supabase/client';
-import type { AnyNode, Element } from 'cheerio';
+import type { AnyNode } from 'cheerio/lib/nodes';
 
 // Helper functions
 function extractPrice($element: cheerio.Cheerio<AnyNode>): number {

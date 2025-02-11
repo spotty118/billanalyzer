@@ -1,8 +1,9 @@
+
 import axios from 'axios';
 import * as cheerio from 'cheerio';
 import type { Promotion } from './types';
 import { supabase } from '@/integrations/supabase/client';
-import type { AnyNode } from 'cheerio';
+import type { AnyNode } from 'cheerio/lib/nodes';
 
 function extractTerms($el: cheerio.Cheerio<AnyNode>): string[] {
   const termsEl = $el.find('.terms, .requirements, td').eq(4);
