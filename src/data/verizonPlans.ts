@@ -54,8 +54,6 @@ class VerizonDataManager {
   private readonly CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
   private readonly BASE_URL = '/api/mcp/verizon-data';
   private readonly serverStartupDelay = 500; // Add delay between concurrent requests
-  private isRetryingPlans: boolean = false;
-  private isRetryingPromotions: boolean = false;
   private retryPromise: Promise<Plan[]> | null = null;
   private retryPromotionsPromise: Promise<Promotion[]> | null = null;
 
@@ -143,7 +141,6 @@ class VerizonDataManager {
     }
 
     try {
-      this.isRetryingPlans = true;
       this.retryPromise = (async () => {
         console.log('Fetching plans from MCP server...');
         const data = await this.fetchWithRetry<unknown[]>('fetch_plans');
@@ -167,7 +164,6 @@ class VerizonDataManager {
       })();
       return await this.retryPromise;
     } finally {
-      this.isRetryingPlans = false;
       this.retryPromise = null;
     }
 
@@ -179,7 +175,6 @@ class VerizonDataManager {
     }
 
     try {
-      this.isRetryingPromotions = true;
       this.retryPromotionsPromise = (async () => {
         console.log('Fetching promotions from MCP server...');
         const data = await this.fetchWithRetry<unknown[]>('fetch_promotions');
@@ -203,7 +198,6 @@ class VerizonDataManager {
       })();
       return await this.retryPromotionsPromise;
     } finally {
-      this.isRetryingPromotions = false;
       this.retryPromotionsPromise = null;
     }
 
@@ -250,8 +244,6 @@ class VerizonDataManager {
     this.promotions = null;
     this.lastPlansFetch = 0;
     this.lastPromotionsFetch = 0;
-    this.isRetryingPlans = false;
-    this.isRetryingPromotions = false;
     this.retryPromise = null;
     this.retryPromotionsPromise = null;
     console.log('Cache cleared');
