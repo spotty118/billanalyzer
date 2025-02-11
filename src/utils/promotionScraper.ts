@@ -1,11 +1,9 @@
-
 import axios from 'axios';
 import * as cheerio from 'cheerio';
 import type { Promotion } from './types';
 import { supabase } from '@/integrations/supabase/client';
-import type { AnyNode } from 'cheerio/lib/nodes';
 
-function extractTerms($el: cheerio.Cheerio<AnyNode>): string[] {
+function extractTerms($el: cheerio.Cheerio<cheerio.Element>): string[] {
   const termsEl = $el.find('.terms, .requirements, td').eq(4);
   return termsEl.length ? 
     termsEl.text()
@@ -15,7 +13,7 @@ function extractTerms($el: cheerio.Cheerio<AnyNode>): string[] {
     [];
 }
 
-function determinePromotionType($el: cheerio.Cheerio<AnyNode>): 'device' | 'plan' | 'trade-in' {
+function determinePromotionType($el: cheerio.Cheerio<cheerio.Element>): 'device' | 'plan' | 'trade-in' {
   const typeEl = $el.find('.type, .category, td').first();
   const typeText = typeEl.length ? typeEl.text().trim().toLowerCase() : '';
   if (typeText.includes('device')) return 'device';
