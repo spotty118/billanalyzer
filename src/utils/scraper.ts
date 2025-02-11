@@ -1,7 +1,7 @@
 
 import axios from 'axios';
 import * as cheerio from 'cheerio';
-import type { CheerioAPI, Element } from 'cheerio';
+import type { Element, CheerioAPI, Cheerio } from 'cheerio';
 import type { Promotion } from '@/types';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -80,7 +80,7 @@ export async function scrapeVerizonPlans(): Promise<VerizonPlanDetails[]> {
         // Extract data allowance and handle unlimited case
         const dataText = $el.find('.data-allowance, .data-details').first().text().trim().toLowerCase();
         const dataAllowance = {
-          premium: dataText.includes('unlimited') ? 'unlimited' : parseInt(dataText) || 0,
+          premium: dataText.includes('unlimited') ? 'unlimited' as const : parseInt(dataText) || 0,
           hotspot: extractHotspotData($el)
         };
 
@@ -112,21 +112,34 @@ export async function scrapeVerizonPlans(): Promise<VerizonPlanDetails[]> {
     // Update plans in database
     if (plans.length > 0) {
       for (const plan of plans) {
-        const { data: existingPlan } = await supabase
+        const { data: existingPlan, error: selectError } = await supabase
           .from('verizon_plans')
           .select('id')
           .eq('external_id', plan.external_id)
           .maybeSingle();
 
+        if (selectError) {
+          console.error('Error checking existing plan:', selectError);
+          continue;
+        }
+
         if (existingPlan) {
-          await supabase
+          const { error: updateError } = await supabase
             .from('verizon_plans')
             .update(plan)
             .eq('external_id', plan.external_id);
+
+          if (updateError) {
+            console.error('Error updating plan:', updateError);
+          }
         } else {
-          await supabase
+          const { error: insertError } = await supabase
             .from('verizon_plans')
             .insert(plan);
+
+          if (insertError) {
+            console.error('Error inserting plan:', insertError);
+          }
         }
       }
     }
@@ -141,12 +154,12 @@ export async function scrapeVerizonPlans(): Promise<VerizonPlanDetails[]> {
 }
 
 // Helper functions
-function extractPrice($element: cheerio.Cheerio<Element>): number {
+function extractPrice($element: Cheerio<Element>): number {
   const priceText = $element.text().trim();
   return parseFloat(priceText.replace(/[^0-9.]/g, '')) || 0;
 }
 
-function extractHotspotData($element: cheerio.Cheerio<Element>): number | undefined {
+function extractHotspotData($element: Cheerio<Element>): number | undefined {
   const hotspotText = $element.find('.hotspot-data, .mobile-hotspot').first().text().trim();
   const hotspotGB = parseInt(hotspotText.match(/\d+/)?.[0] || '0');
   return hotspotGB || undefined;
@@ -159,7 +172,7 @@ function determineStreamingQuality(text: string): '480p' | '720p' | '1080p' | '4
   return '480p';
 }
 
-function extractDiscount($element: cheerio.Cheerio<Element>, type: 'autopay' | 'paperless'): number | undefined {
+function extractDiscount($element: Cheerio<Element>, type: 'autopay' | 'paperless'): number | undefined {
   const discountText = $element.find(`.${type}-discount, .${type}-billing`).first().text().trim();
   const discount = parseFloat(discountText.replace(/[^0-9.]/g, ''));
   return discount || undefined;
@@ -220,8 +233,11 @@ export async function scrapeGridPromotions(): Promise<Promotion[]> {
                     typeText.includes('plan') ? 'plan' as const : 'trade-in' as const;
 
         if (title) {
-          const promotion = {
-            external_id: $el.attr('id') || `promo-${title.toLowerCase().replace(/\s+/g, '-')}`,
+          const external_id = $el.attr('id') || `promo-${title.toLowerCase().replace(/\s+/g, '-')}`;
+          
+          const promotion: Promotion = {
+            id: '', // Will be set by Supabase
+            external_id,
             title,
             description,
             expires,
@@ -236,21 +252,30 @@ export async function scrapeGridPromotions(): Promise<Promotion[]> {
           supabase
             .from('verizon_promotions')
             .select('id')
-            .eq('external_id', promotion.external_id)
+            .eq('external_id', external_id)
             .maybeSingle()
-            .then(({ data: existingPromo }) => {
+            .then(({ data: existingPromo, error: selectError }) => {
+              if (selectError) {
+                console.error('Error checking existing promotion:', selectError);
+                return;
+              }
+
               if (existingPromo) {
                 return supabase
                   .from('verizon_promotions')
                   .update(promotion)
-                  .eq('external_id', promotion.external_id);
+                  .eq('external_id', external_id);
               } else {
                 return supabase
                   .from('verizon_promotions')
                   .insert(promotion);
               }
             })
-            .catch(error => console.error('Error updating promotion:', error));
+            .then(({ error: upsertError }) => {
+              if (upsertError) {
+                console.error('Error upserting promotion:', upsertError);
+              }
+            });
         }
       });
     });
@@ -268,4 +293,3 @@ export async function scrapeGridPromotions(): Promise<Promotion[]> {
 export async function scrapeVerizonPromotions(): Promise<Promotion[]> {
   return scrapeGridPromotions();
 }
-
