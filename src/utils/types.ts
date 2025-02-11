@@ -1,4 +1,3 @@
-
 export interface VerizonPlanDetails {
   external_id: string;
   name: string;
@@ -30,4 +29,5 @@ export interface Promotion {
   value: string;
   terms?: string[];
   stackable: boolean;
+  eligiblePlans?: string[];
 }
