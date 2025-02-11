@@ -25,18 +25,6 @@ const LoadingFallback = () => (
   </Card>
 );
 
-const ErrorFallback = ({ error }: { error: Error }) => (
-  <Card>
-    <CardContent className="p-6">
-      <Alert variant="destructive">
-        <AlertDescription>
-          {error.message || 'An error occurred while loading the component'}
-        </AlertDescription>
-      </Alert>
-    </CardContent>
-  </Card>
-);
-
 function MainLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex">

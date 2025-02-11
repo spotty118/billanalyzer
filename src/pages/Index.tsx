@@ -1,9 +1,6 @@
+
 import { AppSidebar } from "@/components/AppSidebar";
 import { QuoteCalculator } from "@/components/QuoteCalculator";
-import { CommissionCalculator } from "@/components/CommissionCalculator";
-import { PromotionsOverview } from "@/components/PromotionsOverview";
-import { NumberLookup } from "@/components/NumberLookup";
-import { BillAnalyzer } from "@/components/BillAnalyzer";
 
 const Index = () => {
   return (
