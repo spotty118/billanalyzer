@@ -1,11 +1,8 @@
-
 import axios from 'axios';
 import * as cheerio from 'cheerio';
 import type { Promotion } from '@/types';
-import type { VerizonPlanDetails } from '@/types';
 
-// Remove unused TableStructure interface
-
+// Define VerizonPlanDetails interface locally since it's specific to the scraper
 export interface VerizonPlanDetails {
   id: string;
   name: string;
@@ -119,12 +116,12 @@ export async function scrapeVerizonPlans(): Promise<VerizonPlanDetails[]> {
 }
 
 // Helper functions
-function extractPrice($element: cheerio.Cheerio<cheerio.Element>): number {
+function extractPrice($element: cheerio.Cheerio): number {
   const priceText = $element.text().trim();
   return parseFloat(priceText.replace(/[^0-9.]/g, '')) || 0;
 }
 
-function extractHotspotData($element: cheerio.Cheerio<cheerio.Element>): number | undefined {
+function extractHotspotData($element: cheerio.Cheerio): number | undefined {
   const hotspotText = $element.find('.hotspot-data, .mobile-hotspot').first().text().trim();
   const hotspotGB = parseInt(hotspotText.match(/\d+/)?.[0] || '0');
   return hotspotGB || undefined;
@@ -137,7 +134,7 @@ function determineStreamingQuality(text: string): '480p' | '720p' | '1080p' | '4
   return '480p';
 }
 
-function extractDiscount($element: cheerio.Cheerio<cheerio.Element>, type: 'autopay' | 'paperless'): number | undefined {
+function extractDiscount($element: cheerio.Cheerio, type: 'autopay' | 'paperless'): number | undefined {
   const discountText = $element.find(`.${type}-discount, .${type}-billing`).first().text().trim();
   const discount = parseFloat(discountText.replace(/[^0-9.]/g, ''));
   return discount || undefined;
@@ -245,4 +242,3 @@ export async function scrapeVerizonPromotions(): Promise<Promotion[]> {
     return [];
   }
 }
-
