@@ -5,9 +5,9 @@ import { AppSidebar } from './components/AppSidebar';
 import { Card, CardContent } from './components/ui/card';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import Index from './pages/Index';
+import { QuoteCalculator } from './components/QuoteCalculator';
 
 // Lazy load components
-const QuoteCalculator = lazy(() => import('./components/QuoteCalculator').then(mod => ({ default: mod.QuoteCalculator })));
 const CommissionCalculator = lazy(() => import('./components/CommissionCalculator').then(mod => ({ default: mod.CommissionCalculator })));
 const PromotionsOverview = lazy(() => import('./components/PromotionsOverview').then(mod => ({ default: mod.PromotionsOverview })));
 const AdminLogin = lazy(() => import('./pages/AdminLogin'));
@@ -43,15 +43,11 @@ function App() {
         <Routes>
           <Route
             path="/"
-            element={<Index />}
+            element={<MainLayout><QuoteCalculator /></MainLayout>}
           />
           <Route
             path="/quotes"
-            element={
-              <MainLayout>
-                <QuoteCalculator />
-              </MainLayout>
-            }
+            element={<MainLayout><QuoteCalculator /></MainLayout>}
           />
           <Route
             path="/commissions"
