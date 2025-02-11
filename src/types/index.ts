@@ -1,3 +1,4 @@
+
 export interface Plan {
   id: string;
   name: string;
@@ -15,6 +16,8 @@ export interface Plan {
     hotspot?: number;
   };
   streamingQuality: '480p' | '720p' | '1080p' | '4K';
+  autopayDiscount?: number;
+  paperlessDiscount?: number;
 }
 
 export interface Promotion {
@@ -55,4 +58,38 @@ export type ApiResponse<T> = {
 } | {
   data?: never;
   error: ApiError;
+}
+
+export interface Database {
+  public: {
+    Tables: {
+      verizon_plans: {
+        Row: {
+          id: string;
+          external_id: string;
+          name: string;
+          base_price: number;
+          type: 'consumer' | 'business';
+          multi_line_discounts: {
+            lines2: number;
+            lines3: number;
+            lines4: number;
+            lines5Plus: number;
+          };
+          data_allowance: {
+            premium: number | 'unlimited';
+            hotspot?: number;
+          };
+          streaming_quality: '480p' | '720p' | '1080p' | '4K';
+          autopay_discount?: number;
+          paperless_discount?: number;
+          features: string[];
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: Omit<Database['public']['Tables']['verizon_plans']['Row'], 'id' | 'created_at' | 'updated_at'>;
+        Update: Partial<Database['public']['Tables']['verizon_plans']['Insert']>;
+      };
+    };
+  };
 }

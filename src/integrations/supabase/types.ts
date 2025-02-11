@@ -113,7 +113,8 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      [_ in never]: never
+      plan_type: "consumer" | "business"
+      streaming_quality: "480p" | "720p" | "1080p" | "4K"
     }
     CompositeTypes: {
       [_ in never]: never
