@@ -1,3 +1,4 @@
+
 import { Suspense, lazy } from 'react';
 import './App.css';
 import { AppSidebar } from './components/AppSidebar';
@@ -37,16 +38,10 @@ function MainLayout({ children }: { children: React.ReactNode }) {
 function App() {
   return (
     <div className="min-h-screen bg-gray-100 dark:bg-gray-900">
-      <Router>
+      <Router basename="/">
         <Routes>
-          <Route
-            path="/"
-            element={<MainLayout><QuoteCalculator /></MainLayout>}
-          />
-          <Route
-            path="/quotes"
-            element={<MainLayout><QuoteCalculator /></MainLayout>}
-          />
+          <Route path="/" element={<MainLayout><QuoteCalculator /></MainLayout>} />
+          <Route path="/quotes" element={<MainLayout><QuoteCalculator /></MainLayout>} />
           <Route
             path="/commissions"
             element={
