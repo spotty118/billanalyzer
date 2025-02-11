@@ -4,7 +4,7 @@ import type { Promotion } from './types';
 import { supabase } from '@/integrations/supabase/client';
 
 /**
- * Scrapes and updates promotions using Puppeteer
+ * Scrapes and updates promotions using the Grid API
  */
 export async function scrapeGridPromotions(): Promise<Promotion[]> {
   try {
@@ -132,3 +132,4 @@ function determinePromotionType(title: string, description: string): 'device' | 
 export async function scrapeVerizonPromotions(): Promise<Promotion[]> {
   return scrapeGridPromotions();
 }
+

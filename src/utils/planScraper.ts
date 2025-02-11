@@ -4,7 +4,7 @@ import type { VerizonPlanDetails } from './types';
 import { supabase } from '@/integrations/supabase/client';
 
 /**
- * Scrapes and updates Verizon plan information using Puppeteer
+ * Scrapes and updates Verizon plan information using the Grid API
  */
 export async function scrapeVerizonPlans(): Promise<VerizonPlanDetails[]> {
   try {
@@ -44,12 +44,12 @@ export async function scrapeVerizonPlans(): Promise<VerizonPlanDetails[]> {
             lines5Plus: 0
           },
           features: Array.isArray(planData.structure.features) ? planData.structure.features : [],
-          type: 'consumer' as const,
+          type: 'consumer',
           data_allowance: {
             premium: 'unlimited',
             hotspot: undefined
           },
-          streaming_quality: '480p' as const
+          streaming_quality: '480p'
         };
 
         // Update the plan in the database
@@ -98,3 +98,4 @@ export async function scrapeVerizonPlans(): Promise<VerizonPlanDetails[]> {
     return [];
   }
 }
+
