@@ -10,7 +10,6 @@ import Index from './pages/Index';
 
 // Lazy load components
 const QuoteCalculator = lazy(() => import('./components/QuoteCalculator').then(mod => ({ default: mod.QuoteCalculator })));
-const BillAnalyzer = lazy(() => import('./components/BillAnalyzer').then(mod => ({ default: mod.BillAnalyzer })));
 const CommissionCalculator = lazy(() => import('./components/CommissionCalculator').then(mod => ({ default: mod.CommissionCalculator })));
 const PromotionsOverview = lazy(() => import('./components/PromotionsOverview').then(mod => ({ default: mod.PromotionsOverview })));
 const AdminLogin = lazy(() => import('./pages/AdminLogin'));
@@ -20,18 +19,6 @@ const LoadingFallback = () => (
   <Card>
     <CardContent className="p-6">
       <div>Loading...</div>
-    </CardContent>
-  </Card>
-);
-
-const ErrorFallback = ({ error }: { error: Error }) => (
-  <Card>
-    <CardContent className="p-6">
-      <Alert variant="destructive">
-        <AlertDescription>
-          {error.message || 'An error occurred while loading the component'}
-        </AlertDescription>
-      </Alert>
     </CardContent>
   </Card>
 );
