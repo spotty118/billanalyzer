@@ -1,7 +1,7 @@
 
 import axios from 'axios';
 import * as cheerio from 'cheerio';
-import type { Cheerio, CheerioAPI } from 'cheerio';
+import type { Cheerio } from 'cheerio';
 import type { Element } from 'domhandler';
 import type { Promotion } from '@/types';
 import { supabase } from '@/integrations/supabase/client';
@@ -58,18 +58,20 @@ export async function scrapeVerizonPlans(): Promise<VerizonPlanDetails[]> {
         const $el = $(element);
         
         // Extract plan name
-        const name = $el.find('.plan-name, .plan-title, h2, h3').first().text().trim();
+        const nameEl = $el.find('.plan-name, .plan-title, h2, h3').first();
+        const name = nameEl.length ? nameEl.text().trim() : '';
         
         // Extract base price
-        const basePriceText = $el.find('.price, .base-price').first().text().trim();
+        const priceEl = $el.find('.price', '.base-price').first();
+        const basePriceText = priceEl.length ? priceEl.text().trim() : '0';
         const basePrice = parseFloat(basePriceText.replace(/[^0-9.]/g, '')) || 0;
 
         // Extract multi-line discounts
         const multiLineDiscounts = {
-          lines2: extractPrice($el.find('[data-lines="2"]')),
-          lines3: extractPrice($el.find('[data-lines="3"]')),
-          lines4: extractPrice($el.find('[data-lines="4"]')),
-          lines5Plus: extractPrice($el.find('[data-lines="5"]'))
+          lines2: extractPrice($el.find('[data-lines="2"]') as Cheerio<Element>),
+          lines3: extractPrice($el.find('[data-lines="3"]') as Cheerio<Element>),
+          lines4: extractPrice($el.find('[data-lines="4"]') as Cheerio<Element>),
+          lines5Plus: extractPrice($el.find('[data-lines="5"]') as Cheerio<Element>)
         };
 
         // Extract features
@@ -79,19 +81,21 @@ export async function scrapeVerizonPlans(): Promise<VerizonPlanDetails[]> {
           .filter(Boolean);
 
         // Extract data allowance and handle unlimited case
-        const dataText = $el.find('.data-allowance, .data-details').first().text().trim().toLowerCase();
+        const dataEl = $el.find('.data-allowance, .data-details').first();
+        const dataText = dataEl.length ? dataEl.text().trim().toLowerCase() : '';
         const dataAllowance = {
           premium: dataText.includes('unlimited') ? 'unlimited' as const : parseInt(dataText) || 0,
-          hotspot: extractHotspotData($el)
+          hotspot: extractHotspotData($el as Cheerio<Element>)
         };
 
         // Extract streaming quality
-        const streamingText = $el.find('.streaming-quality, .video-quality').first().text().trim().toLowerCase();
+        const streamingEl = $el.find('.streaming-quality, .video-quality').first();
+        const streamingText = streamingEl.length ? streamingEl.text().trim().toLowerCase() : '';
         const streamingQuality = determineStreamingQuality(streamingText);
 
         // Extract autopay and paperless discounts
-        const autopayDiscount = extractDiscount($el, 'autopay');
-        const paperlessDiscount = extractDiscount($el, 'paperless');
+        const autopayDiscount = extractDiscount($el as Cheerio<Element>, 'autopay');
+        const paperlessDiscount = extractDiscount($el as Cheerio<Element>, 'paperless');
 
         if (name) {
           plans.push({
@@ -156,12 +160,15 @@ export async function scrapeVerizonPlans(): Promise<VerizonPlanDetails[]> {
 
 // Helper functions
 function extractPrice($element: Cheerio<Element>): number {
+  if (!$element.length) return 0;
   const priceText = $element.text().trim();
   return parseFloat(priceText.replace(/[^0-9.]/g, '')) || 0;
 }
 
 function extractHotspotData($element: Cheerio<Element>): number | undefined {
-  const hotspotText = $element.find('.hotspot-data, .mobile-hotspot').first().text().trim();
+  const hotspotEl = $element.find('.hotspot-data, .mobile-hotspot').first();
+  if (!hotspotEl.length) return undefined;
+  const hotspotText = hotspotEl.text().trim();
   const hotspotGB = parseInt(hotspotText.match(/\d+/)?.[0] || '0');
   return hotspotGB || undefined;
 }
@@ -174,7 +181,9 @@ function determineStreamingQuality(text: string): '480p' | '720p' | '1080p' | '4
 }
 
 function extractDiscount($element: Cheerio<Element>, type: 'autopay' | 'paperless'): number | undefined {
-  const discountText = $element.find(`.${type}-discount, .${type}-billing`).first().text().trim();
+  const discountEl = $element.find(`.${type}-discount, .${type}-billing`).first();
+  if (!discountEl.length) return undefined;
+  const discountText = discountEl.text().trim();
   const discount = parseFloat(discountText.replace(/[^0-9.]/g, ''));
   return discount || undefined;
 }
@@ -217,7 +226,7 @@ export async function scrapeGridPromotions(): Promise<Promotion[]> {
         const descriptionEl = $el.find('.details, .description, td').first();
         const description = descriptionEl.length ? descriptionEl.text().trim() : '';
         
-        const terms = extractTerms($el);
+        const terms = extractTerms($el as Cheerio<Element>);
         
         const expiresEl = $el.find('.date, .expiration, time').first();
         const expires = expiresEl.length ? expiresEl.text().trim() :
@@ -226,7 +235,7 @@ export async function scrapeGridPromotions(): Promise<Promotion[]> {
         const valueEl = $el.find('.value, .savings').first();
         const value = valueEl.length ? valueEl.text().trim() : 'Contact for details';
         
-        const type = determinePromotionType($el);
+        const type = determinePromotionType($el as Cheerio<Element>);
 
         if (title) {
           const promo_id = $el.attr('id') || `promo-${title.toLowerCase().replace(/\s+/g, '-')}`;
@@ -288,7 +297,7 @@ export async function scrapeGridPromotions(): Promise<Promotion[]> {
   }
 }
 
-// Helper functions
+// Helper functions for promotions
 function extractTerms($el: Cheerio<Element>): string[] {
   const termsEl = $el.find('.terms, .requirements, td').eq(4);
   return termsEl.length ? 
