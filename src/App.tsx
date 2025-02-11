@@ -3,8 +3,6 @@ import { Suspense, lazy } from 'react';
 import './App.css';
 import { AppSidebar } from './components/AppSidebar';
 import { Card, CardContent } from './components/ui/card';
-import { Alert, AlertDescription } from './components/ui/alert';
-import { ErrorBoundary } from './components/ui/error-boundary';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import Index from './pages/Index';
 
@@ -41,57 +39,55 @@ function MainLayout({ children }: { children: React.ReactNode }) {
 function App() {
   return (
     <div className="min-h-screen bg-gray-100 dark:bg-gray-900">
-      <ErrorBoundary>
-        <Router>
-            <Routes>
-              <Route
-                path="/"
-                element={<Index />}
-              />
-              <Route
-                path="/quotes"
-                element={
-                  <MainLayout>
-                    <QuoteCalculator />
-                  </MainLayout>
-                }
-              />
-              <Route
-                path="/commissions"
-                element={
-                  <MainLayout>
-                    <CommissionCalculator />
-                  </MainLayout>
-                }
-              />
-              <Route
-                path="/promotions"
-                element={
-                  <MainLayout>
-                    <PromotionsOverview />
-                  </MainLayout>
-                }
-              />
-              <Route 
-                path="/admin-login" 
-                element={
-                  <Suspense fallback={<LoadingFallback />}>
-                    <AdminLogin />
-                  </Suspense>
-                } 
-              />
-              <Route 
-                path="/admin-dashboard" 
-                element={
-                  <Suspense fallback={<LoadingFallback />}>
-                    <AdminDashboard />
-                  </Suspense>
-                } 
-              />
-              <Route path="*" element={<Navigate to="/" replace />} />
-            </Routes>
-        </Router>
-      </ErrorBoundary>
+      <Router>
+        <Routes>
+          <Route
+            path="/"
+            element={<Index />}
+          />
+          <Route
+            path="/quotes"
+            element={
+              <MainLayout>
+                <QuoteCalculator />
+              </MainLayout>
+            }
+          />
+          <Route
+            path="/commissions"
+            element={
+              <MainLayout>
+                <CommissionCalculator />
+              </MainLayout>
+            }
+          />
+          <Route
+            path="/promotions"
+            element={
+              <MainLayout>
+                <PromotionsOverview />
+              </MainLayout>
+            }
+          />
+          <Route 
+            path="/admin-login" 
+            element={
+              <Suspense fallback={<LoadingFallback />}>
+                <AdminLogin />
+              </Suspense>
+            } 
+          />
+          <Route 
+            path="/admin-dashboard" 
+            element={
+              <Suspense fallback={<LoadingFallback />}>
+                <AdminDashboard />
+              </Suspense>
+            } 
+          />
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </Router>
     </div>
   );
 }
