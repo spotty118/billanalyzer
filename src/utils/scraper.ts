@@ -1,6 +1,7 @@
+
 import axios from 'axios';
 import * as cheerio from 'cheerio';
-import type { Cheerio, CheerioAPI } from 'cheerio';
+import type { Cheerio } from 'cheerio';
 import type { Element } from 'domhandler';
 import type { Promotion } from '@/types';
 import { supabase } from '@/integrations/supabase/client';
@@ -208,29 +209,16 @@ export async function scrapeGridPromotions(): Promise<Promotion[]> {
       $(selector).each((_, element) => {
         const $el = $(element);
         
-        // Extract title from various possible elements
-        const title = $el.find('.title, .promo-title, .deal-title, h2, h3').first().text().trim() ||
-                     $el.find('td').eq(1).text().trim();
+        // Extract data from element using helper functions that handle Element type
+        const title = extractText($el, '.title, .promo-title, .deal-title, h2, h3') ||
+                     extractText($el.find('td').eq(1));
 
-        // Extract description and terms
-        const description = $el.find('.details, .description, td').eq(3).text().trim();
-        const terms = $el.find('.terms, .requirements, td').eq(4)
-          .text()
-          .split(/[•\n]/)
-          .map(item => item.trim())
-          .filter(item => item.length > 0);
-
-        // Extract expiration date
-        const expires = $el.find('.date, .expiration, time').first().text().trim() ||
+        const description = extractText($el, '.details, .description, td').eq(3);
+        const terms = extractTerms($el);
+        const expires = extractText($el, '.date, .expiration, time') ||
                        new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
-
-        // Extract value
-        const value = $el.find('.value, .savings').first().text().trim() || 'Contact for details';
-
-        // Extract type
-        const typeText = $el.find('.type, .category, td').first().text().trim().toLowerCase();
-        const type = typeText.includes('device') ? 'device' as const :
-                    typeText.includes('plan') ? 'plan' as const : 'trade-in' as const;
+        const value = extractText($el, '.value, .savings') || 'Contact for details';
+        const type = determinePromotionType($el);
 
         if (title) {
           const promo_id = $el.attr('id') || `promo-${title.toLowerCase().replace(/\s+/g, '-')}`;
@@ -290,6 +278,27 @@ export async function scrapeGridPromotions(): Promise<Promotion[]> {
     console.error('Error scraping Grid promotions:', error);
     return [];
   }
+}
+
+// Additional helper functions for promotion scraping
+function extractText($element: Cheerio<Element>, selector?: string): string {
+  const $target = selector ? $element.find(selector) : $element;
+  return $target.first().text().trim();
+}
+
+function extractTerms($element: Cheerio<Element>): string[] {
+  return $element.find('.terms, .requirements, td').eq(4)
+    .text()
+    .split(/[•\n]/)
+    .map(item => item.trim())
+    .filter(item => item.length > 0);
+}
+
+function determinePromotionType($element: Cheerio<Element>): 'device' | 'plan' | 'trade-in' {
+  const typeText = extractText($element, '.type, .category, td').toLowerCase();
+  if (typeText.includes('device')) return 'device';
+  if (typeText.includes('plan')) return 'plan';
+  return 'trade-in';
 }
 
 /** @deprecated Use scrapeGridPromotions instead */
