@@ -9,7 +9,102 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      [_ in never]: never
+      verizon_plans: {
+        Row: {
+          autopay_discount: number | null
+          base_price: number
+          created_at: string
+          data_allowance: Json
+          external_id: string
+          features: string[]
+          id: string
+          multi_line_discounts: Json
+          name: string
+          paperless_discount: number | null
+          streaming_quality: string
+          type: string
+          updated_at: string
+        }
+        Insert: {
+          autopay_discount?: number | null
+          base_price: number
+          created_at?: string
+          data_allowance: Json
+          external_id: string
+          features: string[]
+          id?: string
+          multi_line_discounts: Json
+          name: string
+          paperless_discount?: number | null
+          streaming_quality: string
+          type: string
+          updated_at?: string
+        }
+        Update: {
+          autopay_discount?: number | null
+          base_price?: number
+          created_at?: string
+          data_allowance?: Json
+          external_id?: string
+          features?: string[]
+          id?: string
+          multi_line_discounts?: Json
+          name?: string
+          paperless_discount?: number | null
+          streaming_quality?: string
+          type?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      verizon_promotions: {
+        Row: {
+          created_at: string
+          description: string
+          eligible_plans: string[] | null
+          expires: string
+          external_id: string
+          id: string
+          stackable: boolean | null
+          terms: string[] | null
+          title: string
+          type: string
+          updated_at: string
+          value: string
+          version: string | null
+        }
+        Insert: {
+          created_at?: string
+          description: string
+          eligible_plans?: string[] | null
+          expires: string
+          external_id: string
+          id?: string
+          stackable?: boolean | null
+          terms?: string[] | null
+          title: string
+          type: string
+          updated_at?: string
+          value: string
+          version?: string | null
+        }
+        Update: {
+          created_at?: string
+          description?: string
+          eligible_plans?: string[] | null
+          expires?: string
+          external_id?: string
+          id?: string
+          stackable?: boolean | null
+          terms?: string[] | null
+          title?: string
+          type?: string
+          updated_at?: string
+          value?: string
+          version?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

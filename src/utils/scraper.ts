@@ -1,13 +1,16 @@
+
 import axios from 'axios';
 import * as cheerio from 'cheerio';
+import type { CheerioAPI, Element } from 'cheerio';
 import type { Promotion } from '@/types';
+import { supabase } from '@/integrations/supabase/client';
 
 // Define VerizonPlanDetails interface locally since it's specific to the scraper
 export interface VerizonPlanDetails {
-  id: string;
+  external_id: string;
   name: string;
-  basePrice: number;
-  multiLineDiscounts: {
+  base_price: number;
+  multi_line_discounts: {
     lines2: number;
     lines3: number;
     lines4: number;
@@ -15,22 +18,22 @@ export interface VerizonPlanDetails {
   };
   features: string[];
   type: 'consumer' | 'business';
-  dataAllowance: {
+  data_allowance: {
     premium: number | 'unlimited';
     hotspot?: number;
   };
-  streamingQuality: '480p' | '720p' | '1080p' | '4K';
-  autopayDiscount?: number;
-  paperlessDiscount?: number;
+  streaming_quality: '480p' | '720p' | '1080p' | '4K';
+  autopay_discount?: number;
+  paperless_discount?: number;
 }
 
 /**
- * Scrapes real-time Verizon consumer plan information
+ * Scrapes and updates Verizon plan information
  */
 export async function scrapeVerizonPlans(): Promise<VerizonPlanDetails[]> {
   try {
     console.log('Starting Verizon plan scraping...');
-    const { data } = await axios.get('http://localhost:3001/api/grid');
+    const { data } = await axios.get('/api/grid');
     
     if (!data.html) {
       console.log('No HTML content found in response');
@@ -50,7 +53,7 @@ export async function scrapeVerizonPlans(): Promise<VerizonPlanDetails[]> {
     ];
 
     planSelectors.forEach(selector => {
-      $(selector).each((index, element) => {
+      $(selector).each((_, element) => {
         const $el = $(element);
         
         // Extract plan name
@@ -75,9 +78,9 @@ export async function scrapeVerizonPlans(): Promise<VerizonPlanDetails[]> {
           .filter(Boolean);
 
         // Extract data allowance and handle unlimited case
-        const dataText = $el.find('.data-allowance, .data-details').first().text().trim();
+        const dataText = $el.find('.data-allowance, .data-details').first().text().trim().toLowerCase();
         const dataAllowance = {
-          premium: dataText.toLowerCase().includes('unlimited') ? 'unlimited' : parseInt(dataText) || 0,
+          premium: dataText.includes('unlimited') ? 'unlimited' : parseInt(dataText) || 0,
           hotspot: extractHotspotData($el)
         };
 
@@ -91,22 +94,44 @@ export async function scrapeVerizonPlans(): Promise<VerizonPlanDetails[]> {
 
         if (name) {
           plans.push({
-            id: $el.attr('id') || `plan-${index}`,
+            external_id: $el.attr('id') || `plan-${name.toLowerCase().replace(/\s+/g, '-')}`,
             name,
-            basePrice,
-            multiLineDiscounts,
+            base_price: basePrice,
+            multi_line_discounts: multiLineDiscounts,
             features,
-            type: 'consumer' as const,
-            dataAllowance,
-            streamingQuality,
-            ...(autopayDiscount && { autopayDiscount }),
-            ...(paperlessDiscount && { paperlessDiscount })
+            type: 'consumer',
+            data_allowance: dataAllowance,
+            streaming_quality: streamingQuality,
+            ...(autopayDiscount && { autopay_discount: autopayDiscount }),
+            ...(paperlessDiscount && { paperless_discount: paperlessDiscount })
           });
         }
       });
     });
 
-    console.log(`Found ${plans.length} Verizon plans`);
+    // Update plans in database
+    if (plans.length > 0) {
+      for (const plan of plans) {
+        const { data: existingPlan } = await supabase
+          .from('verizon_plans')
+          .select('id')
+          .eq('external_id', plan.external_id)
+          .maybeSingle();
+
+        if (existingPlan) {
+          await supabase
+            .from('verizon_plans')
+            .update(plan)
+            .eq('external_id', plan.external_id);
+        } else {
+          await supabase
+            .from('verizon_plans')
+            .insert(plan);
+        }
+      }
+    }
+
+    console.log(`Found and updated ${plans.length} Verizon plans`);
     return plans;
 
   } catch (error) {
@@ -116,12 +141,12 @@ export async function scrapeVerizonPlans(): Promise<VerizonPlanDetails[]> {
 }
 
 // Helper functions
-function extractPrice($element: cheerio.Cheerio): number {
+function extractPrice($element: cheerio.Cheerio<Element>): number {
   const priceText = $element.text().trim();
   return parseFloat(priceText.replace(/[^0-9.]/g, '')) || 0;
 }
 
-function extractHotspotData($element: cheerio.Cheerio): number | undefined {
+function extractHotspotData($element: cheerio.Cheerio<Element>): number | undefined {
   const hotspotText = $element.find('.hotspot-data, .mobile-hotspot').first().text().trim();
   const hotspotGB = parseInt(hotspotText.match(/\d+/)?.[0] || '0');
   return hotspotGB || undefined;
@@ -134,18 +159,18 @@ function determineStreamingQuality(text: string): '480p' | '720p' | '1080p' | '4
   return '480p';
 }
 
-function extractDiscount($element: cheerio.Cheerio, type: 'autopay' | 'paperless'): number | undefined {
+function extractDiscount($element: cheerio.Cheerio<Element>, type: 'autopay' | 'paperless'): number | undefined {
   const discountText = $element.find(`.${type}-discount, .${type}-billing`).first().text().trim();
   const discount = parseFloat(discountText.replace(/[^0-9.]/g, ''));
   return discount || undefined;
 }
 
 /**
- * Scrapes promotions from vzdaily.com
+ * Scrapes and updates promotions from grid
  */
 export async function scrapeGridPromotions(): Promise<Promotion[]> {
   try {
-    const { data } = await axios.get('http://localhost:3001/api/grid');
+    const { data } = await axios.get('/api/grid');
     console.log('Parsing response...');
     
     if (!data.html) {
@@ -167,7 +192,7 @@ export async function scrapeGridPromotions(): Promise<Promotion[]> {
     ];
 
     promoSelectors.forEach(selector => {
-      $(selector).each((index, element) => {
+      $(selector).each((_, element) => {
         const $el = $(element);
         
         // Extract title from various possible elements
@@ -184,7 +209,7 @@ export async function scrapeGridPromotions(): Promise<Promotion[]> {
 
         // Extract expiration date
         const expires = $el.find('.date, .expiration, time').first().text().trim() ||
-                       new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(); // Default 30 days
+                       new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
 
         // Extract value
         const value = $el.find('.value, .savings').first().text().trim() || 'Contact for details';
@@ -195,15 +220,37 @@ export async function scrapeGridPromotions(): Promise<Promotion[]> {
                     typeText.includes('plan') ? 'plan' as const : 'trade-in' as const;
 
         if (title) {
-          promotions.push({
-            id: $el.attr('id') || String(index),
+          const promotion = {
+            external_id: $el.attr('id') || `promo-${title.toLowerCase().replace(/\s+/g, '-')}`,
             title,
             description,
             expires,
             type,
             value,
             terms: terms.length > 0 ? terms : undefined
-          });
+          };
+
+          promotions.push(promotion);
+
+          // Update promotion in database
+          supabase
+            .from('verizon_promotions')
+            .select('id')
+            .eq('external_id', promotion.external_id)
+            .maybeSingle()
+            .then(({ data: existingPromo }) => {
+              if (existingPromo) {
+                return supabase
+                  .from('verizon_promotions')
+                  .update(promotion)
+                  .eq('external_id', promotion.external_id);
+              } else {
+                return supabase
+                  .from('verizon_promotions')
+                  .insert(promotion);
+              }
+            })
+            .catch(error => console.error('Error updating promotion:', error));
         }
       });
     });
@@ -219,26 +266,6 @@ export async function scrapeGridPromotions(): Promise<Promotion[]> {
 
 /** @deprecated Use scrapeGridPromotions instead */
 export async function scrapeVerizonPromotions(): Promise<Promotion[]> {
-  try {
-    const { data } = await axios.get('https://www.verizon.com/promotions');
-    const $ = cheerio.load(data);
-    const promotions: Promotion[] = [];
-
-    $('.promotion-item').each((index, element) => {
-      const $el = $(element);
-      promotions.push({
-        id: $el.attr('data-id') || String(index),
-        title: $el.find('.promotion-title').text().trim(),
-        description: $el.find('.promotion-description').text().trim(),
-        expires: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(), // Default 30 days
-        type: 'plan' as const,
-        value: 'Contact for details'
-      });
-    });
-
-    return promotions;
-  } catch (error) {
-    console.error('Error scraping Verizon promotions:', error);
-    return [];
-  }
+  return scrapeGridPromotions();
 }
+
