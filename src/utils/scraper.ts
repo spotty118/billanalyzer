@@ -1,7 +1,7 @@
 
 import axios from 'axios';
 import * as cheerio from 'cheerio';
-import type { Cheerio } from 'cheerio';
+import type { Cheerio, CheerioAPI } from 'cheerio';
 import type { Element } from 'domhandler';
 import type { Promotion } from '@/types';
 import { supabase } from '@/integrations/supabase/client';
@@ -207,21 +207,29 @@ export async function scrapeGridPromotions(): Promise<Promotion[]> {
 
     promoSelectors.forEach(selector => {
       $(selector).each((_, element) => {
-        const $el = cheerio.load(element);
+        const $el = $(element);
         
         // Extract data from element using helper functions that handle Element type
-        const title = extractText($el('.title, .promo-title, .deal-title, h2, h3')) ||
-                     extractText($el('td').eq(1));
+        const titleEl = $el.find('.title, .promo-title, .deal-title, h2, h3').first();
+        const title = titleEl.length ? titleEl.text().trim() : 
+                     $el.find('td').eq(1).text().trim();
 
-        const description = extractText($el('.details, .description, td'));
+        const descriptionEl = $el.find('.details, .description, td').first();
+        const description = descriptionEl.length ? descriptionEl.text().trim() : '';
+        
         const terms = extractTerms($el);
-        const expires = extractText($el('.date, .expiration, time')) ||
+        
+        const expiresEl = $el.find('.date, .expiration, time').first();
+        const expires = expiresEl.length ? expiresEl.text().trim() :
                        new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
-        const value = extractText($el('.value, .savings')) || 'Contact for details';
+                       
+        const valueEl = $el.find('.value, .savings').first();
+        const value = valueEl.length ? valueEl.text().trim() : 'Contact for details';
+        
         const type = determinePromotionType($el);
 
         if (title) {
-          const promo_id = $el(':root').attr('id') || `promo-${title.toLowerCase().replace(/\s+/g, '-')}`;
+          const promo_id = $el.attr('id') || `promo-${title.toLowerCase().replace(/\s+/g, '-')}`;
           
           const promotionData = {
             id: '', // Will be set by Supabase
@@ -281,21 +289,19 @@ export async function scrapeGridPromotions(): Promise<Promotion[]> {
 }
 
 // Helper functions
-function extractText($: cheerio.CheerioAPI | Cheerio<Element>, selector?: string): string {
-  const $target = selector ? $(selector) : $;
-  return $target.text().trim();
+function extractTerms($el: Cheerio<Element>): string[] {
+  const termsEl = $el.find('.terms, .requirements, td').eq(4);
+  return termsEl.length ? 
+    termsEl.text()
+      .split(/[•\n]/)
+      .map(item => item.trim())
+      .filter(item => item.length > 0) : 
+    [];
 }
 
-function extractTerms($: cheerio.CheerioAPI): string[] {
-  return $('.terms, .requirements, td').eq(4)
-    .text()
-    .split(/[•\n]/)
-    .map(item => item.trim())
-    .filter(item => item.length > 0);
-}
-
-function determinePromotionType($: cheerio.CheerioAPI): 'device' | 'plan' | 'trade-in' {
-  const typeText = extractText($, '.type, .category, td').toLowerCase();
+function determinePromotionType($el: Cheerio<Element>): 'device' | 'plan' | 'trade-in' {
+  const typeEl = $el.find('.type, .category, td').first();
+  const typeText = typeEl.length ? typeEl.text().trim().toLowerCase() : '';
   if (typeText.includes('device')) return 'device';
   if (typeText.includes('plan')) return 'plan';
   return 'trade-in';
@@ -305,4 +311,3 @@ function determinePromotionType($: cheerio.CheerioAPI): 'device' | 'plan' | 'tra
 export async function scrapeVerizonPromotions(): Promise<Promotion[]> {
   return scrapeGridPromotions();
 }
-
