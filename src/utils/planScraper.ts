@@ -20,7 +20,7 @@ export async function scrapeVerizonPlans(): Promise<VerizonPlanDetails[]> {
     
     for (const planData of data.planAnalysis) {
       if (planData.structure?.name) {
-        const plan = {
+        const plan: VerizonPlanDetails = {
           external_id: planData.id || `plan-${planData.structure.name.toLowerCase().replace(/\s+/g, '-')}`,
           name: planData.structure.name,
           base_price: parseFloat(planData.structure.price?.replace(/[^0-9.]/g, '') || '0'),
@@ -31,7 +31,7 @@ export async function scrapeVerizonPlans(): Promise<VerizonPlanDetails[]> {
             lines5Plus: 0
           },
           features: planData.structure.features || [],
-          type: 'consumer',
+          type: 'consumer' as const, // Explicitly set as "consumer" type
           data_allowance: {
             premium: 'unlimited',
             hotspot: undefined
@@ -77,4 +77,3 @@ export async function scrapeVerizonPlans(): Promise<VerizonPlanDetails[]> {
     return [];
   }
 }
-
