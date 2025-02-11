@@ -1,3 +1,4 @@
+
 import { Suspense, lazy } from 'react';
 import './App.css';
 import { AppSidebar } from './components/AppSidebar';
@@ -6,11 +7,13 @@ import { Alert, AlertDescription } from './components/ui/alert';
 import { ErrorBoundary } from './components/ui/error-boundary';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 
-// Lazy load components
-const QuoteCalculator = lazy(() => import('./components/QuoteCalculator').then(mod => ({ default: mod.QuoteCalculator })));
-const BillAnalyzer = lazy(() => import('./components/BillAnalyzer').then(mod => ({ default: mod.BillAnalyzer })));
-const CommissionCalculator = lazy(() => import('./components/CommissionCalculator').then(mod => ({ default: mod.CommissionCalculator })));
-const PromotionsOverview = lazy(() => import('./components/PromotionsOverview').then(mod => ({ default: mod.PromotionsOverview })));
+// Regular imports instead of lazy loading for main components
+import { QuoteCalculator } from './components/QuoteCalculator';
+import { BillAnalyzer } from './components/BillAnalyzer';
+import { CommissionCalculator } from './components/CommissionCalculator';
+import { PromotionsOverview } from './components/PromotionsOverview';
+
+// Lazy load admin components only
 const AdminLogin = lazy(() => import('./pages/AdminLogin'));
 const AdminDashboard = lazy(() => import('./pages/AdminDashboard'));
 
@@ -64,58 +67,58 @@ function App() {
   return (
     <div className="min-h-screen bg-gray-100 dark:bg-gray-900">
       <ErrorBoundary>
-        <Router>
-            <Routes>
-              <Route
-                path="/"
-                element={
-                  <MainLayout>
-                    <Dashboard />
-                  </MainLayout>
-                }
-              />
-              <Route
-                path="/quotes"
-                element={
-                  <MainLayout>
-                    <QuoteCalculator />
-                  </MainLayout>
-                }
-              />
-              <Route
-                path="/commissions"
-                element={
-                  <MainLayout>
-                    <CommissionCalculator />
-                  </MainLayout>
-                }
-              />
-              <Route
-                path="/promotions"
-                element={
-                  <MainLayout>
-                    <PromotionsOverview />
-                  </MainLayout>
-                }
-              />
-              <Route 
-                path="/admin-login" 
-                element={
-                  <Suspense fallback={<LoadingFallback />}>
-                    <AdminLogin />
-                  </Suspense>
-                } 
-              />
-              <Route 
-                path="/admin-dashboard" 
-                element={
-                  <Suspense fallback={<LoadingFallback />}>
-                    <AdminDashboard />
-                  </Suspense>
-                } 
-              />
-              <Route path="*" element={<Navigate to="/" replace />} />
-            </Routes>
+        <Router basename="/">
+          <Routes>
+            <Route
+              path="/"
+              element={
+                <MainLayout>
+                  <Dashboard />
+                </MainLayout>
+              }
+            />
+            <Route
+              path="/quotes"
+              element={
+                <MainLayout>
+                  <QuoteCalculator />
+                </MainLayout>
+              }
+            />
+            <Route
+              path="/commissions"
+              element={
+                <MainLayout>
+                  <CommissionCalculator />
+                </MainLayout>
+              }
+            />
+            <Route
+              path="/promotions"
+              element={
+                <MainLayout>
+                  <PromotionsOverview />
+                </MainLayout>
+              }
+            />
+            <Route 
+              path="/admin-login" 
+              element={
+                <Suspense fallback={<LoadingFallback />}>
+                  <AdminLogin />
+                </Suspense>
+              } 
+            />
+            <Route 
+              path="/admin-dashboard" 
+              element={
+                <Suspense fallback={<LoadingFallback />}>
+                  <AdminDashboard />
+                </Suspense>
+              } 
+            />
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
         </Router>
       </ErrorBoundary>
     </div>
