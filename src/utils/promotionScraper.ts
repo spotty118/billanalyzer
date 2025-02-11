@@ -4,17 +4,17 @@ import * as cheerio from 'cheerio';
 import type { Promotion } from './types';
 import { supabase } from '@/integrations/supabase/client';
 
-function extractTerms($el: cheerio.Cheerio): string[] {
+function extractTerms($el: cheerio.Cheerio<cheerio.Element>): string[] {
   const termsEl = $el.find('.terms, .requirements, td').eq(4);
   return termsEl.length ? 
     termsEl.text()
       .split(/[•\n]/)
-      .map(item => item.trim())
-      .filter(item => item.length > 0) : 
+      .map((item: string) => item.trim())
+      .filter((item: string) => item.length > 0) : 
     [];
 }
 
-function determinePromotionType($el: cheerio.Cheerio): 'device' | 'plan' | 'trade-in' {
+function determinePromotionType($el: cheerio.Cheerio<cheerio.Element>): 'device' | 'plan' | 'trade-in' {
   const typeEl = $el.find('.type, .category, td').first();
   const typeText = typeEl.length ? typeEl.text().trim().toLowerCase() : '';
   if (typeText.includes('device')) return 'device';
