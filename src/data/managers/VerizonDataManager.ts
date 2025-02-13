@@ -1,13 +1,11 @@
 
-import { Plan, Promotion } from '../types/verizonTypes';
+import { Plan, Promotion, StreamingQuality, PlanType } from '../types/verizonTypes';
 import { supabase } from '@/integrations/supabase/client';
 
 class VerizonDataManager {
   private static instance: VerizonDataManager;
   private plans: Plan[] | null = null;
   private lastPlansFetch: number = 0;
-  private promotions: Promotion[] | null = null;
-  private lastPromotionsFetch: number = 0;
   private readonly CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
 
   private constructor() {}
@@ -36,11 +34,19 @@ class VerizonDataManager {
           id: plan.external_id,
           name: plan.name,
           basePrice: plan.base_price,
-          multiLineDiscounts: plan.multi_line_discounts,
+          multiLineDiscounts: plan.multi_line_discounts as { 
+            lines2: number;
+            lines3: number;
+            lines4: number;
+            lines5Plus: number;
+          },
           features: plan.features,
-          type: plan.type,
-          dataAllowance: plan.data_allowance,
-          streamingQuality: plan.streaming_quality,
+          type: plan.type as PlanType,
+          dataAllowance: plan.data_allowance as {
+            premium: number | 'unlimited';
+            hotspot?: number;
+          },
+          streamingQuality: plan.streaming_quality as StreamingQuality,
           autopayDiscount: plan.autopay_discount,
           paperlessDiscount: plan.paperless_discount
         }));
@@ -51,7 +57,7 @@ class VerizonDataManager {
         throw error;
       }
     }
-    return this.plans;
+    return this.plans || [];
   }
 
   public async getPlanById(planId: string): Promise<Plan | null> {
@@ -73,11 +79,19 @@ class VerizonDataManager {
         id: plan.external_id,
         name: plan.name,
         basePrice: plan.base_price,
-        multiLineDiscounts: plan.multi_line_discounts,
+        multiLineDiscounts: plan.multi_line_discounts as {
+          lines2: number;
+          lines3: number;
+          lines4: number;
+          lines5Plus: number;
+        },
         features: plan.features,
-        type: plan.type,
-        dataAllowance: plan.data_allowance,
-        streamingQuality: plan.streaming_quality,
+        type: plan.type as PlanType,
+        dataAllowance: plan.data_allowance as {
+          premium: number | 'unlimited';
+          hotspot?: number;
+        },
+        streamingQuality: plan.streaming_quality as StreamingQuality,
         autopayDiscount: plan.autopay_discount,
         paperlessDiscount: plan.paperless_discount
       };
@@ -93,9 +107,7 @@ class VerizonDataManager {
 
   public clearCache(): void {
     this.plans = null;
-    this.promotions = null;
     this.lastPlansFetch = 0;
-    this.lastPromotionsFetch = 0;
     console.log('Cache cleared');
   }
 }

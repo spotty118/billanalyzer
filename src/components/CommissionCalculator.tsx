@@ -2,7 +2,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useState, useMemo } from "react";
-import { devices, addons, Device, Addon } from "@/data/devices";
+import { devices, addons } from "@/data/devices";
 
 export function CommissionCalculator() {
   const [selectedDevice, setSelectedDevice] = useState<string>("");
