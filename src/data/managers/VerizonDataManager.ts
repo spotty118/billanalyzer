@@ -1,4 +1,3 @@
-
 import { Plan, PlanType, StreamingQuality } from '../types/verizonTypes';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -93,6 +92,35 @@ class VerizonDataManager {
       };
     } catch (error) {
       console.error('Error in getPlanById:', error);
+      throw error;
+    }
+  }
+
+  public async getPlansByType(type: PlanType): Promise<Plan[]> {
+    try {
+      const { data: plans, error } = await supabase
+        .from('verizon_plans')
+        .select('*')
+        .eq('type', type)
+        .order('base_price');
+
+      if (error) {
+        console.error('Error fetching plans by type:', error);
+        throw error;
+      }
+
+      return plans.map(plan => ({
+        id: plan.external_id,
+        name: plan.name,
+        basePrice: plan.base_price,
+        multiLineDiscounts: plan.multi_line_discounts,
+        features: plan.features,
+        type: plan.type as PlanType,
+        dataAllowance: plan.data_allowance,
+        streamingQuality: plan.streaming_quality as StreamingQuality
+      }));
+    } catch (error) {
+      console.error('Error in getPlansByType:', error);
       throw error;
     }
   }
