@@ -13,16 +13,16 @@ interface PlanSelectorProps {
   selectedPlan: string;
   onPlanChange: (value: string) => void;
   plans: Plan[];
+  currentLines: number;
 }
 
 const PlanSelector = ({
   selectedPlan,
   onPlanChange,
   plans,
+  currentLines,
 }: PlanSelectorProps) => {
-  // Filter for only myPlan plans based on name
   const myPlans = plans.filter(plan => {
-    console.log('Filtering plan:', plan); // Debug log
     const planName = plan.name.toLowerCase();
     return plan.type === 'consumer' && 
            (planName.includes('welcome') || 
@@ -30,7 +30,13 @@ const PlanSelector = ({
             planName.includes('ultimate'));
   });
 
-  console.log('Filtered myPlans:', myPlans); // Debug log
+  const getLinePrice = (plan: Plan, lines: number) => {
+    if (lines <= 1) return plan.basePrice;
+    if (lines === 2) return plan.multiLineDiscounts.lines2;
+    if (lines === 3) return plan.multiLineDiscounts.lines3;
+    if (lines === 4) return plan.multiLineDiscounts.lines4;
+    return plan.multiLineDiscounts.lines5Plus;
+  };
 
   return (
     <div className="space-y-2">
@@ -42,7 +48,7 @@ const PlanSelector = ({
         <SelectContent>
           {myPlans.map((plan) => (
             <SelectItem key={plan.id} value={plan.id}>
-              {plan.name} - {formatCurrency(plan.basePrice)}/mo
+              {plan.name} - {formatCurrency(getLinePrice(plan, currentLines))}/mo per line
             </SelectItem>
           ))}
         </SelectContent>
@@ -140,7 +146,6 @@ export function QuoteCalculator() {
   useEffect(() => {
     const fetchPlans = async () => {
       try {
-        console.log('Fetching plans...'); // Debug log
         setLoading(true);
         setError(null);
         
@@ -150,7 +155,6 @@ export function QuoteCalculator() {
           throw new Error('Invalid response format');
         }
         
-        console.log('Fetched plans:', plans); // Debug log
         setAvailablePlans(plans);
         setLoading(false);
       } catch (err) {
@@ -226,6 +230,7 @@ export function QuoteCalculator() {
               selectedPlan={selectedPlanId}
               onPlanChange={setSelectedPlanId}
               plans={availablePlans}
+              currentLines={parseInt(lines) || 1}
             />
             <div className="space-y-2">
               <label className="text-sm font-medium">Number of Lines</label>
