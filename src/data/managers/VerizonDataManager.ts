@@ -47,8 +47,8 @@ class VerizonDataManager {
             hotspot?: number;
           },
           streamingQuality: plan.streaming_quality as StreamingQuality,
-          autopayDiscount: plan.autopay_discount || undefined,
-          paperlessDiscount: plan.paperless_discount || undefined
+          autopayDiscount: plan.autopay_discount ?? undefined,
+          paperlessDiscount: plan.paperless_discount ?? undefined
         }));
         
         this.lastPlansFetch = Date.now();
@@ -92,8 +92,8 @@ class VerizonDataManager {
           hotspot?: number;
         },
         streamingQuality: plan.streaming_quality as StreamingQuality,
-        autopayDiscount: plan.autopay_discount || undefined,
-        paperlessDiscount: plan.paperless_discount || undefined
+        autopayDiscount: plan.autopay_discount ?? undefined,
+        paperlessDiscount: plan.paperless_discount ?? undefined
       };
     } catch (error) {
       console.error('Error in getPlanById:', error);
@@ -131,8 +131,8 @@ class VerizonDataManager {
           hotspot?: number;
         },
         streamingQuality: plan.streaming_quality as StreamingQuality,
-        autopayDiscount: plan.autopay_discount || undefined,
-        paperlessDiscount: plan.paperless_discount || undefined
+        autopayDiscount: plan.autopay_discount ?? undefined,
+        paperlessDiscount: plan.paperless_discount ?? undefined
       }));
     } catch (error) {
       console.error('Error in getPlansByType:', error);
