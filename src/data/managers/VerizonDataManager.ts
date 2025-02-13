@@ -1,5 +1,5 @@
 
-import { Plan, Promotion, StreamingQuality, PlanType } from '../types/verizonTypes';
+import { Plan, PlanType, StreamingQuality } from '../types/verizonTypes';
 import { supabase } from '@/integrations/supabase/client';
 
 class VerizonDataManager {
@@ -46,9 +46,7 @@ class VerizonDataManager {
             premium: number | 'unlimited';
             hotspot?: number;
           },
-          streamingQuality: plan.streaming_quality as StreamingQuality,
-          autopayDiscount: plan.autopay_discount,
-          paperlessDiscount: plan.paperless_discount
+          streamingQuality: plan.streaming_quality as StreamingQuality
         }));
         
         this.lastPlansFetch = Date.now();
@@ -91,9 +89,7 @@ class VerizonDataManager {
           premium: number | 'unlimited';
           hotspot?: number;
         },
-        streamingQuality: plan.streaming_quality as StreamingQuality,
-        autopayDiscount: plan.autopay_discount,
-        paperlessDiscount: plan.paperless_discount
+        streamingQuality: plan.streaming_quality as StreamingQuality
       };
     } catch (error) {
       console.error('Error in getPlanById:', error);

@@ -27,6 +27,8 @@ export const PlanSchema = z.object({
     hotspot: z.number().optional(),
   }),
   streamingQuality: StreamingQuality,
+  autopayDiscount: z.number().optional(),
+  paperlessDiscount: z.number().optional()
 });
 
 export type Plan = z.infer<typeof PlanSchema>;

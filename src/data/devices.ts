@@ -1,14 +1,15 @@
+
 export interface Device {
   id: string;
   name: string;
-  baseCommission: number; // Base commission amount in dollars
+  baseCommission: number;
   category: 'phone' | 'tablet' | 'watch' | 'accessory';
 }
 
 export interface Addon {
   id: string;
   name: string;
-  commission: number; // Additional commission amount in dollars
+  commission: number;
   category: 'protection' | 'service' | 'feature';
 }
 

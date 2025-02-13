@@ -9,9 +9,8 @@ import {
 } from "@/components/ui/select";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Skeleton } from "@/components/ui/skeleton";
-import { getPromotions, PromotionType } from "@/data/verizonPlans";
-import { useMemo, useState, useEffect } from "react";
-import { Promotion } from "@/types";
+import { Promotion, PromotionType } from "@/data/types/verizonTypes";
+import { useState, useEffect, useMemo } from "react";
 
 type FilterType = PromotionType | 'All';
 
@@ -29,19 +28,45 @@ export function PromotionsOverview() {
   const [selectedType, setSelectedType] = useState<FilterType>("All");
 
   useEffect(() => {
-    const fetchPromotions = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-        const data = await getPromotions();
-        setPromotions(data);
-      } catch (err) {
-        setError('Failed to load promotions. Please try again later.');
-      } finally {
-        setLoading(false);
+    // Mock promotions data
+    const mockPromotions: Promotion[] = [
+      {
+        id: "1",
+        title: "Save $200 on new iPhone",
+        description: "Get $200 off the latest iPhone with select trade-in.",
+        expires: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+        type: "device",
+        value: "$200",
+        terms: ["With approved credit", "Limited time offer"],
+        eligiblePlans: ["Unlimited Plus", "Unlimited Welcome"],
+        stackable: true
+      },
+      {
+        id: "2",
+        title: "50% off Unlimited Plan",
+        description: "New customers get 50% off Unlimited Welcome plan for 12 months.",
+        expires: new Date(Date.now() + 60 * 24 * 60 * 60 * 1000).toISOString(),
+        type: "plan",
+        value: "50% off",
+        terms: ["New customers only", "12-month commitment"],
+        eligiblePlans: ["Unlimited Welcome"],
+        stackable: false
+      },
+      {
+        id: "3",
+        title: "Get up to $800 with trade-in",
+        description: "Trade in your old phone and get up to $800 towards a new Samsung Galaxy.",
+        expires: new Date(Date.now() + 45 * 24 * 60 * 60 * 1000).toISOString(),
+        type: "trade-in",
+        value: "Up to $800",
+        terms: ["Trade-in condition applies", "Select models only"],
+        eligiblePlans: ["Unlimited Plus", "Unlimited Ultimate"],
+        stackable: true
       }
-    };
-    fetchPromotions();
+    ];
+
+    setLoading(false);
+    setPromotions(mockPromotions);
   }, []);
 
   // Group promotion types with "All" option

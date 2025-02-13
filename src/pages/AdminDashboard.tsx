@@ -1,37 +1,24 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useQuery } from "@tanstack/react-query";
-import { getPlans, getPromotions } from "@/data/verizonPlans";
+import { getPlans } from "@/data/verizonPlans";
 import { RefreshCw } from "lucide-react";
+import { Plan } from "@/data/types/verizonTypes";
 
 function Dashboard() {
   const { 
-    data: promotions, 
-    isLoading: loadingPromotions,
-    refetch: refetchPromotions
-  } = useQuery({
-    queryKey: ["promotions"],
-    queryFn: getPromotions,
-    retry: false, // Let VerizonDataManager handle retries
-    staleTime: 5 * 60 * 1000, // Match VerizonDataManager's cache duration
-  });
-
-  const { 
-    data: plans, 
+    data: plans,
     isLoading: loadingPlans,
     refetch: refetchPlans
   } = useQuery({
     queryKey: ["plans"],
     queryFn: getPlans,
-    retry: false, // Let VerizonDataManager handle retries
-    staleTime: 5 * 60 * 1000, // Match VerizonDataManager's cache duration
+    retry: false,
+    staleTime: 5 * 60 * 1000,
   });
 
   const handleRefreshData = async () => {
-    await Promise.all([
-      refetchPlans(),
-      refetchPromotions()
-    ]);
+    await refetchPlans();
   };
 
   // Calculate plan type counts
@@ -54,19 +41,6 @@ function Dashboard() {
       </div>
       
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <Card>
-          <CardHeader>
-            <CardTitle>Active Promotions</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {loadingPromotions ? (
-              <p className="text-gray-500">Loading...</p>
-            ) : (
-              <p className="text-2xl font-bold">{promotions?.length || 0}</p>
-            )}
-          </CardContent>
-        </Card>
-
         <Card>
           <CardHeader>
             <CardTitle>Available Plans</CardTitle>
