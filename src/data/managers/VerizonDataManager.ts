@@ -1,3 +1,4 @@
+
 import { Plan, PlanType, StreamingQuality } from '../types/verizonTypes';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -33,7 +34,7 @@ class VerizonDataManager {
           id: plan.external_id,
           name: plan.name,
           basePrice: plan.base_price,
-          multiLineDiscounts: plan.multi_line_discounts as { 
+          multiLineDiscounts: plan.multi_line_discounts as {
             lines2: number;
             lines3: number;
             lines4: number;
@@ -45,7 +46,9 @@ class VerizonDataManager {
             premium: number | 'unlimited';
             hotspot?: number;
           },
-          streamingQuality: plan.streaming_quality as StreamingQuality
+          streamingQuality: plan.streaming_quality as StreamingQuality,
+          autopayDiscount: plan.autopay_discount,
+          paperlessDiscount: plan.paperless_discount
         }));
         
         this.lastPlansFetch = Date.now();
@@ -88,7 +91,9 @@ class VerizonDataManager {
           premium: number | 'unlimited';
           hotspot?: number;
         },
-        streamingQuality: plan.streaming_quality as StreamingQuality
+        streamingQuality: plan.streaming_quality as StreamingQuality,
+        autopayDiscount: plan.autopay_discount,
+        paperlessDiscount: plan.paperless_discount
       };
     } catch (error) {
       console.error('Error in getPlanById:', error);
@@ -113,11 +118,21 @@ class VerizonDataManager {
         id: plan.external_id,
         name: plan.name,
         basePrice: plan.base_price,
-        multiLineDiscounts: plan.multi_line_discounts,
+        multiLineDiscounts: plan.multi_line_discounts as {
+          lines2: number;
+          lines3: number;
+          lines4: number;
+          lines5Plus: number;
+        },
         features: plan.features,
         type: plan.type as PlanType,
-        dataAllowance: plan.data_allowance,
-        streamingQuality: plan.streaming_quality as StreamingQuality
+        dataAllowance: plan.data_allowance as {
+          premium: number | 'unlimited';
+          hotspot?: number;
+        },
+        streamingQuality: plan.streaming_quality as StreamingQuality,
+        autopayDiscount: plan.autopay_discount,
+        paperlessDiscount: plan.paperless_discount
       }));
     } catch (error) {
       console.error('Error in getPlansByType:', error);
