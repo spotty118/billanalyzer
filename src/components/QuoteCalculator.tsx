@@ -21,11 +21,14 @@ const PlanSelector = ({
   plans,
 }: PlanSelectorProps) => {
   // Filter for only myPlan plans (consumer type plans with planLevel)
-  const myPlans = plans.filter(plan => 
-    plan.type === 'consumer' && 
-    plan.planLevel && 
-    ['welcome', 'plus', 'unlimited'].includes(plan.planLevel)
-  );
+  const myPlans = plans.filter(plan => {
+    console.log('Filtering plan:', plan); // Debug log
+    return plan.type === 'consumer' && 
+           plan.planLevel && 
+           ['welcome', 'plus', 'unlimited'].includes(plan.planLevel);
+  });
+
+  console.log('Filtered myPlans:', myPlans); // Debug log
 
   return (
     <div className="space-y-2">
@@ -135,7 +138,7 @@ export function QuoteCalculator() {
   useEffect(() => {
     const fetchPlans = async () => {
       try {
-        console.log('Fetching plans...');
+        console.log('Fetching plans...'); // Debug log
         setLoading(true);
         setError(null);
         
@@ -145,6 +148,7 @@ export function QuoteCalculator() {
           throw new Error('Invalid response format');
         }
         
+        console.log('Fetched plans:', plans); // Debug log
         setAvailablePlans(plans);
         setLoading(false);
       } catch (err) {
