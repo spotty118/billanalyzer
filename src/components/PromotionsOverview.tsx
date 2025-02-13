@@ -1,3 +1,4 @@
+
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -24,6 +25,7 @@ const LoadingState = () => (
 export function PromotionsOverview() {
   const [promotions, setPromotions] = useState<Promotion[]>([]);
   const [loading, setLoading] = useState(true);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [selectedType, setSelectedType] = useState<FilterType>("All");
 
   useEffect(() => {
@@ -100,12 +102,12 @@ export function PromotionsOverview() {
     );
   }
 
-  if (error) {
+  if (errorMessage) {
     return (
       <Card>
         <CardContent className="p-6">
           <Alert variant="destructive">
-            <AlertDescription>{error}</AlertDescription>
+            <AlertDescription>{errorMessage}</AlertDescription>
           </Alert>
         </CardContent>
       </Card>
