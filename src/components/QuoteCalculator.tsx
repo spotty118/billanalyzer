@@ -1,3 +1,4 @@
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -19,7 +20,12 @@ const PlanSelector = ({
   onPlanChange,
   plans,
 }: PlanSelectorProps) => {
-  const consumerPlans = plans.filter(plan => plan.type === 'consumer');
+  // Filter for only myPlan plans (consumer type plans with planLevel)
+  const myPlans = plans.filter(plan => 
+    plan.type === 'consumer' && 
+    plan.planLevel && 
+    ['welcome', 'plus', 'unlimited'].includes(plan.planLevel)
+  );
 
   return (
     <div className="space-y-2">
@@ -29,7 +35,7 @@ const PlanSelector = ({
           <SelectValue placeholder="Choose a plan" />
         </SelectTrigger>
         <SelectContent>
-          {consumerPlans.map((plan) => (
+          {myPlans.map((plan) => (
             <SelectItem key={plan.id} value={plan.id}>
               {plan.name} - {formatCurrency(plan.basePrice)}/mo
             </SelectItem>
@@ -154,7 +160,6 @@ export function QuoteCalculator() {
 
     fetchPlans();
   }, []);
-
 
   const selectedPlan = availablePlans.find(p => p.id === selectedPlanId) || null;
   const { calculation, error: calculationError } = useQuoteCalculator(selectedPlan, parseInt(lines) || 0);
