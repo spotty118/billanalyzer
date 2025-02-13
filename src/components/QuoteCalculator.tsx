@@ -125,6 +125,7 @@ export function QuoteCalculator() {
   const [availablePlans, setAvailablePlans] = useState<Plan[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<ApiError | null>(null);
+
   useEffect(() => {
     const fetchPlans = async () => {
       try {
