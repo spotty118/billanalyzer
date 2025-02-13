@@ -24,7 +24,6 @@ const LoadingState = () => (
 export function PromotionsOverview() {
   const [promotions, setPromotions] = useState<Promotion[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [selectedType, setSelectedType] = useState<FilterType>("All");
 
   useEffect(() => {

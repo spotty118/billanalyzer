@@ -3,7 +3,6 @@ import { Button } from "@/components/ui/button";
 import { useQuery } from "@tanstack/react-query";
 import { getPlans } from "@/data/verizonPlans";
 import { RefreshCw } from "lucide-react";
-import { Plan } from "@/data/types/verizonTypes";
 
 function Dashboard() {
   const { 

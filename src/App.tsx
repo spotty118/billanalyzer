@@ -1,9 +1,7 @@
-
 import { Suspense, lazy } from 'react';
 import './App.css';
 import { AppSidebar } from './components/AppSidebar';
 import { Card, CardContent } from './components/ui/card';
-import { Alert, AlertDescription } from './components/ui/alert';
 import { ErrorBoundary } from './components/ui/error-boundary';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 
