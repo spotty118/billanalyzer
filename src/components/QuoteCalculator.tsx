@@ -20,12 +20,14 @@ const PlanSelector = ({
   onPlanChange,
   plans,
 }: PlanSelectorProps) => {
-  // Filter for only myPlan plans (consumer type plans with planLevel)
+  // Filter for only myPlan plans based on name
   const myPlans = plans.filter(plan => {
     console.log('Filtering plan:', plan); // Debug log
+    const planName = plan.name.toLowerCase();
     return plan.type === 'consumer' && 
-           plan.planLevel && 
-           ['welcome', 'plus', 'unlimited'].includes(plan.planLevel);
+           (planName.includes('welcome') || 
+            planName.includes('plus') || 
+            planName.includes('ultimate'));
   });
 
   console.log('Filtered myPlans:', myPlans); // Debug log
