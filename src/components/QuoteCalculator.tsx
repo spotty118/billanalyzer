@@ -1,3 +1,4 @@
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -106,15 +107,16 @@ export function QuoteCalculator() {
     let totalWithoutAutopay = 0;
     const streamingBillValue = parseFloat(streamingBill) || 0;
 
-    const linePrices = selectedPlans.map(({ plan }, index) => {
+    const linePrices = selectedPlans.map(({ plan, perks }, index) => {
       const linePosition = index + 1;
       const planName = plan.name.toLowerCase();
       const linePrice = getLinePriceForPosition(planName, linePosition);
-      totalMonthly += linePrice;
-      totalWithoutAutopay += linePrice + 10;
+      const perksPrice = perks.length * 10; // Calculate perks price for this line
+      totalMonthly += linePrice + perksPrice;
+      totalWithoutAutopay += linePrice + 10 + perksPrice;
       return {
         plan: plan.name,
-        price: linePrice
+        price: linePrice + perksPrice // Include perks in the line price
       };
     });
 
