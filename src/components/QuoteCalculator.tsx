@@ -28,15 +28,16 @@ const PlanSelector = ({
             planName.includes('ultimate'));
   });
 
-  const getSingleLinePrice = (plan: Plan) => {
-    // Get the base price for a single line
-    const singleLinePrice = plan.basePrice;
-    // Apply autopay discount if available
-    return singleLinePrice - (plan.autopayDiscount || 0);
+  const getFixedSingleLinePrice = (plan: Plan) => {
+    const planName = plan.name.toLowerCase();
+    if (planName.includes('ultimate')) return 90;
+    if (planName.includes('plus')) return 80;
+    if (planName.includes('welcome')) return 65;
+    return plan.basePrice - (plan.autopayDiscount || 0); // fallback
   };
 
   const getDisplayPrice = (plan: Plan) => {
-    const singleLinePrice = getSingleLinePrice(plan);
+    const singleLinePrice = getFixedSingleLinePrice(plan);
     return `${plan.name} - ${formatCurrency(singleLinePrice)}/line`;
   };
 
