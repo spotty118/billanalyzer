@@ -1,3 +1,4 @@
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -50,22 +51,22 @@ const PlanSelector = ({
     const priceWithAutopay = basePrice - (plan.autopayDiscount || 0);
     const totalPrice = priceWithAutopay * currentLines;
 
-    return `${plan.name} - ${formatCurrency(getSingleLinePrice(plan))}/line with autopay (${formatCurrency(totalPrice)} total for ${currentLines} lines)`;
+    return `${plan.name} - ${formatCurrency(priceWithAutopay)}/line with autopay (${formatCurrency(totalPrice)} total for ${currentLines} lines)`;
   };
 
   return (
     <div className="space-y-2">
       <label className="text-sm font-medium">Select Plan</label>
       <Select onValueChange={onPlanChange} value={selectedPlan}>
-        <SelectTrigger>
+        <SelectTrigger className="bg-white">
           <SelectValue placeholder="Choose a plan">
             {selectedPlan && getDisplayPrice(plans.find(p => p.id === selectedPlan)!)}
           </SelectValue>
         </SelectTrigger>
-        <SelectContent>
+        <SelectContent className="bg-white">
           {myPlans.map((plan) => (
             <SelectItem key={plan.id} value={plan.id}>
-              {currentLines > 1 ? getMultiLineDisplayPrice(plan) : getDisplayPrice(plan)}
+              {getDisplayPrice(plan)}
             </SelectItem>
           ))}
         </SelectContent>
