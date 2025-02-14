@@ -1,4 +1,3 @@
-
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -44,8 +43,15 @@ export function CommissionCalculator() {
         const { data: devicesData, error: devicesError } = await supabase
           .from('commission_devices')
           .select(`
-            *,
-            commission_brands (
+            device_id,
+            model_name,
+            dpp_price,
+            welcome_unlimited_upgrade,
+            ultimate_upgrade,
+            welcome_unlimited_new,
+            ultimate_new,
+            spiff_amount,
+            commission_brands!inner (
               name
             )
           `)
@@ -56,6 +62,20 @@ export function CommissionCalculator() {
           console.error('Devices fetch error:', devicesError);
           throw devicesError;
         }
+
+        const formattedDevices = devicesData.map(device => ({
+          device_id: device.device_id,
+          model_name: device.model_name,
+          brand_name: device.commission_brands.name,
+          dpp_price: device.dpp_price,
+          welcome_unlimited_upgrade: device.welcome_unlimited_upgrade,
+          ultimate_upgrade: device.ultimate_upgrade,
+          welcome_unlimited_new: device.welcome_unlimited_new,
+          ultimate_new: device.ultimate_new,
+          spiff_amount: device.spiff_amount
+        }));
+
+        setDevices(formattedDevices);
 
         const { data: servicesData, error: servicesError } = await supabase
           .from('commission_services')
@@ -68,19 +88,6 @@ export function CommissionCalculator() {
           throw servicesError;
         }
 
-        const formattedDevices = devicesData.map(device => ({
-          device_id: device.device_id,
-          model_name: device.model_name,
-          brand_name: device.commission_brands?.name || 'Unknown Brand',
-          dpp_price: device.dpp_price,
-          welcome_unlimited_upgrade: device.welcome_unlimited_upgrade,
-          ultimate_upgrade: device.ultimate_upgrade,
-          welcome_unlimited_new: device.welcome_unlimited_new,
-          ultimate_new: device.ultimate_new,
-          spiff_amount: device.spiff_amount
-        }));
-
-        setDevices(formattedDevices);
         setServices(servicesData);
 
       } catch (err) {
@@ -98,11 +105,9 @@ export function CommissionCalculator() {
     fetchDevicesAndServices();
   }, [toast]);
 
-  // Calculate total commission
   const commission = useMemo(() => {
     let total = 0;
 
-    // Add device commission
     const device = devices.find(d => d.device_id.toString() === selectedDevice);
     if (device) {
       const planAmount = device[selectedPlan] ?? 0;
@@ -110,7 +115,6 @@ export function CommissionCalculator() {
       total += planAmount + spiffAmount;
     }
 
-    // Add service commissions
     selectedServices.forEach(serviceId => {
       const service = services.find(s => s.service_id.toString() === serviceId);
       if (service) {
@@ -146,7 +150,6 @@ export function CommissionCalculator() {
       </CardHeader>
       <CardContent>
         <div className="space-y-6">
-          {/* Device Selection */}
           <div className="space-y-2">
             <label className="text-sm font-medium">Select Device</label>
             <Select value={selectedDevice} onValueChange={setSelectedDevice}>
@@ -156,19 +159,13 @@ export function CommissionCalculator() {
               <SelectContent>
                 {devices.map((device) => (
                   <SelectItem key={device.device_id} value={device.device_id.toString()}>
-                    <div className="flex justify-between items-center w-full">
-                      <span>{device.brand_name} {device.model_name}</span>
-                      <span className="text-sm text-muted-foreground">
-                        ${((device[selectedPlan] ?? 0) + (device.spiff_amount ?? 0)).toFixed(2)}
-                      </span>
-                    </div>
+                    {device.brand_name} {device.model_name}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </div>
 
-          {/* Plan Selection */}
           <div className="space-y-2">
             <label className="text-sm font-medium">Select Plan Type</label>
             <Select value={selectedPlan} onValueChange={(value) => setSelectedPlan(value as PlanType)}>
@@ -184,7 +181,6 @@ export function CommissionCalculator() {
             </Select>
           </div>
 
-          {/* Services Selection */}
           {selectedDevice && services.length > 0 && (
             <div className="space-y-4">
               <label className="text-sm font-medium">Add Services</label>
@@ -217,7 +213,6 @@ export function CommissionCalculator() {
             </div>
           )}
 
-          {/* Commission Display */}
           {commission > 0 && (
             <div className="pt-4 border-t">
               <div className="text-center">
