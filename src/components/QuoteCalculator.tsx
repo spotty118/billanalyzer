@@ -104,12 +104,12 @@ const QuoteResult = ({
       </div>
     </div>
 
-    {hasDiscount && lines >= 2 && (
+    {hasDiscount && (
       <Alert>
         <AlertDescription>
           <div className="space-y-1">
             <p className="font-medium text-green-600">
-              Multi-line discount applied!
+              Price includes autopay discount!
             </p>
             <p className="text-sm">
               Monthly savings: {formatCurrency(breakdown.discount)}
@@ -124,17 +124,17 @@ const QuoteResult = ({
 
     <div className="text-sm space-y-1 border-t pt-2">
       <div className="flex justify-between">
-        <span>Subtotal</span>
+        <span>Without autopay</span>
         <span>{formatCurrency(breakdown.subtotal)}</span>
       </div>
       {hasDiscount && (
         <div className="flex justify-between text-green-600">
-          <span>Multi-line Discount</span>
+          <span>Autopay Discount</span>
           <span>-{formatCurrency(breakdown.discount)}</span>
         </div>
       )}
       <div className="flex justify-between font-medium">
-        <span>Total</span>
+        <span>Total with autopay</span>
         <span>{formatCurrency(breakdown.total)}</span>
       </div>
     </div>
