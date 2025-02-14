@@ -31,19 +31,19 @@ const mockPlans: Plan[] = [
 		id: 'plan1',
 		name: 'Basic Plan',
 		basePrice: 70,
+		price_1_line: 70,
+		price_2_line: 60,
+		price_3_line: 45,
+		price_4_line: 35,
+		price_5plus_line: 30,
 		type: 'consumer',
 		features: ['5G', 'Unlimited Data'],
-		multiLineDiscounts: {
-			lines2: 60,
-			lines3: 45,
-			lines4: 35,
-			lines5Plus: 30,
-		},
 		dataAllowance: {
 			premium: 'unlimited',
 			hotspot: 15,
 		},
 		streamingQuality: '720p',
+		autopayDiscount: 10,
 	},
 ];
 
@@ -394,19 +394,19 @@ describe('QuoteCalculator', () => {
 				id: 'business1',
 				name: 'Business Plan',
 				basePrice: 100,
+				price_1_line: 100,
+				price_2_line: 90,
+				price_3_line: 80,
+				price_4_line: 70,
+				price_5plus_line: 60,
 				type: 'business',
 				features: ['5G', 'Priority Data'],
-				multiLineDiscounts: {
-					lines2: 90,
-					lines3: 80,
-					lines4: 70,
-					lines5Plus: 60,
-				},
 				dataAllowance: {
 					premium: 'unlimited',
 					hotspot: 100,
 				},
 				streamingQuality: '4K',
+				autopayDiscount: 10,
 			},
 		];
 		
@@ -447,7 +447,7 @@ describe('QuoteCalculator', () => {
 		
 		// Verify calculations
 		const subtotal = mockPlans[0].basePrice * 3; // $70 * 3
-		const discountedPrice = mockPlans[0].multiLineDiscounts.lines3 * 3; // $45 * 3
+		const discountedPrice = mockPlans[0].price_3_line * 3; // $45 * 3
 		const discount = subtotal - discountedPrice;
 		
 		expect(screen.getByText(`$${subtotal.toFixed(2)}`)).toBeInTheDocument();
@@ -464,7 +464,7 @@ describe('QuoteCalculator', () => {
 		
 		const invalidPlan = {
 			...mockPlans[0],
-			multiLineDiscounts: {} // Missing required fields
+			price_1_line: undefined // Missing required fields
 		};
 		(verizonPlans.getPlans as ReturnType<typeof vi.fn>).mockResolvedValue([invalidPlan]);
 		
@@ -496,7 +496,7 @@ describe('QuoteCalculator', () => {
 		
 		// Calculate annual savings
 		const baseTotal = mockPlans[0].basePrice * 5 * 12; // $70 * 5 * 12
-		const discountedTotal = mockPlans[0].multiLineDiscounts.lines5Plus * 5 * 12; // $30 * 5 * 12
+		const discountedTotal = mockPlans[0].price_5plus_line * 5 * 12; // $30 * 5 * 12
 		const annualSavings = baseTotal - discountedTotal;
 		
 		expect(screen.getByText(new RegExp(`Annual savings: \\$${annualSavings.toFixed(2)}`))).toBeInTheDocument();

@@ -14,12 +14,11 @@ export const PlanSchema = z.object({
   id: z.string(),
   name: z.string(),
   basePrice: z.number(),
-  multiLineDiscounts: z.object({
-    lines2: z.number(),
-    lines3: z.number(),
-    lines4: z.number(),
-    lines5Plus: z.number(),
-  }),
+  price_1_line: z.number(),
+  price_2_line: z.number(),
+  price_3_line: z.number(),
+  price_4_line: z.number(),
+  price_5plus_line: z.number(),
   features: z.array(z.string()),
   type: PlanType,
   dataAllowance: z.object({
@@ -28,7 +27,8 @@ export const PlanSchema = z.object({
   }),
   streamingQuality: StreamingQuality,
   autopayDiscount: z.number().optional(),
-  paperlessDiscount: z.number().optional()
+  paperlessDiscount: z.number().optional(),
+  planLevel: z.enum(['welcome', 'plus', 'unlimited']).optional()
 });
 
 export type Plan = z.infer<typeof PlanSchema>;
