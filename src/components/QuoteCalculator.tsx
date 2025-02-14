@@ -1,23 +1,35 @@
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Button } from "@/components/ui/button";
+import { Plus, Minus } from "lucide-react";
 import { useState, useEffect } from "react";
 import { Plan, ApiError } from "@/types";
 import { getPlans, formatCurrency } from "@/data/verizonPlans";
 import { useQuoteCalculator } from "@/hooks/use-quote-calculator";
 import { ErrorBoundary } from "@/components/ui/error-boundary";
 
+interface LinePlan {
+  plan: string;
+  perks: string[];
+}
+
 interface PlanSelectorProps {
   selectedPlan: string;
   onPlanChange: (value: string) => void;
+  onPerksChange: (perks: string[]) => void;
   plans: Plan[];
+  selectedPerks: string[];
 }
 
 const PlanSelector = ({
   selectedPlan,
   onPlanChange,
+  onPerksChange,
   plans,
+  selectedPerks,
 }: PlanSelectorProps) => {
   const myPlans = plans.filter(plan => {
     const planName = plan.name.toLowerCase();
@@ -29,39 +41,60 @@ const PlanSelector = ({
 
   const getFixedSingleLinePrice = (plan: Plan) => {
     const planName = plan.name.toLowerCase();
-    if (planName.includes('ultimate')) return 100; // Base price before autopay
-    if (planName.includes('plus')) return 90; // Base price before autopay
-    if (planName.includes('welcome')) return 75; // Base price before autopay
-    return plan.basePrice; // fallback
+    if (planName.includes('ultimate')) return 100;
+    if (planName.includes('plus')) return 90;
+    if (planName.includes('welcome')) return 75;
+    return plan.basePrice;
   };
 
   const getDisplayPrice = (plan: Plan) => {
-    const singleLinePrice = getFixedSingleLinePrice(plan) - 10; // Apply $10 autopay discount
+    const singleLinePrice = getFixedSingleLinePrice(plan) - 10;
     return `${plan.name} - ${formatCurrency(singleLinePrice)}/line`;
   };
 
   return (
-    <div className="space-y-2">
-      <label className="text-sm font-medium">Select Plan</label>
-      <Select onValueChange={onPlanChange} value={selectedPlan}>
-        <SelectTrigger className="bg-white">
-          <SelectValue placeholder="Choose a plan">
-            {selectedPlan && getDisplayPrice(plans.find(p => p.id === selectedPlan)!)}
-          </SelectValue>
-        </SelectTrigger>
-        <SelectContent className="bg-white">
-          {myPlans.map((plan) => (
-            <SelectItem key={plan.id} value={plan.id}>
-              {getDisplayPrice(plan)}
-            </SelectItem>
+    <div className="space-y-4">
+      <div className="space-y-2">
+        <label className="text-sm font-medium">Select Plan</label>
+        <Select onValueChange={onPlanChange} value={selectedPlan}>
+          <SelectTrigger className="bg-white">
+            <SelectValue placeholder="Choose a plan">
+              {selectedPlan && getDisplayPrice(plans.find(p => p.id === selectedPlan)!)}
+            </SelectValue>
+          </SelectTrigger>
+          <SelectContent className="bg-white">
+            {myPlans.map((plan) => (
+              <SelectItem key={plan.id} value={plan.id}>
+                {getDisplayPrice(plan)}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+      
+      <div className="space-y-2">
+        <label className="text-sm font-medium">Select Perks</label>
+        <div className="space-y-2 border rounded-md p-4">
+          {['apple_music', 'apple_one', 'disney', 'google', 'netflix', 'cloud', 'youtube', 'hotspot', 'travel'].map((perk) => (
+            <div key={perk} className="flex items-center space-x-2">
+              <input
+                type="checkbox"
+                id={perk}
+                checked={selectedPerks.includes(perk)}
+                onChange={(e) => {
+                  const newPerks = e.target.checked 
+                    ? [...selectedPerks, perk]
+                    : selectedPerks.filter(p => p !== perk);
+                  onPerksChange(newPerks);
+                }}
+              />
+              <label htmlFor={perk} className="text-sm">
+                {perk.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}
+              </label>
+            </div>
           ))}
-        </SelectContent>
-      </Select>
-      {selectedPlan && (
-        <div className="text-xs text-gray-500">
-          {plans.find(p => p.id === selectedPlan)?.features.join(' • ')}
         </div>
-      )}
+      </div>
     </div>
   );
 };
@@ -75,6 +108,8 @@ interface QuoteResultProps {
     subtotal: number;
     discount: number;
     total: number;
+    streamingSavings?: number;
+    totalSavings?: number;
   };
 }
 
@@ -88,7 +123,7 @@ const QuoteResult = ({
   <div className="mt-4 space-y-4">
     <div className="grid grid-cols-2 gap-4">
       <div className="text-center">
-        <p className="text-sm text-gray-500">Price Per Line</p>
+        <p className="text-sm text-gray-500">Average Price Per Line</p>
         <p className="text-xl font-bold text-verizon-red">
           {formatCurrency(linePrice)}/mo
         </p>
@@ -139,8 +174,8 @@ const QuoteResult = ({
 );
 
 export function QuoteCalculator() {
-  const [selectedPlanId, setSelectedPlanId] = useState("");
-  const [lines, setLines] = useState("");
+  const [linePlans, setLinePlans] = useState<LinePlan[]>([{ plan: "", perks: [] }]);
+  const [streamingBill, setStreamingBill] = useState("");
   const [availablePlans, setAvailablePlans] = useState<Plan[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<ApiError | null>(null);
@@ -150,13 +185,10 @@ export function QuoteCalculator() {
       try {
         setLoading(true);
         setError(null);
-        
         const plans = await getPlans();
-        
         if (!Array.isArray(plans)) {
           throw new Error('Invalid response format');
         }
-        
         setAvailablePlans(plans);
         setLoading(false);
       } catch (err) {
@@ -173,17 +205,72 @@ export function QuoteCalculator() {
     fetchPlans();
   }, []);
 
-  const selectedPlan = availablePlans.find(p => p.id === selectedPlanId) || null;
-  const { calculation, error: calculationError } = useQuoteCalculator(selectedPlan, parseInt(lines) || 0);
-
-  const handleLineChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value;
-    const numValue = parseInt(value);
-    
-    if (value === "" || (numValue >= 1 && numValue <= 12)) {
-      setLines(value);
-    }
+  const addLine = () => {
+    setLinePlans([...linePlans, { plan: "", perks: [] }]);
   };
+
+  const removeLine = (index: number) => {
+    setLinePlans(linePlans.filter((_, i) => i !== index));
+  };
+
+  const updateLinePlan = (index: number, plan: string) => {
+    const newLinePlans = [...linePlans];
+    newLinePlans[index] = { ...newLinePlans[index], plan };
+    setLinePlans(newLinePlans);
+  };
+
+  const updateLinePerks = (index: number, perks: string[]) => {
+    const newLinePlans = [...linePlans];
+    newLinePlans[index] = { ...newLinePlans[index], perks };
+    setLinePlans(newLinePlans);
+  };
+
+  // Calculate totals across all lines
+  const totalCalculation = useMemo(() => {
+    const selectedPlans = linePlans
+      .filter(lp => lp.plan)
+      .map(lp => ({
+        plan: availablePlans.find(p => p.id === lp.plan)!,
+        perks: lp.perks
+      }));
+
+    if (selectedPlans.length === 0) return null;
+
+    let totalMonthly = 0;
+    let totalWithoutAutopay = 0;
+    const streamingBillValue = parseFloat(streamingBill) || 0;
+
+    selectedPlans.forEach(({ plan }) => {
+      let linePrice;
+      if (selectedPlans.length === 1) linePrice = plan.price_1_line;
+      else if (selectedPlans.length === 2) linePrice = plan.price_2_line;
+      else if (selectedPlans.length === 3) linePrice = plan.price_3_line;
+      else if (selectedPlans.length === 4) linePrice = plan.price_4_line;
+      else linePrice = plan.price_5plus_line;
+
+      totalMonthly += linePrice;
+      totalWithoutAutopay += linePrice + 10;
+    });
+
+    const perksValue = linePlans.reduce((acc, lp) => acc + (lp.perks.length * 10), 0);
+    const discount = totalWithoutAutopay - totalMonthly;
+    const annualSavings = (streamingBillValue * 12) + (perksValue * 12) + (discount * 12);
+
+    return {
+      linePrice: totalMonthly / selectedPlans.length,
+      total: totalMonthly,
+      hasDiscount: true,
+      annualSavings,
+      selectedPerks: linePlans.flatMap(lp => lp.perks),
+      breakdown: {
+        subtotal: totalWithoutAutopay,
+        discount,
+        total: totalMonthly,
+        streamingSavings: streamingBillValue,
+        totalSavings: annualSavings,
+      },
+    };
+  }, [linePlans, availablePlans, streamingBill]);
 
   if (loading) {
     return (
@@ -227,38 +314,61 @@ export function QuoteCalculator() {
           <CardTitle>Plan Quote Calculator</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="space-y-4">
-            <PlanSelector
-              selectedPlan={selectedPlanId}
-              onPlanChange={setSelectedPlanId}
-              plans={availablePlans}
-            />
+          <div className="space-y-6">
+            <div className="space-y-4">
+              {linePlans.map((linePlan, index) => (
+                <div key={index} className="p-4 border rounded-lg space-y-4">
+                  <div className="flex justify-between items-center">
+                    <h3 className="text-lg font-medium">Line {index + 1}</h3>
+                    {linePlans.length > 1 && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => removeLine(index)}
+                      >
+                        <Minus className="h-4 w-4" />
+                      </Button>
+                    )}
+                  </div>
+                  <PlanSelector
+                    selectedPlan={linePlan.plan}
+                    onPlanChange={(value) => updateLinePlan(index, value)}
+                    onPerksChange={(perks) => updateLinePerks(index, perks)}
+                    plans={availablePlans}
+                    selectedPerks={linePlan.perks}
+                  />
+                </div>
+              ))}
+
+              <Button
+                variant="outline"
+                onClick={addLine}
+                className="w-full"
+                disabled={linePlans.length >= 12}
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Add Line
+              </Button>
+            </div>
+
             <div className="space-y-2">
-              <label className="text-sm font-medium">Number of Lines</label>
+              <label className="text-sm font-medium">Current Monthly Streaming Cost</label>
               <Input
                 type="number"
-                min="1"
-                max="12"
-                value={lines}
-                onChange={handleLineChange}
-                placeholder="Enter number of lines (1-12)"
+                value={streamingBill}
+                onChange={(e) => setStreamingBill(e.target.value)}
+                placeholder="Enter monthly streaming cost"
                 className="mt-1"
               />
             </div>
 
-            {calculationError && (
-              <Alert variant="destructive">
-                <AlertDescription>{calculationError.message}</AlertDescription>
-              </Alert>
-            )}
-
-            {calculation && parseInt(lines) > 0 && (
+            {totalCalculation && (
               <QuoteResult
-                linePrice={calculation.linePrice}
-                total={calculation.total}
-                hasDiscount={calculation.hasDiscount}
-                annualSavings={calculation.annualSavings}
-                breakdown={calculation.breakdown}
+                linePrice={totalCalculation.linePrice}
+                total={totalCalculation.total}
+                hasDiscount={totalCalculation.hasDiscount}
+                annualSavings={totalCalculation.annualSavings}
+                breakdown={totalCalculation.breakdown}
               />
             )}
           </div>
