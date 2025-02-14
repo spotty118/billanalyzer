@@ -8,7 +8,6 @@ import { useState, useEffect, useMemo } from "react";
 import { Plan, ApiError } from "@/types";
 import { getPlans, formatCurrency } from "@/data/verizonPlans";
 import { ErrorBoundary } from "@/components/ui/error-boundary";
-import { PricingGrid } from "./PricingGrid";
 
 interface LinePlan {
   plan: string;
@@ -224,26 +223,26 @@ export function QuoteCalculator() {
     setLinePlans(newLinePlans);
   };
 
-  const getLinePriceForPlan = (planName: string, totalLines: number): number => {
+  const getLinePriceForPosition = (planName: string, linePosition: number): number => {
     if (planName.includes('ultimate')) {
-      if (totalLines === 1) return 90;
-      if (totalLines === 2) return 80;
-      if (totalLines === 3) return 65;
-      if (totalLines === 4) return 55;
+      if (linePosition === 1) return 90;
+      if (linePosition === 2) return 80;
+      if (linePosition === 3) return 65;
+      if (linePosition === 4) return 55;
       return 52; // 5+ lines
     }
     if (planName.includes('plus')) {
-      if (totalLines === 1) return 80;
-      if (totalLines === 2) return 70;
-      if (totalLines === 3) return 55;
-      if (totalLines === 4) return 45;
+      if (linePosition === 1) return 80;
+      if (linePosition === 2) return 70;
+      if (linePosition === 3) return 55;
+      if (linePosition === 4) return 45;
       return 42; // 5+ lines
     }
     if (planName.includes('welcome')) {
-      if (totalLines === 1) return 65;
-      if (totalLines === 2) return 55;
-      if (totalLines === 3) return 40;
-      if (totalLines === 4) return 30;
+      if (linePosition === 1) return 65;
+      if (linePosition === 2) return 55;
+      if (linePosition === 3) return 40;
+      if (linePosition === 4) return 30;
       return 27; // 5+ lines
     }
     return 0;
@@ -262,15 +261,14 @@ export function QuoteCalculator() {
     let totalMonthly = 0;
     let totalWithoutAutopay = 0;
     const streamingBillValue = parseFloat(streamingBill) || 0;
-    const totalLines = selectedPlans.length; // This determines the tier for all lines
+    const totalLines = selectedPlans.length;
 
-    // Calculate for each line using the total number of lines for tier pricing
-    selectedPlans.forEach(({ plan }) => {
+    selectedPlans.forEach(({ plan }, index) => {
+      const linePosition = index + 1;
       const planName = plan.name.toLowerCase();
-      // Each line gets priced according to the total number of lines
-      const linePrice = getLinePriceForPlan(planName, totalLines);
+      const linePrice = getLinePriceForPosition(planName, linePosition);
       totalMonthly += linePrice;
-      totalWithoutAutopay += linePrice + 10; // Add $10 for without autopay
+      totalWithoutAutopay += linePrice + 10;
     });
 
     const perksValue = linePlans.reduce((acc, lp) => acc + (lp.perks.length * 10), 0);
@@ -336,8 +334,6 @@ export function QuoteCalculator() {
         </CardHeader>
         <CardContent>
           <div className="space-y-6">
-            <PricingGrid />
-            
             <div className="space-y-4">
               {linePlans.map((linePlan, index) => (
                 <div key={index} className="p-4 border rounded-lg space-y-4">
