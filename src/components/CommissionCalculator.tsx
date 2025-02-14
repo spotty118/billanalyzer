@@ -11,8 +11,10 @@ interface CommissionDevice {
   model_name: string;
   brand_name: string;
   dpp_price: number | null;
-  upgrade_amount: number | null;
-  new_line_amount: number | null;
+  welcome_unlimited_upgrade: number | null;
+  ultimate_upgrade: number | null;
+  welcome_unlimited_new: number | null;
+  ultimate_new: number | null;
   spiff_amount: number | null;
 }
 
@@ -23,8 +25,11 @@ interface CommissionService {
   spiff_amount: number | null;
 }
 
+type PlanType = "welcome_unlimited_new" | "ultimate_new" | "welcome_unlimited_upgrade" | "ultimate_upgrade";
+
 export function CommissionCalculator() {
   const [selectedDevice, setSelectedDevice] = useState<string>("");
+  const [selectedPlan, setSelectedPlan] = useState<PlanType>("welcome_unlimited_new");
   const [selectedServices, setSelectedServices] = useState<string[]>([]);
   const [devices, setDevices] = useState<CommissionDevice[]>([]);
   const [services, setServices] = useState<CommissionService[]>([]);
@@ -36,7 +41,6 @@ export function CommissionCalculator() {
       try {
         setLoading(true);
         
-        // Fetch devices with brand names
         const { data: devicesData, error: devicesError } = await supabase
           .from('commission_devices')
           .select(`
@@ -53,9 +57,6 @@ export function CommissionCalculator() {
           throw devicesError;
         }
 
-        console.log('Devices data:', devicesData); // Debug log
-
-        // Fetch services
         const { data: servicesData, error: servicesError } = await supabase
           .from('commission_services')
           .select('*')
@@ -67,20 +68,17 @@ export function CommissionCalculator() {
           throw servicesError;
         }
 
-        console.log('Services data:', servicesData); // Debug log
-
-        // Transform the data to match our interface
         const formattedDevices = devicesData.map(device => ({
           device_id: device.device_id,
           model_name: device.model_name,
           brand_name: device.commission_brands?.name || 'Unknown Brand',
           dpp_price: device.dpp_price,
-          upgrade_amount: device.upgrade_amount,
-          new_line_amount: device.new_line_amount,
+          welcome_unlimited_upgrade: device.welcome_unlimited_upgrade,
+          ultimate_upgrade: device.ultimate_upgrade,
+          welcome_unlimited_new: device.welcome_unlimited_new,
+          ultimate_new: device.ultimate_new,
           spiff_amount: device.spiff_amount
         }));
-
-        console.log('Formatted devices:', formattedDevices); // Debug log
 
         setDevices(formattedDevices);
         setServices(servicesData);
@@ -107,10 +105,9 @@ export function CommissionCalculator() {
     // Add device commission
     const device = devices.find(d => d.device_id.toString() === selectedDevice);
     if (device) {
-      // Use nullish coalescing to handle null values
+      const planAmount = device[selectedPlan] ?? 0;
       const spiffAmount = device.spiff_amount ?? 0;
-      const newLineAmount = device.new_line_amount ?? 0;
-      total += spiffAmount + newLineAmount;
+      total += planAmount + spiffAmount;
     }
 
     // Add service commissions
@@ -124,7 +121,7 @@ export function CommissionCalculator() {
     });
 
     return total;
-  }, [selectedDevice, selectedServices, devices, services]);
+  }, [selectedDevice, selectedPlan, selectedServices, devices, services]);
 
   if (loading) {
     return (
@@ -162,11 +159,27 @@ export function CommissionCalculator() {
                     <div className="flex justify-between items-center w-full">
                       <span>{device.brand_name} {device.model_name}</span>
                       <span className="text-sm text-muted-foreground">
-                        ${((device.new_line_amount ?? 0) + (device.spiff_amount ?? 0)).toFixed(2)}
+                        ${((device[selectedPlan] ?? 0) + (device.spiff_amount ?? 0)).toFixed(2)}
                       </span>
                     </div>
                   </SelectItem>
                 ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Plan Selection */}
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Select Plan Type</label>
+            <Select value={selectedPlan} onValueChange={(value) => setSelectedPlan(value as PlanType)}>
+              <SelectTrigger>
+                <SelectValue placeholder="Choose a plan type" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="welcome_unlimited_new">Welcome Unlimited (New)</SelectItem>
+                <SelectItem value="ultimate_new">Ultimate (New)</SelectItem>
+                <SelectItem value="welcome_unlimited_upgrade">Welcome Unlimited (Upgrade)</SelectItem>
+                <SelectItem value="ultimate_upgrade">Ultimate (Upgrade)</SelectItem>
               </SelectContent>
             </Select>
           </div>

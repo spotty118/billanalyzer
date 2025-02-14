@@ -101,8 +101,12 @@ export type Database = {
           new_line_amount: number | null
           spiff_amount: number | null
           storage_size: string | null
+          ultimate_new: number | null
+          ultimate_upgrade: number | null
           updated_at: string | null
           upgrade_amount: number | null
+          welcome_unlimited_new: number | null
+          welcome_unlimited_upgrade: number | null
         }
         Insert: {
           brand_id?: number | null
@@ -117,8 +121,12 @@ export type Database = {
           new_line_amount?: number | null
           spiff_amount?: number | null
           storage_size?: string | null
+          ultimate_new?: number | null
+          ultimate_upgrade?: number | null
           updated_at?: string | null
           upgrade_amount?: number | null
+          welcome_unlimited_new?: number | null
+          welcome_unlimited_upgrade?: number | null
         }
         Update: {
           brand_id?: number | null
@@ -133,8 +141,12 @@ export type Database = {
           new_line_amount?: number | null
           spiff_amount?: number | null
           storage_size?: string | null
+          ultimate_new?: number | null
+          ultimate_upgrade?: number | null
           updated_at?: string | null
           upgrade_amount?: number | null
+          welcome_unlimited_new?: number | null
+          welcome_unlimited_upgrade?: number | null
         }
         Relationships: [
           {
