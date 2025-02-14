@@ -2,6 +2,8 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Button } from "@/components/ui/button";
+import { Plus, Minus } from "lucide-react";
 import { useState, useMemo, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
@@ -25,7 +27,6 @@ interface CommissionService {
   spiff_amount: number | null;
 }
 
-// Define the shape of the Supabase response
 interface DeviceWithBrand {
   device_id: number;
   model_name: string;
@@ -42,9 +43,13 @@ interface DeviceWithBrand {
 
 type PlanType = "welcome_unlimited_new" | "ultimate_new" | "welcome_unlimited_upgrade" | "ultimate_upgrade";
 
+interface DevicePlan {
+  deviceId: string;
+  planType: PlanType;
+}
+
 export function CommissionCalculator() {
-  const [selectedDevice, setSelectedDevice] = useState<string>("");
-  const [selectedPlan, setSelectedPlan] = useState<PlanType>("welcome_unlimited_new");
+  const [devicePlans, setDevicePlans] = useState<DevicePlan[]>([]);
   const [selectedServices, setSelectedServices] = useState<string[]>([]);
   const [devices, setDevices] = useState<CommissionDevice[]>([]);
   const [services, setServices] = useState<CommissionService[]>([]);
@@ -79,7 +84,6 @@ export function CommissionCalculator() {
           throw devicesError;
         }
 
-        // Type assert the response to be DeviceWithBrand[]
         const formattedDevices = (devicesData as DeviceWithBrand[]).map(device => ({
           device_id: device.device_id,
           model_name: device.model_name,
@@ -122,16 +126,37 @@ export function CommissionCalculator() {
     fetchDevicesAndServices();
   }, [toast]);
 
+  const addDevicePlan = () => {
+    setDevicePlans([...devicePlans, { deviceId: "", planType: "welcome_unlimited_new" }]);
+  };
+
+  const removeDevicePlan = (index: number) => {
+    setDevicePlans(devicePlans.filter((_, i) => i !== index));
+  };
+
+  const updateDevicePlan = (index: number, field: keyof DevicePlan, value: string) => {
+    const newDevicePlans = [...devicePlans];
+    newDevicePlans[index] = {
+      ...newDevicePlans[index],
+      [field]: field === 'planType' ? value as PlanType : value
+    };
+    setDevicePlans(newDevicePlans);
+  };
+
   const commission = useMemo(() => {
     let total = 0;
 
-    const device = devices.find(d => d.device_id.toString() === selectedDevice);
-    if (device) {
-      const planAmount = device[selectedPlan] ?? 0;
-      const spiffAmount = device.spiff_amount ?? 0;
-      total += planAmount + spiffAmount;
-    }
+    // Calculate commission for each device-plan combination
+    devicePlans.forEach(({ deviceId, planType }) => {
+      const device = devices.find(d => d.device_id.toString() === deviceId);
+      if (device) {
+        const planAmount = device[planType] ?? 0;
+        const spiffAmount = device.spiff_amount ?? 0;
+        total += planAmount + spiffAmount;
+      }
+    });
 
+    // Add service commissions
     selectedServices.forEach(serviceId => {
       const service = services.find(s => s.service_id.toString() === serviceId);
       if (service) {
@@ -142,7 +167,7 @@ export function CommissionCalculator() {
     });
 
     return total;
-  }, [selectedDevice, selectedPlan, selectedServices, devices, services]);
+  }, [devicePlans, selectedServices, devices, services]);
 
   if (loading) {
     return (
@@ -167,38 +192,69 @@ export function CommissionCalculator() {
       </CardHeader>
       <CardContent>
         <div className="space-y-6">
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Select Device</label>
-            <Select value={selectedDevice} onValueChange={setSelectedDevice}>
-              <SelectTrigger>
-                <SelectValue placeholder="Choose a device" />
-              </SelectTrigger>
-              <SelectContent>
-                {devices.map((device) => (
-                  <SelectItem key={device.device_id} value={device.device_id.toString()}>
-                    {device.brand_name} {device.model_name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+          <div className="space-y-4">
+            {devicePlans.map((plan, index) => (
+              <div key={index} className="flex items-start space-x-4 p-4 border rounded-lg">
+                <div className="flex-1 space-y-4">
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Select Device</label>
+                    <Select 
+                      value={plan.deviceId} 
+                      onValueChange={(value) => updateDevicePlan(index, 'deviceId', value)}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Choose a device" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {devices.map((device) => (
+                          <SelectItem key={device.device_id} value={device.device_id.toString()}>
+                            {device.brand_name} {device.model_name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Select Plan Type</label>
+                    <Select 
+                      value={plan.planType} 
+                      onValueChange={(value) => updateDevicePlan(index, 'planType', value)}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Choose a plan type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="welcome_unlimited_new">Welcome Unlimited (New)</SelectItem>
+                        <SelectItem value="ultimate_new">Ultimate (New)</SelectItem>
+                        <SelectItem value="welcome_unlimited_upgrade">Welcome Unlimited (Upgrade)</SelectItem>
+                        <SelectItem value="ultimate_upgrade">Ultimate (Upgrade)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => removeDevicePlan(index)}
+                  className="mt-2"
+                >
+                  <Minus className="h-4 w-4" />
+                </Button>
+              </div>
+            ))}
+
+            <Button
+              variant="outline"
+              onClick={addDevicePlan}
+              className="w-full"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Add Device
+            </Button>
           </div>
 
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Select Plan Type</label>
-            <Select value={selectedPlan} onValueChange={(value) => setSelectedPlan(value as PlanType)}>
-              <SelectTrigger>
-                <SelectValue placeholder="Choose a plan type" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="welcome_unlimited_new">Welcome Unlimited (New)</SelectItem>
-                <SelectItem value="ultimate_new">Ultimate (New)</SelectItem>
-                <SelectItem value="welcome_unlimited_upgrade">Welcome Unlimited (Upgrade)</SelectItem>
-                <SelectItem value="ultimate_upgrade">Ultimate (Upgrade)</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          {selectedDevice && services.length > 0 && (
+          {devices.length > 0 && services.length > 0 && (
             <div className="space-y-4">
               <label className="text-sm font-medium">Add Services</label>
               <div className="space-y-2">
