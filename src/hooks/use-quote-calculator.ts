@@ -1,3 +1,4 @@
+
 import { useMemo } from 'react';
 import { Plan, QuoteCalculation } from '@/types';
 import { z } from 'zod';
@@ -6,12 +7,11 @@ const QuoteInputSchema = z.object({
   plan: z.object({
     id: z.string(),
     basePrice: z.number(),
-    multiLineDiscounts: z.object({
-      lines2: z.number(),
-      lines3: z.number(),
-      lines4: z.number(),
-      lines5Plus: z.number(),
-    }),
+    price_1_line: z.number(),
+    price_2_line: z.number(),
+    price_3_line: z.number(),
+    price_4_line: z.number(),
+    price_5plus_line: z.number(),
   }),
   lines: z.number().int().min(1).max(12),
   streamingBill: z.number().optional(),
@@ -31,15 +31,23 @@ const calculateQuote = (
 ): QuoteCalculation | null => {
   if (!plan || lines <= 0) return null;
 
-  // Base price is the price without autopay discount
-  const basePrice = plan.basePrice;
-  
-  // Price per line with autopay discount
-  const pricePerLineWithAutopay = basePrice - (plan.autopayDiscount || 0);
+  // Get the appropriate price per line based on number of lines
+  let pricePerLine: number;
+  if (lines === 1) {
+    pricePerLine = plan.price_1_line;
+  } else if (lines === 2) {
+    pricePerLine = plan.price_2_line;
+  } else if (lines === 3) {
+    pricePerLine = plan.price_3_line;
+  } else if (lines === 4) {
+    pricePerLine = plan.price_4_line;
+  } else {
+    pricePerLine = plan.price_5plus_line;
+  }
   
   // Calculate totals
-  const subtotal = basePrice * lines;  // Total without autopay discount
-  const totalWithAutopay = pricePerLineWithAutopay * lines;
+  const subtotal = plan.basePrice * lines;  // Total without autopay discount
+  const totalWithAutopay = pricePerLine * lines;
   const discount = subtotal - totalWithAutopay;  // This will be $10 per line
   const annualSavings = discount * 12;
 
@@ -51,9 +59,9 @@ const calculateQuote = (
   const totalSavings = annualSavings + (streamingSavings * 12) + (perksValue * 12);
 
   return {
-    linePrice: pricePerLineWithAutopay,
+    linePrice: pricePerLine,
     total: totalWithAutopay,
-    hasDiscount: true, // Always true since there's always autopay discount
+    hasDiscount: discount > 0,
     annualSavings,
     selectedPerks,
     breakdown: {
@@ -113,9 +121,13 @@ export const useQuoteCalculator = (
       };
     }
   }, [
-    selectedPlan?.id, 
-    selectedPlan?.basePrice, 
-    selectedPlan?.multiLineDiscounts, 
+    selectedPlan?.id,
+    selectedPlan?.basePrice,
+    selectedPlan?.price_1_line,
+    selectedPlan?.price_2_line,
+    selectedPlan?.price_3_line,
+    selectedPlan?.price_4_line,
+    selectedPlan?.price_5plus_line,
     lines,
     streamingBill,
     selectedPerks

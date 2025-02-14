@@ -17,7 +17,7 @@ class VerizonDataManager {
     return VerizonDataManager.instance;
   }
 
-  public async getPlans(withAutopay: boolean = true): Promise<Plan[]> {
+  public async getPlans(): Promise<Plan[]> {
     if (!this.plans || this.shouldRefetch(this.lastPlansFetch)) {
       try {
         const { data: plans, error } = await supabase
