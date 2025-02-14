@@ -1,4 +1,3 @@
-
 import { useMemo } from 'react';
 import { Plan, QuoteCalculation } from '@/types';
 import { z } from 'zod';
@@ -23,52 +22,64 @@ interface QuoteError {
   code: string;
 }
 
+const getLinePriceForPosition = (planName: string, linePosition: number): number => {
+  if (planName.includes('ultimate')) {
+    if (linePosition === 1) return 90;
+    if (linePosition === 2) return 80;
+    if (linePosition === 3) return 65;
+    if (linePosition === 4) return 55;
+    return 52; // 5+ lines
+  }
+  if (planName.includes('plus')) {
+    if (linePosition === 1) return 80;
+    if (linePosition === 2) return 70;
+    if (linePosition === 3) return 55;
+    if (linePosition === 4) return 45;
+    return 42; // 5+ lines
+  }
+  if (planName.includes('welcome')) {
+    if (linePosition === 1) return 65;
+    if (linePosition === 2) return 55;
+    if (linePosition === 3) return 40;
+    if (linePosition === 4) return 30;
+    return 27; // 5+ lines
+  }
+  return 0;
+};
+
 const calculateQuote = (
-  plan: Plan, 
-  lines: number, 
+  plans: Plan[], 
+  lines: number,
   streamingBill: number = 0,
   selectedPerks: string[] = []
 ): QuoteCalculation | null => {
-  if (!plan || lines <= 0) return null;
+  if (!plans || !plans.length || lines <= 0) return null;
 
-  // Get the appropriate price per line based on number of lines
-  let pricePerLine: number;
-  if (lines === 1) {
-    pricePerLine = plan.price_1_line;
-  } else if (lines === 2) {
-    pricePerLine = plan.price_2_line;
-  } else if (lines === 3) {
-    pricePerLine = plan.price_3_line;
-  } else if (lines === 4) {
-    pricePerLine = plan.price_4_line;
-  } else {
-    pricePerLine = plan.price_5plus_line;
-  }
-  
-  // Calculate monthly total with autopay
-  const monthlyTotal = pricePerLine * lines;
-  
-  // Calculate price without autopay ($10 more per line)
-  const priceWithoutAutopay = pricePerLine + 10;
-  const subtotal = priceWithoutAutopay * lines;
-  const discount = subtotal - monthlyTotal; // Will be $10 per line
-  
-  // Calculate perks value
-  const perksValue = selectedPerks.length * 10; // $10 value per perk
+  let monthlyTotal = 0;
+  let subtotal = 0;
+
+  // Calculate price for each line based on its position
+  plans.forEach((plan, index) => {
+    const linePosition = index + 1;
+    const linePrice = getLinePriceForPosition(plan.name.toLowerCase(), linePosition);
+    monthlyTotal += linePrice;
+    subtotal += linePrice + 10; // Add $10 for without autopay
+  });
+
+  const discount = subtotal - monthlyTotal;
+  const perksValue = selectedPerks.length * 10;
   const streamingSavings = streamingBill;
-  
-  // Calculate total savings including streaming and perks
   const annualSavings = (streamingSavings * 12) + (perksValue * 12) + (discount * 12);
 
   return {
-    linePrice: pricePerLine,
+    linePrice: monthlyTotal / lines,
     total: monthlyTotal,
-    hasDiscount: true, // Always true since showing autopay discount
+    hasDiscount: true,
     annualSavings,
     selectedPerks,
     breakdown: {
-      subtotal: subtotal, // Price without autopay discount
-      discount: discount, // $10 per line autopay discount
+      subtotal,
+      discount,
       total: monthlyTotal,
       streamingSavings,
       totalSavings: annualSavings,
@@ -97,7 +108,7 @@ export const useQuoteCalculator = (
         selectedPerks,
       });
 
-      const calculation = calculateQuote(selectedPlan, lines, streamingBill, selectedPerks);
+      const calculation = calculateQuote([selectedPlan], lines, streamingBill, selectedPerks);
       
       return {
         calculation,
@@ -151,8 +162,8 @@ export const calculatePlanSavings = (
   streamingBill: number = 0,
   selectedPerks: string[] = []
 ): number => {
-  const currentCalc = calculateQuote(currentPlan, lines);
-  const newCalc = calculateQuote(newPlan, lines, streamingBill, selectedPerks);
+  const currentCalc = calculateQuote([currentPlan], lines);
+  const newCalc = calculateQuote([newPlan], lines, streamingBill, selectedPerks);
 
   if (!currentCalc || !newCalc) return 0;
 
