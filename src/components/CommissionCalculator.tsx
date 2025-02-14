@@ -1,3 +1,4 @@
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -39,13 +40,10 @@ export function CommissionCalculator() {
         const { data: devicesData, error: devicesError } = await supabase
           .from('commission_devices')
           .select(`
-            device_id,
-            model_name,
-            dpp_price,
-            upgrade_amount,
-            new_line_amount,
-            spiff_amount,
-            brand_id:commission_brands(name)
+            *,
+            commission_brands (
+              name
+            )
           `)
           .is('end_date', null)
           .order('model_name');
@@ -75,7 +73,7 @@ export function CommissionCalculator() {
         const formattedDevices = devicesData.map(device => ({
           device_id: device.device_id,
           model_name: device.model_name,
-          brand_name: device.brand_id?.[0]?.name || 'Unknown Brand',
+          brand_name: device.commission_brands?.name || 'Unknown Brand',
           dpp_price: device.dpp_price,
           upgrade_amount: device.upgrade_amount,
           new_line_amount: device.new_line_amount,
