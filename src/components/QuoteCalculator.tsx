@@ -1,3 +1,4 @@
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -28,13 +29,15 @@ const PlanSelector = ({
   });
 
   const getSingleLinePrice = (plan: Plan) => {
-    // Always return single line price with autopay discount
-    return plan.basePrice - (plan.autopayDiscount || 0);
+    // Get the base price for a single line
+    const singleLinePrice = plan.basePrice;
+    // Apply autopay discount if available
+    return singleLinePrice - (plan.autopayDiscount || 0);
   };
 
   const getDisplayPrice = (plan: Plan) => {
     const singleLinePrice = getSingleLinePrice(plan);
-    return `${plan.name} - ${formatCurrency(singleLinePrice)}/line with autopay`;
+    return `${plan.name} - ${formatCurrency(singleLinePrice)}/line`;
   };
 
   return (
