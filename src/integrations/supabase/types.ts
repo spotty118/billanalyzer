@@ -9,6 +9,57 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      devices: {
+        Row: {
+          base_commission: number
+          brand: string
+          category: string
+          created_at: string
+          dpp_price: number | null
+          external_id: string
+          id: string
+          name: string
+          spiff_amount: number
+          unlimited_plus_new: number
+          unlimited_plus_upgrade: number
+          updated_at: string
+          welcome_new: number
+          welcome_upgrade: number
+        }
+        Insert: {
+          base_commission: number
+          brand: string
+          category: string
+          created_at?: string
+          dpp_price?: number | null
+          external_id: string
+          id?: string
+          name: string
+          spiff_amount: number
+          unlimited_plus_new: number
+          unlimited_plus_upgrade: number
+          updated_at?: string
+          welcome_new: number
+          welcome_upgrade: number
+        }
+        Update: {
+          base_commission?: number
+          brand?: string
+          category?: string
+          created_at?: string
+          dpp_price?: number | null
+          external_id?: string
+          id?: string
+          name?: string
+          spiff_amount?: number
+          unlimited_plus_new?: number
+          unlimited_plus_upgrade?: number
+          updated_at?: string
+          welcome_new?: number
+          welcome_upgrade?: number
+        }
+        Relationships: []
+      }
       verizon_plans: {
         Row: {
           autopay_discount: number | null

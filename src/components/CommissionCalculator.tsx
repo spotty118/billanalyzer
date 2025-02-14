@@ -1,21 +1,66 @@
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useState, useMemo } from "react";
-import { devices, addons, type Addon } from "@/data/devices";
+import { useState, useMemo, useEffect } from "react";
+import { addons, type Addon } from "@/data/devices";
+import { supabase } from "@/integrations/supabase/client";
+
+interface Device {
+  id: string;
+  external_id: string;
+  name: string;
+  base_commission: number;
+  category: 'phone' | 'tablet' | 'watch' | 'accessory';
+  brand: 'Apple' | 'Google' | 'Samsung';
+  dpp_price: number | null;
+  spiff_amount: number;
+  welcome_upgrade: number;
+  unlimited_plus_upgrade: number;
+  welcome_new: number;
+  unlimited_plus_new: number;
+}
 
 export function CommissionCalculator() {
   const [selectedDevice, setSelectedDevice] = useState<string>("");
   const [selectedAddons, setSelectedAddons] = useState<string[]>([]);
+  const [devices, setDevices] = useState<Device[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchDevices = async () => {
+      try {
+        setLoading(true);
+        const { data, error } = await supabase
+          .from('devices')
+          .select('*')
+          .order('name');
+
+        if (error) {
+          throw error;
+        }
+
+        setDevices(data);
+      } catch (err) {
+        console.error('Error fetching devices:', err);
+        setError('Failed to load devices. Please try again later.');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchDevices();
+  }, []);
 
   // Calculate total commission
   const commission = useMemo(() => {
     let total = 0;
 
     // Add device base commission
-    const device = devices.find(d => d.id === selectedDevice);
+    const device = devices.find(d => d.external_id === selectedDevice);
     if (device) {
-      total += device.baseCommission;
+      total += device.base_commission;
     }
 
     // Add addon commissions
@@ -27,7 +72,7 @@ export function CommissionCalculator() {
     });
 
     return total;
-  }, [selectedDevice, selectedAddons]);
+  }, [selectedDevice, selectedAddons, devices]);
 
   // Group addons by category for better organization
   const groupedAddons = useMemo(() => {
@@ -40,6 +85,34 @@ export function CommissionCalculator() {
     });
     return groups;
   }, []);
+
+  if (loading) {
+    return (
+      <Card>
+        <CardContent className="p-6">
+          <div className="flex items-center justify-center space-x-2">
+            <div 
+              className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-900"
+              data-testid="loading-spinner"
+            ></div>
+            <div>Loading devices...</div>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (error) {
+    return (
+      <Card>
+        <CardContent className="p-6">
+          <div className="text-red-600">
+            {error}
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <Card>
@@ -57,11 +130,11 @@ export function CommissionCalculator() {
               </SelectTrigger>
               <SelectContent>
                 {devices.map((device) => (
-                  <SelectItem key={device.id} value={device.id}>
+                  <SelectItem key={device.id} value={device.external_id}>
                     <div className="flex justify-between items-center w-full">
                       <span>{device.name}</span>
                       <span className="text-sm text-muted-foreground">
-                        ${device.baseCommission}
+                        ${device.base_commission}
                       </span>
                     </div>
                   </SelectItem>
