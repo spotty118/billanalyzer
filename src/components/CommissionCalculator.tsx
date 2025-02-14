@@ -11,15 +11,15 @@ interface CommissionDevice {
   model_name: string;
   brand_name: string;
   dpp_price: number | null;
-  upgrade_amount: number;
-  new_line_amount: number;
-  spiff_amount: number;
+  upgrade_amount: number | null;
+  new_line_amount: number | null;
+  spiff_amount: number | null;
 }
 
 interface CommissionService {
   service_id: number;
   name: string;
-  base_commission: number;
+  base_commission: number | null;
   spiff_amount: number | null;
 }
 
@@ -98,14 +98,19 @@ export function CommissionCalculator() {
     // Add device commission
     const device = devices.find(d => d.device_id.toString() === selectedDevice);
     if (device) {
-      total += device.spiff_amount + device.new_line_amount; // Using new line amount as default
+      // Use nullish coalescing to handle null values
+      const spiffAmount = device.spiff_amount ?? 0;
+      const newLineAmount = device.new_line_amount ?? 0;
+      total += spiffAmount + newLineAmount;
     }
 
     // Add service commissions
     selectedServices.forEach(serviceId => {
       const service = services.find(s => s.service_id.toString() === serviceId);
       if (service) {
-        total += service.base_commission + (service.spiff_amount || 0);
+        const baseCommission = service.base_commission ?? 0;
+        const spiffAmount = service.spiff_amount ?? 0;
+        total += baseCommission + spiffAmount;
       }
     });
 
@@ -148,7 +153,7 @@ export function CommissionCalculator() {
                     <div className="flex justify-between items-center w-full">
                       <span>{device.brand_name} {device.model_name}</span>
                       <span className="text-sm text-muted-foreground">
-                        ${device.new_line_amount + device.spiff_amount}
+                        ${((device.new_line_amount ?? 0) + (device.spiff_amount ?? 0)).toFixed(2)}
                       </span>
                     </div>
                   </SelectItem>
@@ -181,7 +186,7 @@ export function CommissionCalculator() {
                     >
                       <span>{service.name}</span>
                       <span className="text-muted-foreground">
-                        +${(service.base_commission + (service.spiff_amount || 0)).toFixed(2)}
+                        +${((service.base_commission ?? 0) + (service.spiff_amount ?? 0)).toFixed(2)}
                       </span>
                     </label>
                   </div>
