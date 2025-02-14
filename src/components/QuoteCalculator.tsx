@@ -20,6 +20,7 @@ interface PlanSelectorProps {
   onPerksChange: (perks: string[]) => void;
   plans: Plan[];
   selectedPerks: string[];
+  allSelectedPerks?: string[];
 }
 
 const PlanSelector = ({
@@ -28,7 +29,8 @@ const PlanSelector = ({
   onPerksChange,
   plans,
   selectedPerks,
-}: PlanSelectorProps) => {
+  allSelectedPerks = [],
+}: PlanSelectorProps & { allSelectedPerks?: string[] }) => {
   const myPlans = plans.filter(plan => {
     const planName = plan.name.toLowerCase();
     return plan.type === 'consumer' && 
@@ -48,6 +50,13 @@ const PlanSelector = ({
   const getDisplayPrice = (plan: Plan) => {
     const basePrice = getPlanBasePrice(plan);
     return `${plan.name} - ${formatCurrency(basePrice)}/line`;
+  };
+
+  const isEntertainmentPerkDisabled = (perk: string) => {
+    if ((perk === 'disney' || perk === 'netflix') && !selectedPerks.includes(perk)) {
+      return allSelectedPerks.includes(perk);
+    }
+    return false;
   };
 
   return (
@@ -71,23 +80,34 @@ const PlanSelector = ({
       </div>
       
       <div className="space-y-2">
-        <label className="text-sm font-medium">Select Perks</label>
+        <label className="text-sm font-medium">Select Perks ($10/month each)</label>
         <div className="space-y-2 border rounded-md p-4">
-          {['apple_music', 'apple_one', 'disney', 'google', 'netflix', 'cloud', 'youtube', 'hotspot', 'travel'].map((perk) => (
-            <div key={perk} className="flex items-center space-x-2">
+          {[
+            ['apple_music', 'Apple Music'],
+            ['apple_one', 'Apple One'],
+            ['disney', 'Disney Bundle'],
+            ['google', 'Google One'],
+            ['netflix', 'Netflix & Max (with Ads)'],
+            ['cloud', 'Cloud'],
+            ['youtube', 'YouTube'],
+            ['hotspot', 'Hotspot'],
+            ['travelpass', 'TravelPass']
+          ].map(([value, label]) => (
+            <div key={value} className="flex items-center space-x-2">
               <input
                 type="checkbox"
-                id={perk}
-                checked={selectedPerks.includes(perk)}
+                id={value}
+                checked={selectedPerks.includes(value)}
+                disabled={isEntertainmentPerkDisabled(value)}
                 onChange={(e) => {
                   const newPerks = e.target.checked 
-                    ? [...selectedPerks, perk]
-                    : selectedPerks.filter(p => p !== perk);
+                    ? [...selectedPerks, value]
+                    : selectedPerks.filter(p => p !== value);
                   onPerksChange(newPerks);
                 }}
               />
-              <label htmlFor={perk} className="text-sm">
-                {perk.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}
+              <label htmlFor={value} className="text-sm">
+                {label}
               </label>
             </div>
           ))}
@@ -327,6 +347,8 @@ export function QuoteCalculator() {
     );
   }
 
+  const allSelectedPerks = linePlans.flatMap(lp => lp.perks);
+
   return (
     <ErrorBoundary>
       <Card>
@@ -356,6 +378,7 @@ export function QuoteCalculator() {
                     onPerksChange={(perks) => updateLinePerks(index, perks)}
                     plans={availablePlans}
                     selectedPerks={linePlan.perks}
+                    allSelectedPerks={allSelectedPerks}
                   />
                 </div>
               ))}
