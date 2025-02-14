@@ -1,4 +1,3 @@
-
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -46,12 +45,19 @@ export function CommissionCalculator() {
             upgrade_amount,
             new_line_amount,
             spiff_amount,
-            commission_brands (name)
+            brand_id (
+              name
+            )
           `)
           .is('end_date', null)
           .order('model_name');
 
-        if (devicesError) throw devicesError;
+        if (devicesError) {
+          console.error('Devices fetch error:', devicesError);
+          throw devicesError;
+        }
+
+        console.log('Devices data:', devicesData); // Debug log
 
         // Fetch services
         const { data: servicesData, error: servicesError } = await supabase
@@ -60,18 +66,25 @@ export function CommissionCalculator() {
           .is('end_date', null)
           .order('name');
 
-        if (servicesError) throw servicesError;
+        if (servicesError) {
+          console.error('Services fetch error:', servicesError);
+          throw servicesError;
+        }
+
+        console.log('Services data:', servicesData); // Debug log
 
         // Transform the data to match our interface
         const formattedDevices = devicesData.map(device => ({
           device_id: device.device_id,
           model_name: device.model_name,
-          brand_name: device.commission_brands?.name || 'Unknown Brand',
+          brand_name: device.brand_id?.name || 'Unknown Brand',
           dpp_price: device.dpp_price,
           upgrade_amount: device.upgrade_amount,
           new_line_amount: device.new_line_amount,
           spiff_amount: device.spiff_amount
         }));
+
+        console.log('Formatted devices:', formattedDevices); // Debug log
 
         setDevices(formattedDevices);
         setServices(servicesData);
