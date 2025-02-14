@@ -17,7 +17,7 @@ class VerizonDataManager {
     return VerizonDataManager.instance;
   }
 
-  public async getPlans(withAutopay: boolean = true): Promise<Plan[]> {
+  public async getPlans(): Promise<Plan[]> {
     if (!this.plans || this.shouldRefetch(this.lastPlansFetch)) {
       try {
         const { data: plans, error } = await supabase
@@ -48,7 +48,7 @@ class VerizonDataManager {
           price_3_line: plan.price_3_line || plan.base_price,
           price_4_line: plan.price_4_line || plan.base_price,
           price_5plus_line: plan.price_5plus_line || plan.base_price,
-          features: plan.features,
+          features: plan.features || [],
           type: plan.type as PlanType,
           dataAllowance: plan.data_allowance as {
             premium: number | 'unlimited';
@@ -70,7 +70,7 @@ class VerizonDataManager {
     return this.plans || [];
   }
 
-  public async getPlanById(planId: string, withAutopay: boolean = true): Promise<Plan | null> {
+  public async getPlanById(planId: string): Promise<Plan | null> {
     try {
       const { data: plan, error } = await supabase
         .from('verizon_plans')
@@ -94,7 +94,7 @@ class VerizonDataManager {
         price_3_line: plan.price_3_line || plan.base_price,
         price_4_line: plan.price_4_line || plan.base_price,
         price_5plus_line: plan.price_5plus_line || plan.base_price,
-        features: plan.features,
+        features: plan.features || [],
         type: plan.type as PlanType,
         dataAllowance: plan.data_allowance as {
           premium: number | 'unlimited';
