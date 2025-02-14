@@ -1,193 +1,44 @@
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { Plus, Minus } from "lucide-react";
+import { Plus } from "lucide-react";
 import { useState, useEffect, useMemo } from "react";
 import { Plan, ApiError } from "@/types";
-import { getPlans, formatCurrency } from "@/data/verizonPlans";
+import { getPlans } from "@/data/verizonPlans";
 import { ErrorBoundary } from "@/components/ui/error-boundary";
+import { LineItem } from "./quote-calculator/LineItem";
+import { QuoteResult } from "./quote-calculator/QuoteResult";
 
 interface LinePlan {
   plan: string;
   perks: string[];
 }
 
-interface PlanSelectorProps {
-  selectedPlan: string;
-  onPlanChange: (value: string) => void;
-  onPerksChange: (perks: string[]) => void;
-  plans: Plan[];
-  selectedPerks: string[];
-  allSelectedPerks?: string[];
-}
-
-const PlanSelector = ({
-  selectedPlan,
-  onPlanChange,
-  onPerksChange,
-  plans,
-  selectedPerks,
-  allSelectedPerks = [],
-}: PlanSelectorProps & { allSelectedPerks?: string[] }) => {
-  const myPlans = plans.filter(plan => {
-    const planName = plan.name.toLowerCase();
-    return plan.type === 'consumer' && 
-           (planName.includes('welcome') || 
-            planName.includes('plus') || 
-            planName.includes('ultimate'));
-  });
-
-  const getPlanBasePrice = (plan: Plan) => {
-    const planName = plan.name.toLowerCase();
-    if (planName.includes('ultimate')) return 90;
-    if (planName.includes('plus')) return 80;
-    if (planName.includes('welcome')) return 65;
-    return plan.basePrice;
-  };
-
-  const getDisplayPrice = (plan: Plan) => {
-    const basePrice = getPlanBasePrice(plan);
-    return `${plan.name} - ${formatCurrency(basePrice)}/line`;
-  };
-
-  const isEntertainmentPerkDisabled = (perk: string) => {
-    if ((perk === 'disney' || perk === 'netflix') && !selectedPerks.includes(perk)) {
-      return allSelectedPerks.includes(perk);
-    }
-    return false;
-  };
-
-  return (
-    <div className="space-y-4">
-      <div className="space-y-2">
-        <label className="text-sm font-medium">Select Plan</label>
-        <Select onValueChange={onPlanChange} value={selectedPlan}>
-          <SelectTrigger className="bg-white">
-            <SelectValue placeholder="Choose a plan">
-              {selectedPlan && getDisplayPrice(plans.find(p => p.id === selectedPlan)!)}
-            </SelectValue>
-          </SelectTrigger>
-          <SelectContent className="bg-white">
-            {myPlans.map((plan) => (
-              <SelectItem key={plan.id} value={plan.id}>
-                {getDisplayPrice(plan)}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-      
-      <div className="space-y-2">
-        <label className="text-sm font-medium">Select Perks ($10/month each)</label>
-        <div className="space-y-2 border rounded-md p-4">
-          {[
-            ['apple_music', 'Apple Music'],
-            ['apple_one', 'Apple One'],
-            ['disney', 'Disney Bundle'],
-            ['google', 'Google One'],
-            ['netflix', 'Netflix & Max (with Ads)'],
-            ['cloud', 'Cloud'],
-            ['youtube', 'YouTube'],
-            ['hotspot', 'Hotspot'],
-            ['travelpass', 'TravelPass']
-          ].map(([value, label]) => (
-            <div key={value} className="flex items-center space-x-2">
-              <input
-                type="checkbox"
-                id={value}
-                checked={selectedPerks.includes(value)}
-                disabled={isEntertainmentPerkDisabled(value)}
-                onChange={(e) => {
-                  const newPerks = e.target.checked 
-                    ? [...selectedPerks, value]
-                    : selectedPerks.filter(p => p !== value);
-                  onPerksChange(newPerks);
-                }}
-              />
-              <label htmlFor={value} className="text-sm">
-                {label}
-              </label>
-            </div>
-          ))}
-        </div>
-      </div>
-    </div>
-  );
+const getLinePriceForPosition = (planName: string, linePosition: number): number => {
+  if (planName.includes('ultimate')) {
+    if (linePosition === 1) return 90;
+    if (linePosition === 2) return 80;
+    if (linePosition === 3) return 65;
+    if (linePosition === 4) return 55;
+    return 52; // 5+ lines
+  }
+  if (planName.includes('plus')) {
+    if (linePosition === 1) return 80;
+    if (linePosition === 2) return 70;
+    if (linePosition === 3) return 55;
+    if (linePosition === 4) return 45;
+    return 42; // 5+ lines
+  }
+  if (planName.includes('welcome')) {
+    if (linePosition === 1) return 65;
+    if (linePosition === 2) return 55;
+    if (linePosition === 3) return 40;
+    if (linePosition === 4) return 30;
+    return 27; // 5+ lines
+  }
+  return 0;
 };
-
-interface QuoteResultProps {
-  linePrices: Array<{plan: string; price: number}>;
-  total: number;
-  hasDiscount: boolean;
-  annualSavings: number;
-  breakdown: {
-    subtotal: number;
-    discount: number;
-    total: number;
-    streamingSavings?: number;
-    totalSavings?: number;
-  };
-}
-
-const QuoteResult = ({
-  linePrices,
-  total,
-  hasDiscount,
-  annualSavings,
-  breakdown,
-}: QuoteResultProps) => (
-  <div className="mt-4 space-y-4">
-    <div className="space-y-2">
-      {linePrices.map((line, index) => (
-        <div key={index} className="flex justify-between items-center">
-          <span className="text-sm text-gray-500">Line {index + 1} ({line.plan})</span>
-          <span className="text-sm font-bold text-verizon-red">{formatCurrency(line.price)}/mo</span>
-        </div>
-      ))}
-      <div className="border-t pt-2 flex justify-between items-center">
-        <span className="text-sm font-medium">Total Monthly Cost</span>
-        <span className="text-xl font-bold text-verizon-red">{formatCurrency(total)}/mo</span>
-      </div>
-    </div>
-
-    {hasDiscount && (
-      <Alert>
-        <AlertDescription>
-          <div className="space-y-1">
-            <p className="font-medium text-green-600">
-              Price includes autopay discount!
-            </p>
-            <p className="text-sm">
-              Monthly savings: {formatCurrency(breakdown.discount)}
-            </p>
-            <p className="text-sm">
-              Annual savings: {formatCurrency(annualSavings)}
-            </p>
-          </div>
-        </AlertDescription>
-      </Alert>
-    )}
-
-    <div className="text-sm space-y-1 border-t pt-2">
-      <div className="flex justify-between">
-        <span>Without autopay</span>
-        <span>{formatCurrency(breakdown.subtotal)}</span>
-      </div>
-      {hasDiscount && (
-        <div className="flex justify-between text-green-600">
-          <span>Autopay Discount</span>
-          <span>-{formatCurrency(breakdown.discount)}</span>
-        </div>
-      )}
-      <div className="flex justify-between font-medium">
-        <span>Total with autopay</span>
-        <span>{formatCurrency(breakdown.total)}</span>
-      </div>
-    </div>
-  </div>
-);
 
 export function QuoteCalculator() {
   const [linePlans, setLinePlans] = useState<LinePlan[]>([{ plan: "", perks: [] }]);
@@ -239,31 +90,6 @@ export function QuoteCalculator() {
     const newLinePlans = [...linePlans];
     newLinePlans[index] = { ...newLinePlans[index], perks };
     setLinePlans(newLinePlans);
-  };
-
-  const getLinePriceForPosition = (planName: string, linePosition: number): number => {
-    if (planName.includes('ultimate')) {
-      if (linePosition === 1) return 90;
-      if (linePosition === 2) return 80;
-      if (linePosition === 3) return 65;
-      if (linePosition === 4) return 55;
-      return 52; // 5+ lines
-    }
-    if (planName.includes('plus')) {
-      if (linePosition === 1) return 80;
-      if (linePosition === 2) return 70;
-      if (linePosition === 3) return 55;
-      if (linePosition === 4) return 45;
-      return 42; // 5+ lines
-    }
-    if (planName.includes('welcome')) {
-      if (linePosition === 1) return 65;
-      if (linePosition === 2) return 55;
-      if (linePosition === 3) return 40;
-      if (linePosition === 4) return 30;
-      return 27; // 5+ lines
-    }
-    return 0;
   };
 
   const totalCalculation = useMemo(() => {
@@ -367,29 +193,17 @@ export function QuoteCalculator() {
 
             <div className="mt-6 space-y-4">
               {linePlans.map((linePlan, index) => (
-                <div key={index} className="p-6 border rounded-lg space-y-4 bg-white shadow-sm transition-all hover:shadow-md">
-                  <div className="flex justify-between items-center">
-                    <h3 className="text-lg font-medium text-gray-700">Line {index + 1}</h3>
-                    {linePlans.length > 1 && (
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => removeLine(index)}
-                        className="text-gray-500 hover:text-gray-700"
-                      >
-                        <Minus className="h-4 w-4" />
-                      </Button>
-                    )}
-                  </div>
-                  <PlanSelector
-                    selectedPlan={linePlan.plan}
-                    onPlanChange={(value) => updateLinePlan(index, value)}
-                    onPerksChange={(perks) => updateLinePerks(index, perks)}
-                    plans={availablePlans}
-                    selectedPerks={linePlan.perks}
-                    allSelectedPerks={allSelectedPerks}
-                  />
-                </div>
+                <LineItem
+                  key={index}
+                  index={index}
+                  linePlan={linePlan}
+                  plans={availablePlans}
+                  allSelectedPerks={allSelectedPerks}
+                  onRemove={() => removeLine(index)}
+                  onPlanChange={(value) => updateLinePlan(index, value)}
+                  onPerksChange={(perks) => updateLinePerks(index, perks)}
+                  showRemoveButton={linePlans.length > 1}
+                />
               ))}
 
               <Button
