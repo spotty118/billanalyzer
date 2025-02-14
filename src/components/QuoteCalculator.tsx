@@ -1,4 +1,3 @@
-
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -9,6 +8,7 @@ import { useState, useEffect, useMemo } from "react";
 import { Plan, ApiError } from "@/types";
 import { getPlans, formatCurrency } from "@/data/verizonPlans";
 import { ErrorBoundary } from "@/components/ui/error-boundary";
+import { PricingGrid } from "./PricingGrid";
 
 interface LinePlan {
   plan: string;
@@ -336,6 +336,8 @@ export function QuoteCalculator() {
         </CardHeader>
         <CardContent>
           <div className="space-y-6">
+            <PricingGrid />
+            
             <div className="space-y-4">
               {linePlans.map((linePlan, index) => (
                 <div key={index} className="p-4 border rounded-lg space-y-4">
