@@ -18,15 +18,11 @@ export type Database = {
           external_id: string
           features: string[]
           id: string
+          multi_line_discounts: Json
           name: string
           paperless_discount: number | null
           perks: Json[] | null
           plan_level: string | null
-          price_1_line: number | null
-          price_2_line: number | null
-          price_3_line: number | null
-          price_4_line: number | null
-          price_5plus_line: number | null
           streaming_quality: string
           type: string
           updated_at: string
@@ -39,15 +35,11 @@ export type Database = {
           external_id: string
           features: string[]
           id?: string
+          multi_line_discounts: Json
           name: string
           paperless_discount?: number | null
           perks?: Json[] | null
           plan_level?: string | null
-          price_1_line?: number | null
-          price_2_line?: number | null
-          price_3_line?: number | null
-          price_4_line?: number | null
-          price_5plus_line?: number | null
           streaming_quality: string
           type: string
           updated_at?: string
@@ -60,15 +52,11 @@ export type Database = {
           external_id?: string
           features?: string[]
           id?: string
+          multi_line_discounts?: Json
           name?: string
           paperless_discount?: number | null
           perks?: Json[] | null
           plan_level?: string | null
-          price_1_line?: number | null
-          price_2_line?: number | null
-          price_3_line?: number | null
-          price_4_line?: number | null
-          price_5plus_line?: number | null
           streaming_quality?: string
           type?: string
           updated_at?: string

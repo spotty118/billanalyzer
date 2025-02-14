@@ -1,4 +1,3 @@
-
 import { useMemo } from 'react';
 import { Plan, QuoteCalculation } from '@/types';
 import { z } from 'zod';
@@ -6,12 +5,13 @@ import { z } from 'zod';
 const QuoteInputSchema = z.object({
   plan: z.object({
     id: z.string(),
-    price_1_line: z.number(),
-    price_2_line: z.number(),
-    price_3_line: z.number(),
-    price_4_line: z.number(),
-    price_5plus_line: z.number(),
-    autopayDiscount: z.number().optional(),
+    basePrice: z.number(),
+    multiLineDiscounts: z.object({
+      lines2: z.number(),
+      lines3: z.number(),
+      lines4: z.number(),
+      lines5Plus: z.number(),
+    }),
   }),
   lines: z.number().int().min(1).max(12),
   streamingBill: z.number().optional(),
@@ -31,32 +31,24 @@ const calculateQuote = (
 ): QuoteCalculation | null => {
   if (!plan || lines <= 0) return null;
 
-  // Get the appropriate price per line based on number of lines
-  const getPricePerLine = (numLines: number): number => {
-    if (numLines >= 5) return plan.price_5plus_line;
-    if (numLines === 4) return plan.price_4_line;
-    if (numLines === 3) return plan.price_3_line;
-    if (numLines === 2) return plan.price_2_line;
-    return plan.price_1_line;
-  };
-
-  // Get price per line before autopay discount
-  const pricePerLine = getPricePerLine(lines);
+  // Base price is the price without autopay discount
+  const basePrice = plan.basePrice;
   
-  // Apply autopay discount
-  const pricePerLineWithAutopay = pricePerLine - (plan.autopayDiscount || 0);
+  // Price per line with autopay discount
+  const pricePerLineWithAutopay = basePrice - (plan.autopayDiscount || 0);
   
   // Calculate totals
-  const subtotal = pricePerLine * lines; // Total without autopay discount
+  const subtotal = basePrice * lines;  // Total without autopay discount
   const totalWithAutopay = pricePerLineWithAutopay * lines;
-  const discount = subtotal - totalWithAutopay; // Autopay discount
+  const discount = subtotal - totalWithAutopay;  // This will be $10 per line
+  const annualSavings = discount * 12;
 
   // Calculate perks value
   const perksValue = selectedPerks.length * 10; // $10 value per perk
   const streamingSavings = streamingBill;
   
-  // Calculate total annual savings including streaming and perks
-  const annualSavings = (discount * 12) + (streamingSavings * 12) + (perksValue * 12);
+  // Calculate total savings including streaming and perks
+  const totalSavings = annualSavings + (streamingSavings * 12) + (perksValue * 12);
 
   return {
     linePrice: pricePerLineWithAutopay,
@@ -65,11 +57,11 @@ const calculateQuote = (
     annualSavings,
     selectedPerks,
     breakdown: {
-      subtotal,
-      discount,
+      subtotal: subtotal,
+      discount: discount,
       total: totalWithAutopay,
       streamingSavings,
-      totalSavings: annualSavings,
+      totalSavings,
     },
   };
 };
@@ -81,11 +73,13 @@ export const useQuoteCalculator = (
   selectedPerks: string[] = []
 ): { calculation: QuoteCalculation | null; error: QuoteError | null } => {
   return useMemo(() => {
+    // Early return if no data
     if (!selectedPlan || lines <= 0) {
       return { calculation: null, error: null };
     }
 
     try {
+      // Validate inputs
       QuoteInputSchema.parse({
         plan: selectedPlan,
         lines,
@@ -119,13 +113,9 @@ export const useQuoteCalculator = (
       };
     }
   }, [
-    selectedPlan?.id,
-    selectedPlan?.price_1_line,
-    selectedPlan?.price_2_line,
-    selectedPlan?.price_3_line,
-    selectedPlan?.price_4_line,
-    selectedPlan?.price_5plus_line,
-    selectedPlan?.autopayDiscount,
+    selectedPlan?.id, 
+    selectedPlan?.basePrice, 
+    selectedPlan?.multiLineDiscounts, 
     lines,
     streamingBill,
     selectedPerks

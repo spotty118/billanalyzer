@@ -17,13 +17,6 @@ class VerizonDataManager {
     return VerizonDataManager.instance;
   }
 
-  private validatePlanLevel(level: string | null): "unlimited" | "welcome" | "plus" | undefined {
-    if (level === "unlimited" || level === "welcome" || level === "plus") {
-      return level;
-    }
-    return undefined;
-  }
-
   public async getPlans(withAutopay: boolean = true): Promise<Plan[]> {
     if (!this.plans || this.shouldRefetch(this.lastPlansFetch)) {
       try {
@@ -67,8 +60,7 @@ class VerizonDataManager {
             },
             streamingQuality: plan.streaming_quality as StreamingQuality,
             autopayDiscount: plan.autopay_discount ?? undefined,
-            paperlessDiscount: plan.paperless_discount ?? undefined,
-            planLevel: this.validatePlanLevel(plan.plan_level)
+            paperlessDiscount: plan.paperless_discount ?? undefined
           };
 
           return basePlan;
@@ -125,11 +117,60 @@ class VerizonDataManager {
         },
         streamingQuality: plan.streaming_quality as StreamingQuality,
         autopayDiscount: plan.autopay_discount ?? undefined,
-        paperlessDiscount: plan.paperless_discount ?? undefined,
-        planLevel: this.validatePlanLevel(plan.plan_level)
+        paperlessDiscount: plan.paperless_discount ?? undefined
       };
     } catch (error) {
       console.error('Error in getPlanById:', error);
+      throw error;
+    }
+  }
+
+  public async getPlansByType(type: PlanType, withAutopay: boolean = true): Promise<Plan[]> {
+    try {
+      const { data: plans, error } = await supabase
+        .from('verizon_plans')
+        .select('*')
+        .eq('type', type)
+        .order('base_price');
+
+      if (error) {
+        console.error('Error fetching plans by type:', error);
+        throw error;
+      }
+
+      // Remove duplicates based on external_id
+      const uniquePlans = plans.reduce((acc: any[], plan) => {
+        const existingPlan = acc.find(p => p.external_id === plan.external_id);
+        if (!existingPlan) {
+          acc.push(plan);
+        }
+        return acc;
+      }, []);
+
+      return uniquePlans.map(plan => ({
+        id: plan.external_id,
+        name: plan.name,
+        basePrice: withAutopay && plan.autopay_discount ? 
+          plan.base_price - (plan.autopay_discount ?? 0) : 
+          plan.base_price,
+        multiLineDiscounts: plan.multi_line_discounts as {
+          lines2: number;
+          lines3: number;
+          lines4: number;
+          lines5Plus: number;
+        },
+        features: plan.features,
+        type: plan.type as PlanType,
+        dataAllowance: plan.data_allowance as {
+          premium: number | 'unlimited';
+          hotspot?: number;
+        },
+        streamingQuality: plan.streaming_quality as StreamingQuality,
+        autopayDiscount: plan.autopay_discount ?? undefined,
+        paperlessDiscount: plan.paperless_discount ?? undefined
+      }));
+    } catch (error) {
+      console.error('Error in getPlansByType:', error);
       throw error;
     }
   }

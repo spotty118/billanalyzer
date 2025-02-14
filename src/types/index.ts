@@ -2,11 +2,12 @@ export interface Plan {
   id: string;
   name: string;
   basePrice: number;
-  price_1_line: number;
-  price_2_line: number;
-  price_3_line: number;
-  price_4_line: number;
-  price_5plus_line: number;
+  multiLineDiscounts: {
+    lines2: number;
+    lines3: number;
+    lines4: number;
+    lines5Plus: number;
+  };
   features: string[];
   type: 'consumer' | 'business';
   dataAllowance: {
