@@ -1,14 +1,12 @@
-
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Plus, Minus } from "lucide-react";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Plan, ApiError } from "@/types";
 import { getPlans, formatCurrency } from "@/data/verizonPlans";
-import { useQuoteCalculator } from "@/hooks/use-quote-calculator";
 import { ErrorBoundary } from "@/components/ui/error-boundary";
 
 interface LinePlan {
