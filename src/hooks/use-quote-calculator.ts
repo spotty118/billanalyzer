@@ -45,31 +45,28 @@ const calculateQuote = (
     pricePerLine = plan.price_5plus_line;
   }
   
-  // Calculate totals
-  const subtotal = plan.basePrice * lines;  // Total without autopay discount
-  const totalWithAutopay = pricePerLine * lines;
-  const discount = subtotal - totalWithAutopay;  // This will be $10 per line
-  const annualSavings = discount * 12;
-
+  // Calculate monthly total
+  const monthlyTotal = pricePerLine * lines;
+  
   // Calculate perks value
   const perksValue = selectedPerks.length * 10; // $10 value per perk
   const streamingSavings = streamingBill;
   
   // Calculate total savings including streaming and perks
-  const totalSavings = annualSavings + (streamingSavings * 12) + (perksValue * 12);
+  const annualSavings = (streamingSavings * 12) + (perksValue * 12);
 
   return {
     linePrice: pricePerLine,
-    total: totalWithAutopay,
-    hasDiscount: discount > 0,
+    total: monthlyTotal,
+    hasDiscount: true, // Always true since prices include autopay discount
     annualSavings,
     selectedPerks,
     breakdown: {
-      subtotal: subtotal,
-      discount: discount,
-      total: totalWithAutopay,
+      subtotal: monthlyTotal, // No longer calculating a separate subtotal
+      discount: 0, // No longer calculating discounts since prices already include them
+      total: monthlyTotal,
       streamingSavings,
-      totalSavings,
+      totalSavings: annualSavings,
     },
   };
 };
@@ -122,7 +119,6 @@ export const useQuoteCalculator = (
     }
   }, [
     selectedPlan?.id,
-    selectedPlan?.basePrice,
     selectedPlan?.price_1_line,
     selectedPlan?.price_2_line,
     selectedPlan?.price_3_line,
