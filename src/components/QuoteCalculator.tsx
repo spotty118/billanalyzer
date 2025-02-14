@@ -46,13 +46,14 @@ const PlanSelector = ({
     // Always show single line price in dropdown
     const singleLinePrice = getLinePrice(plan, 1);
     
-    // If lines > 1, show the current multi-line price below
+    // If current lines are selected, show as additional info
     if (currentLines > 1) {
       const multiLinePrice = getLinePrice(plan, currentLines);
-      return `${plan.name} - ${formatCurrency(singleLinePrice)}/mo per line with autopay (${formatCurrency(multiLinePrice)}/mo for ${currentLines} lines)`;
+      const totalPrice = multiLinePrice * currentLines;
+      return `${plan.name} - ${formatCurrency(singleLinePrice)}/line with autopay (${formatCurrency(totalPrice)} total for ${currentLines} lines)`;
     }
     
-    return `${plan.name} - ${formatCurrency(singleLinePrice)}/mo per line with autopay`;
+    return `${plan.name} - ${formatCurrency(singleLinePrice)}/line with autopay`;
   };
 
   return (
@@ -60,7 +61,9 @@ const PlanSelector = ({
       <label className="text-sm font-medium">Select Plan</label>
       <Select onValueChange={onPlanChange} value={selectedPlan}>
         <SelectTrigger>
-          <SelectValue placeholder="Choose a plan" />
+          <SelectValue placeholder="Choose a plan">
+            {selectedPlan && plans.find(p => p.id === selectedPlan)?.name}
+          </SelectValue>
         </SelectTrigger>
         <SelectContent>
           {myPlans.map((plan) => (
