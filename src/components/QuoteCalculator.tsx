@@ -30,14 +30,14 @@ const PlanSelector = ({
 
   const getFixedSingleLinePrice = (plan: Plan) => {
     const planName = plan.name.toLowerCase();
-    if (planName.includes('ultimate')) return 90;
-    if (planName.includes('plus')) return 80;
-    if (planName.includes('welcome')) return 65;
-    return plan.basePrice - (plan.autopayDiscount || 0); // fallback
+    if (planName.includes('ultimate')) return 100; // Base price before autopay
+    if (planName.includes('plus')) return 90; // Base price before autopay
+    if (planName.includes('welcome')) return 75; // Base price before autopay
+    return plan.basePrice; // fallback
   };
 
   const getDisplayPrice = (plan: Plan) => {
-    const singleLinePrice = getFixedSingleLinePrice(plan);
+    const singleLinePrice = getFixedSingleLinePrice(plan) - 10; // Apply $10 autopay discount
     return `${plan.name} - ${formatCurrency(singleLinePrice)}/line`;
   };
 
