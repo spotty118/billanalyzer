@@ -16,27 +16,36 @@ interface LinePlan {
   perks: string[];
 }
 
-const getLinePriceForPosition = (planName: string, linePosition: number): number => {
+const getLinePriceForPosition = (planName: string, linePosition: number, totalLines: number): number => {
+  // Use the price tier based on total number of lines, not the line position
+  const priceTier = Math.min(totalLines, 5); // Cap at 5+ lines pricing
+
   if (planName.includes('ultimate')) {
-    if (linePosition === 1) return 90;
-    if (linePosition === 2) return 80;
-    if (linePosition === 3) return 65;
-    if (linePosition === 4) return 55;
-    return 52; // 5+ lines
+    switch (priceTier) {
+      case 1: return 90;
+      case 2: return 80;
+      case 3: return 65;
+      case 4: return 55;
+      default: return 52; // 5+ lines
+    }
   }
   if (planName.includes('plus')) {
-    if (linePosition === 1) return 80;
-    if (linePosition === 2) return 70;
-    if (linePosition === 3) return 55;
-    if (linePosition === 4) return 45;
-    return 42; // 5+ lines
+    switch (priceTier) {
+      case 1: return 80;
+      case 2: return 70;
+      case 3: return 55;
+      case 4: return 45;
+      default: return 42; // 5+ lines
+    }
   }
   if (planName.includes('welcome')) {
-    if (linePosition === 1) return 65;
-    if (linePosition === 2) return 55;
-    if (linePosition === 3) return 40;
-    if (linePosition === 4) return 30;
-    return 27; // 5+ lines
+    switch (priceTier) {
+      case 1: return 65;
+      case 2: return 55;
+      case 3: return 40;
+      case 4: return 30;
+      default: return 27; // 5+ lines
+    }
   }
   return 0;
 };
@@ -106,18 +115,19 @@ export function QuoteCalculator() {
     let totalMonthly = 0;
     let totalWithoutAutopay = 0;
     const streamingBillValue = parseFloat(streamingBill) || 0;
+    const totalLines = selectedPlans.length;
 
     const linePrices = selectedPlans.map(({ plan, perks }, index) => {
       const linePosition = index + 1;
       const planName = plan.name.toLowerCase();
-      const linePrice = getLinePriceForPosition(planName, linePosition);
+      const linePrice = getLinePriceForPosition(planName, linePosition, totalLines);
       const perksPrice = perks.length * 10;
       totalMonthly += linePrice + perksPrice;
       totalWithoutAutopay += linePrice + 10 + perksPrice;
       return {
         plan: plan.name,
         price: linePrice + perksPrice,
-        perks // Add perks to the line prices object
+        perks
       };
     });
 
