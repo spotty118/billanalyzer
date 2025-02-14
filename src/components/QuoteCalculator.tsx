@@ -37,14 +37,16 @@ const PlanSelector = ({
             planName.includes('ultimate'));
   });
 
-  const getDisplayPrice = (plan: Plan) => {
+  const getPlanBasePrice = (plan: Plan) => {
     const planName = plan.name.toLowerCase();
-    let basePrice;
-    if (planName.includes('ultimate')) basePrice = 90;
-    else if (planName.includes('plus')) basePrice = 80;
-    else if (planName.includes('welcome')) basePrice = 65;
-    else basePrice = plan.basePrice;
-    
+    if (planName.includes('ultimate')) return 90;
+    if (planName.includes('plus')) return 80;
+    if (planName.includes('welcome')) return 65;
+    return plan.basePrice;
+  };
+
+  const getDisplayPrice = (plan: Plan) => {
+    const basePrice = getPlanBasePrice(plan);
     return `${plan.name} - ${formatCurrency(basePrice)}/line`;
   };
 
@@ -221,6 +223,31 @@ export function QuoteCalculator() {
     setLinePlans(newLinePlans);
   };
 
+  const getLinePriceForPlan = (planName: string, totalLines: number): number => {
+    if (planName.includes('ultimate')) {
+      if (totalLines === 1) return 90;
+      if (totalLines === 2) return 80;
+      if (totalLines === 3) return 65;
+      if (totalLines === 4) return 55;
+      return 52; // 5+ lines
+    }
+    if (planName.includes('plus')) {
+      if (totalLines === 1) return 80;
+      if (totalLines === 2) return 70;
+      if (totalLines === 3) return 55;
+      if (totalLines === 4) return 45;
+      return 42; // 5+ lines
+    }
+    if (planName.includes('welcome')) {
+      if (totalLines === 1) return 65;
+      if (totalLines === 2) return 55;
+      if (totalLines === 3) return 40;
+      if (totalLines === 4) return 30;
+      return 27; // 5+ lines
+    }
+    return 0;
+  };
+
   const totalCalculation = useMemo(() => {
     const selectedPlans = linePlans
       .filter(lp => lp.plan)
@@ -236,28 +263,11 @@ export function QuoteCalculator() {
     const streamingBillValue = parseFloat(streamingBill) || 0;
     const totalLines = selectedPlans.length;
 
-    const getLineDiscount = (lines: number) => {
-      if (lines === 1) return 0;
-      if (lines === 2) return 10;
-      if (lines === 3) return 25;
-      if (lines === 4) return 35;
-      return 40; // 5+ lines
-    };
-
     selectedPlans.forEach(({ plan }) => {
       const planName = plan.name.toLowerCase();
-      let basePrice;
-      
-      if (planName.includes('ultimate')) basePrice = 90;
-      else if (planName.includes('plus')) basePrice = 80;
-      else if (planName.includes('welcome')) basePrice = 65;
-      else basePrice = plan.basePrice;
-
-      const lineDiscount = getLineDiscount(totalLines);
-      const discountedPrice = basePrice - lineDiscount;
-      
-      totalMonthly += discountedPrice;
-      totalWithoutAutopay += discountedPrice + 10;
+      const linePrice = getLinePriceForPlan(planName, totalLines);
+      totalMonthly += linePrice;
+      totalWithoutAutopay += linePrice + 10; // Add $10 for without autopay
     });
 
     const perksValue = linePlans.reduce((acc, lp) => acc + (lp.perks.length * 10), 0);
