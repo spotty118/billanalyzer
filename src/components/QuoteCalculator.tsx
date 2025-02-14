@@ -98,7 +98,7 @@ const PlanSelector = ({
 };
 
 interface QuoteResultProps {
-  linePrice: number;
+  linePrices: Array<{plan: string; price: number}>;
   total: number;
   hasDiscount: boolean;
   annualSavings: number;
@@ -112,25 +112,23 @@ interface QuoteResultProps {
 }
 
 const QuoteResult = ({
-  linePrice,
+  linePrices,
   total,
   hasDiscount,
   annualSavings,
   breakdown,
 }: QuoteResultProps) => (
   <div className="mt-4 space-y-4">
-    <div className="grid grid-cols-2 gap-4">
-      <div className="text-center">
-        <p className="text-sm text-gray-500">Average Price Per Line</p>
-        <p className="text-xl font-bold text-verizon-red">
-          {formatCurrency(linePrice)}/mo
-        </p>
-      </div>
-      <div className="text-center">
-        <p className="text-sm text-gray-500">Total Monthly Cost</p>
-        <p className="text-2xl font-bold text-verizon-red">
-          {formatCurrency(total)}/mo
-        </p>
+    <div className="space-y-2">
+      {linePrices.map((line, index) => (
+        <div key={index} className="flex justify-between items-center">
+          <span className="text-sm text-gray-500">Line {index + 1} ({line.plan})</span>
+          <span className="text-sm font-bold text-verizon-red">{formatCurrency(line.price)}/mo</span>
+        </div>
+      ))}
+      <div className="border-t pt-2 flex justify-between items-center">
+        <span className="text-sm font-medium">Total Monthly Cost</span>
+        <span className="text-xl font-bold text-verizon-red">{formatCurrency(total)}/mo</span>
       </div>
     </div>
 
@@ -262,12 +260,16 @@ export function QuoteCalculator() {
     let totalWithoutAutopay = 0;
     const streamingBillValue = parseFloat(streamingBill) || 0;
 
-    selectedPlans.forEach(({ plan }, index) => {
+    const linePrices = selectedPlans.map(({ plan }, index) => {
       const linePosition = index + 1;
       const planName = plan.name.toLowerCase();
       const linePrice = getLinePriceForPosition(planName, linePosition);
       totalMonthly += linePrice;
       totalWithoutAutopay += linePrice + 10;
+      return {
+        plan: plan.name,
+        price: linePrice
+      };
     });
 
     const perksValue = linePlans.reduce((acc, lp) => acc + (lp.perks.length * 10), 0);
@@ -275,7 +277,7 @@ export function QuoteCalculator() {
     const annualSavings = (streamingBillValue * 12) + (perksValue * 12) + (discount * 12);
 
     return {
-      linePrice: totalMonthly / selectedPlans.length,
+      linePrices,
       total: totalMonthly,
       hasDiscount: true,
       annualSavings,
@@ -382,7 +384,7 @@ export function QuoteCalculator() {
 
             {totalCalculation && (
               <QuoteResult
-                linePrice={totalCalculation.linePrice}
+                linePrices={totalCalculation.linePrices}
                 total={totalCalculation.total}
                 hasDiscount={totalCalculation.hasDiscount}
                 annualSavings={totalCalculation.annualSavings}
