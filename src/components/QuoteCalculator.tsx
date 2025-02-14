@@ -1,4 +1,3 @@
-
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -16,8 +15,8 @@ interface LinePlan {
   perks: string[];
 }
 
-const getLinePriceForPosition = (planName: string, linePosition: number, totalLines: number): number => {
-  // Use the price tier based on total number of lines, not the line position
+const getLinePriceForPosition = (planName: string, totalLines: number): number => {
+  // Use the price tier based on total number of lines
   const priceTier = Math.min(totalLines, 5); // Cap at 5+ lines pricing
 
   if (planName.includes('ultimate')) {
@@ -117,10 +116,9 @@ export function QuoteCalculator() {
     const streamingBillValue = parseFloat(streamingBill) || 0;
     const totalLines = selectedPlans.length;
 
-    const linePrices = selectedPlans.map(({ plan, perks }, index) => {
-      const linePosition = index + 1;
+    const linePrices = selectedPlans.map(({ plan, perks }) => {
       const planName = plan.name.toLowerCase();
-      const linePrice = getLinePriceForPosition(planName, linePosition, totalLines);
+      const linePrice = getLinePriceForPosition(planName, totalLines);
       const perksPrice = perks.length * 10;
       totalMonthly += linePrice + perksPrice;
       totalWithoutAutopay += linePrice + 10 + perksPrice;
