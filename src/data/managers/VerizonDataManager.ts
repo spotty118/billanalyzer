@@ -17,7 +17,7 @@ class VerizonDataManager {
     return VerizonDataManager.instance;
   }
 
-  public async getPlans(): Promise<Plan[]> {
+  public async getPlans(withAutopay: boolean = true): Promise<Plan[]> {
     if (!this.plans || this.shouldRefetch(this.lastPlansFetch)) {
       try {
         const { data: plans, error } = await supabase
@@ -39,26 +39,32 @@ class VerizonDataManager {
           return acc;
         }, []);
 
-        this.plans = uniquePlans.map(plan => ({
-          id: plan.external_id,
-          name: plan.name,
-          basePrice: plan.base_price,
-          price_1_line: plan.price_1_line || plan.base_price,
-          price_2_line: plan.price_2_line || plan.base_price,
-          price_3_line: plan.price_3_line || plan.base_price,
-          price_4_line: plan.price_4_line || plan.base_price,
-          price_5plus_line: plan.price_5plus_line || plan.base_price,
-          features: plan.features || [],
-          type: plan.type as PlanType,
-          dataAllowance: plan.data_allowance as {
-            premium: number | 'unlimited';
-            hotspot?: number;
-          },
-          streamingQuality: plan.streaming_quality as StreamingQuality,
-          autopayDiscount: plan.autopay_discount ?? undefined,
-          paperlessDiscount: plan.paperless_discount ?? undefined,
-          planLevel: plan.plan_level ?? undefined
-        }));
+        this.plans = uniquePlans.map(plan => {
+          const basePlan = {
+            id: plan.external_id,
+            name: plan.name,
+            basePrice: withAutopay && plan.autopay_discount ? 
+              plan.base_price - (plan.autopay_discount ?? 0) : 
+              plan.base_price,
+            multiLineDiscounts: plan.multi_line_discounts as {
+              lines2: number;
+              lines3: number;
+              lines4: number;
+              lines5Plus: number;
+            },
+            features: plan.features,
+            type: plan.type as PlanType,
+            dataAllowance: plan.data_allowance as {
+              premium: number | 'unlimited';
+              hotspot?: number;
+            },
+            streamingQuality: plan.streaming_quality as StreamingQuality,
+            autopayDiscount: plan.autopay_discount ?? undefined,
+            paperlessDiscount: plan.paperless_discount ?? undefined
+          };
+
+          return basePlan;
+        });
         
         this.lastPlansFetch = Date.now();
       } catch (error) {
@@ -67,10 +73,16 @@ class VerizonDataManager {
       }
     }
 
-    return this.plans || [];
+    // Apply autopay filter to the cached plans
+    return (this.plans || []).map(plan => ({
+      ...plan,
+      basePrice: withAutopay && plan.autopayDiscount ? 
+        plan.basePrice - (plan.autopayDiscount ?? 0) : 
+        plan.basePrice
+    }));
   }
 
-  public async getPlanById(planId: string): Promise<Plan | null> {
+  public async getPlanById(planId: string, withAutopay: boolean = true): Promise<Plan | null> {
     try {
       const { data: plan, error } = await supabase
         .from('verizon_plans')
@@ -88,13 +100,16 @@ class VerizonDataManager {
       return {
         id: plan.external_id,
         name: plan.name,
-        basePrice: plan.base_price,
-        price_1_line: plan.price_1_line || plan.base_price,
-        price_2_line: plan.price_2_line || plan.base_price,
-        price_3_line: plan.price_3_line || plan.base_price,
-        price_4_line: plan.price_4_line || plan.base_price,
-        price_5plus_line: plan.price_5plus_line || plan.base_price,
-        features: plan.features || [],
+        basePrice: withAutopay && plan.autopay_discount ? 
+          plan.base_price - (plan.autopay_discount ?? 0) : 
+          plan.base_price,
+        multiLineDiscounts: plan.multi_line_discounts as {
+          lines2: number;
+          lines3: number;
+          lines4: number;
+          lines5Plus: number;
+        },
+        features: plan.features,
         type: plan.type as PlanType,
         dataAllowance: plan.data_allowance as {
           premium: number | 'unlimited';
@@ -102,11 +117,60 @@ class VerizonDataManager {
         },
         streamingQuality: plan.streaming_quality as StreamingQuality,
         autopayDiscount: plan.autopay_discount ?? undefined,
-        paperlessDiscount: plan.paperless_discount ?? undefined,
-        planLevel: plan.plan_level ?? undefined
+        paperlessDiscount: plan.paperless_discount ?? undefined
       };
     } catch (error) {
       console.error('Error in getPlanById:', error);
+      throw error;
+    }
+  }
+
+  public async getPlansByType(type: PlanType, withAutopay: boolean = true): Promise<Plan[]> {
+    try {
+      const { data: plans, error } = await supabase
+        .from('verizon_plans')
+        .select('*')
+        .eq('type', type)
+        .order('base_price');
+
+      if (error) {
+        console.error('Error fetching plans by type:', error);
+        throw error;
+      }
+
+      // Remove duplicates based on external_id
+      const uniquePlans = plans.reduce((acc: any[], plan) => {
+        const existingPlan = acc.find(p => p.external_id === plan.external_id);
+        if (!existingPlan) {
+          acc.push(plan);
+        }
+        return acc;
+      }, []);
+
+      return uniquePlans.map(plan => ({
+        id: plan.external_id,
+        name: plan.name,
+        basePrice: withAutopay && plan.autopay_discount ? 
+          plan.base_price - (plan.autopay_discount ?? 0) : 
+          plan.base_price,
+        multiLineDiscounts: plan.multi_line_discounts as {
+          lines2: number;
+          lines3: number;
+          lines4: number;
+          lines5Plus: number;
+        },
+        features: plan.features,
+        type: plan.type as PlanType,
+        dataAllowance: plan.data_allowance as {
+          premium: number | 'unlimited';
+          hotspot?: number;
+        },
+        streamingQuality: plan.streaming_quality as StreamingQuality,
+        autopayDiscount: plan.autopay_discount ?? undefined,
+        paperlessDiscount: plan.paperless_discount ?? undefined
+      }));
+    } catch (error) {
+      console.error('Error in getPlansByType:', error);
       throw error;
     }
   }

@@ -6,11 +6,11 @@ import { z } from 'zod';
 const QuoteInputSchema = z.object({
   plan: z.object({
     id: z.string(),
-    price_1_line: z.number().optional(),
-    price_2_line: z.number().optional(),
-    price_3_line: z.number().optional(),
-    price_4_line: z.number().optional(),
-    price_5plus_line: z.number().optional(),
+    price_1_line: z.number(),
+    price_2_line: z.number(),
+    price_3_line: z.number(),
+    price_4_line: z.number(),
+    price_5plus_line: z.number(),
     autopayDiscount: z.number().optional(),
   }),
   lines: z.number().int().min(1).max(12),
@@ -89,8 +89,8 @@ export const useQuoteCalculator = (
       QuoteInputSchema.parse({
         plan: selectedPlan,
         lines,
-        streamingBill: streamingBill || 0,
-        selectedPerks: selectedPerks || [],
+        streamingBill,
+        selectedPerks,
       });
 
       const calculation = calculateQuote(selectedPlan, lines, streamingBill, selectedPerks);
@@ -104,7 +104,7 @@ export const useQuoteCalculator = (
         return {
           calculation: null,
           error: {
-            message: 'Please enter number of lines (1-12)',
+            message: 'Invalid input data',
             code: 'VALIDATION_ERROR',
           },
         };
