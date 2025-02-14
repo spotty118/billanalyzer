@@ -1,4 +1,3 @@
-
 import { useMemo } from 'react';
 import { Plan, QuoteCalculation } from '@/types';
 import { z } from 'zod';
@@ -32,26 +31,16 @@ const calculateQuote = (
 ): QuoteCalculation | null => {
   if (!plan || lines <= 0) return null;
 
-  // Calculate base price per line with autopay discount
-  const basePrice = plan.basePrice - (plan.autopayDiscount || 0);
-
-  // Get the appropriate multi-line price per line
-  const getLinePrice = (numLines: number): number => {
-    const priceWithAutopay = plan.multiLineDiscounts.lines5Plus;
-    if (numLines >= 5) return priceWithAutopay;
-    if (numLines === 4) return plan.multiLineDiscounts.lines4;
-    if (numLines === 3) return plan.multiLineDiscounts.lines3;
-    if (numLines === 2) return plan.multiLineDiscounts.lines2;
-    return basePrice;
-  };
-
-  const linePrice = getLinePrice(lines);
-  const monthlyTotal = lines * linePrice;
-  const hasDiscount = lines > 1;
-
-  // For multi-line plans, calculate savings against single-line price
-  const subtotal = basePrice * lines; // Total without multi-line discount
-  const discount = hasDiscount ? subtotal - monthlyTotal : 0;
+  // Base price is the price without autopay discount
+  const basePrice = plan.basePrice;
+  
+  // Price per line with autopay discount
+  const pricePerLineWithAutopay = basePrice - (plan.autopayDiscount || 0);
+  
+  // Calculate totals
+  const subtotal = basePrice * lines;  // Total without autopay discount
+  const totalWithAutopay = pricePerLineWithAutopay * lines;
+  const discount = subtotal - totalWithAutopay;  // This will be $10 per line
   const annualSavings = discount * 12;
 
   // Calculate perks value
@@ -62,15 +51,15 @@ const calculateQuote = (
   const totalSavings = annualSavings + (streamingSavings * 12) + (perksValue * 12);
 
   return {
-    linePrice,
-    total: monthlyTotal,
-    hasDiscount,
+    linePrice: pricePerLineWithAutopay,
+    total: totalWithAutopay,
+    hasDiscount: true, // Always true since there's always autopay discount
     annualSavings,
     selectedPerks,
     breakdown: {
       subtotal: subtotal,
       discount: discount,
-      total: monthlyTotal,
+      total: totalWithAutopay,
       streamingSavings,
       totalSavings,
     },
