@@ -111,12 +111,13 @@ export function QuoteCalculator() {
       const linePosition = index + 1;
       const planName = plan.name.toLowerCase();
       const linePrice = getLinePriceForPosition(planName, linePosition);
-      const perksPrice = perks.length * 10; // Calculate perks price for this line
+      const perksPrice = perks.length * 10;
       totalMonthly += linePrice + perksPrice;
       totalWithoutAutopay += linePrice + 10 + perksPrice;
       return {
         plan: plan.name,
-        price: linePrice + perksPrice // Include perks in the line price
+        price: linePrice + perksPrice,
+        perks // Add perks to the line prices object
       };
     });
 

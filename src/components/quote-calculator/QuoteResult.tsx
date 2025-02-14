@@ -26,12 +26,25 @@ export function QuoteResult({
   return (
     <div className="mt-4 space-y-4">
       <div className="space-y-2">
-        {linePrices.map((line, index) => (
-          <div key={index} className="flex justify-between items-center">
-            <span className="text-sm text-gray-500">Line {index + 1} ({line.plan})</span>
-            <span className="text-sm font-bold text-verizon-red">{formatCurrency(line.price)}/mo</span>
-          </div>
-        ))}
+        {linePrices.map((line, index) => {
+          const basePlanPrice = line.price - (line.perks?.length * 10 || 0);
+          const perksPrice = line.perks?.length * 10 || 0;
+          
+          return (
+            <div key={index} className="space-y-1">
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-gray-500">Line {index + 1} ({line.plan})</span>
+                <span className="text-sm font-bold text-verizon-red">{formatCurrency(basePlanPrice)}/mo</span>
+              </div>
+              {perksPrice > 0 && (
+                <div className="flex justify-between items-center pl-4">
+                  <span className="text-sm text-gray-400">Perks ({line.perks?.length} selected)</span>
+                  <span className="text-sm text-gray-500">+{formatCurrency(perksPrice)}/mo</span>
+                </div>
+              )}
+            </div>
+          );
+        })}
         <div className="border-t pt-2 flex justify-between items-center">
           <span className="text-sm font-medium">Total Monthly Cost</span>
           <span className="text-xl font-bold text-verizon-red">{formatCurrency(total)}/mo</span>
