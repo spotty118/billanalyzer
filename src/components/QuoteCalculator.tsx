@@ -1,3 +1,4 @@
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -261,10 +262,12 @@ export function QuoteCalculator() {
     let totalMonthly = 0;
     let totalWithoutAutopay = 0;
     const streamingBillValue = parseFloat(streamingBill) || 0;
-    const totalLines = selectedPlans.length;
+    const totalLines = selectedPlans.length; // This determines the tier for all lines
 
+    // Calculate for each line using the total number of lines for tier pricing
     selectedPlans.forEach(({ plan }) => {
       const planName = plan.name.toLowerCase();
+      // Each line gets priced according to the total number of lines
       const linePrice = getLinePriceForPlan(planName, totalLines);
       totalMonthly += linePrice;
       totalWithoutAutopay += linePrice + 10; // Add $10 for without autopay
