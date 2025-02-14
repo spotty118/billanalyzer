@@ -1,4 +1,3 @@
-
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -30,30 +29,28 @@ const PlanSelector = ({
             planName.includes('ultimate'));
   });
 
-  const getLinePrice = (plan: Plan, lines: number) => {
-    let basePrice;
-    if (lines <= 1) basePrice = plan.basePrice;
-    else if (lines === 2) basePrice = plan.multiLineDiscounts.lines2;
-    else if (lines === 3) basePrice = plan.multiLineDiscounts.lines3;
-    else if (lines === 4) basePrice = plan.multiLineDiscounts.lines4;
-    else basePrice = plan.multiLineDiscounts.lines5Plus;
-
-    // Apply autopay discount if available
-    return basePrice - (plan.autopayDiscount || 0);
+  const getSingleLinePrice = (plan: Plan) => {
+    // Always return single line price with autopay discount
+    return plan.basePrice - (plan.autopayDiscount || 0);
   };
 
   const getDisplayPrice = (plan: Plan) => {
-    // Always show single line price in dropdown
-    const singleLinePrice = getLinePrice(plan, 1);
-    
-    // If current lines are selected, show as additional info
-    if (currentLines > 1) {
-      const multiLinePrice = getLinePrice(plan, currentLines);
-      const totalPrice = multiLinePrice * currentLines;
-      return `${plan.name} - ${formatCurrency(singleLinePrice)}/line with autopay (${formatCurrency(totalPrice)} total for ${currentLines} lines)`;
-    }
-    
+    const singleLinePrice = getSingleLinePrice(plan);
     return `${plan.name} - ${formatCurrency(singleLinePrice)}/line with autopay`;
+  };
+
+  const getMultiLineDisplayPrice = (plan: Plan) => {
+    let basePrice;
+    if (currentLines === 2) basePrice = plan.multiLineDiscounts.lines2;
+    else if (currentLines === 3) basePrice = plan.multiLineDiscounts.lines3;
+    else if (currentLines === 4) basePrice = plan.multiLineDiscounts.lines4;
+    else if (currentLines > 4) basePrice = plan.multiLineDiscounts.lines5Plus;
+    else return getDisplayPrice(plan);
+
+    const priceWithAutopay = basePrice - (plan.autopayDiscount || 0);
+    const totalPrice = priceWithAutopay * currentLines;
+
+    return `${plan.name} - ${formatCurrency(getSingleLinePrice(plan))}/line with autopay (${formatCurrency(totalPrice)} total for ${currentLines} lines)`;
   };
 
   return (
@@ -68,7 +65,7 @@ const PlanSelector = ({
         <SelectContent>
           {myPlans.map((plan) => (
             <SelectItem key={plan.id} value={plan.id}>
-              {getDisplayPrice(plan)}
+              {currentLines > 1 ? getMultiLineDisplayPrice(plan) : getDisplayPrice(plan)}
             </SelectItem>
           ))}
         </SelectContent>
