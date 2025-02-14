@@ -1,4 +1,3 @@
-
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -9,6 +8,7 @@ import { getPlans } from "@/data/verizonPlans";
 import { ErrorBoundary } from "@/components/ui/error-boundary";
 import { LineItem } from "./quote-calculator/LineItem";
 import { QuoteResult } from "./quote-calculator/QuoteResult";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 interface LinePlan {
   plan: string;
