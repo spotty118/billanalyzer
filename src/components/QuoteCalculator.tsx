@@ -62,7 +62,7 @@ const PlanSelector = ({
       <Select onValueChange={onPlanChange} value={selectedPlan}>
         <SelectTrigger>
           <SelectValue placeholder="Choose a plan">
-            {selectedPlan && plans.find(p => p.id === selectedPlan)?.name}
+            {selectedPlan && getDisplayPrice(plans.find(p => p.id === selectedPlan)!)}
           </SelectValue>
         </SelectTrigger>
         <SelectContent>
