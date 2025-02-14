@@ -12,14 +12,12 @@ interface PlanSelectorProps {
   selectedPlan: string;
   onPlanChange: (value: string) => void;
   plans: Plan[];
-  currentLines: number;
 }
 
 const PlanSelector = ({
   selectedPlan,
   onPlanChange,
   plans,
-  currentLines,
 }: PlanSelectorProps) => {
   const myPlans = plans.filter(plan => {
     const planName = plan.name.toLowerCase();
@@ -233,7 +231,6 @@ export function QuoteCalculator() {
               selectedPlan={selectedPlanId}
               onPlanChange={setSelectedPlanId}
               plans={availablePlans}
-              currentLines={parseInt(lines) || 1}
             />
             <div className="space-y-2">
               <label className="text-sm font-medium">Number of Lines</label>
