@@ -45,25 +45,30 @@ const calculateQuote = (
     pricePerLine = plan.price_5plus_line;
   }
   
-  // Calculate monthly total
+  // Calculate monthly total with autopay
   const monthlyTotal = pricePerLine * lines;
+  
+  // Calculate price without autopay ($10 more per line)
+  const priceWithoutAutopay = pricePerLine + 10;
+  const subtotal = priceWithoutAutopay * lines;
+  const discount = subtotal - monthlyTotal; // Will be $10 per line
   
   // Calculate perks value
   const perksValue = selectedPerks.length * 10; // $10 value per perk
   const streamingSavings = streamingBill;
   
   // Calculate total savings including streaming and perks
-  const annualSavings = (streamingSavings * 12) + (perksValue * 12);
+  const annualSavings = (streamingSavings * 12) + (perksValue * 12) + (discount * 12);
 
   return {
     linePrice: pricePerLine,
     total: monthlyTotal,
-    hasDiscount: true, // Always true since prices include autopay discount
+    hasDiscount: true, // Always true since showing autopay discount
     annualSavings,
     selectedPerks,
     breakdown: {
-      subtotal: monthlyTotal, // No longer calculating a separate subtotal
-      discount: 0, // No longer calculating discounts since prices already include them
+      subtotal: subtotal, // Price without autopay discount
+      discount: discount, // $10 per line autopay discount
       total: monthlyTotal,
       streamingSavings,
       totalSavings: annualSavings,
