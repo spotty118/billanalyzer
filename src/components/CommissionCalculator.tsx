@@ -41,7 +41,14 @@ export function CommissionCalculator() {
           throw error;
         }
 
-        setDevices(data);
+        // Add type assertion to ensure the data matches our Device interface
+        const typedData = data.map(device => ({
+          ...device,
+          category: device.category as 'phone' | 'tablet' | 'watch' | 'accessory',
+          brand: device.brand as 'Apple' | 'Google' | 'Samsung'
+        }));
+
+        setDevices(typedData);
       } catch (err) {
         console.error('Error fetching devices:', err);
         setError('Failed to load devices. Please try again later.');
