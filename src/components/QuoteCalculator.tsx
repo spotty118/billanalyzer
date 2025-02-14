@@ -31,11 +31,15 @@ const PlanSelector = ({
   });
 
   const getLinePrice = (plan: Plan, lines: number) => {
-    if (lines <= 1) return plan.basePrice;
-    if (lines === 2) return plan.multiLineDiscounts.lines2;
-    if (lines === 3) return plan.multiLineDiscounts.lines3;
-    if (lines === 4) return plan.multiLineDiscounts.lines4;
-    return plan.multiLineDiscounts.lines5Plus;
+    let basePrice;
+    if (lines <= 1) basePrice = plan.basePrice;
+    else if (lines === 2) basePrice = plan.multiLineDiscounts.lines2;
+    else if (lines === 3) basePrice = plan.multiLineDiscounts.lines3;
+    else if (lines === 4) basePrice = plan.multiLineDiscounts.lines4;
+    else basePrice = plan.multiLineDiscounts.lines5Plus;
+
+    // Apply $10 autopay discount
+    return basePrice - 10;
   };
 
   return (
@@ -48,7 +52,7 @@ const PlanSelector = ({
         <SelectContent>
           {myPlans.map((plan) => (
             <SelectItem key={plan.id} value={plan.id}>
-              {plan.name} - {formatCurrency(getLinePrice(plan, currentLines))}/mo per line
+              {plan.name} - {formatCurrency(getLinePrice(plan, currentLines))}/mo per line with autopay
             </SelectItem>
           ))}
         </SelectContent>
