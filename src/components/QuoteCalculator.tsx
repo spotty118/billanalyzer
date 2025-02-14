@@ -357,16 +357,25 @@ export function QuoteCalculator() {
         </CardHeader>
         <CardContent>
           <div className="space-y-6">
-            <div className="space-y-4">
+            <Button 
+              variant="outline" 
+              className="w-full text-gray-400 cursor-not-allowed bg-gray-50"
+              disabled
+            >
+              Military Discount (Coming Soon)
+            </Button>
+
+            <div className="mt-6 space-y-4">
               {linePlans.map((linePlan, index) => (
-                <div key={index} className="p-4 border rounded-lg space-y-4">
+                <div key={index} className="p-6 border rounded-lg space-y-4 bg-white shadow-sm transition-all hover:shadow-md">
                   <div className="flex justify-between items-center">
-                    <h3 className="text-lg font-medium">Line {index + 1}</h3>
+                    <h3 className="text-lg font-medium text-gray-700">Line {index + 1}</h3>
                     {linePlans.length > 1 && (
                       <Button
                         variant="ghost"
                         size="icon"
                         onClick={() => removeLine(index)}
+                        className="text-gray-500 hover:text-gray-700"
                       >
                         <Minus className="h-4 w-4" />
                       </Button>
@@ -386,7 +395,7 @@ export function QuoteCalculator() {
               <Button
                 variant="outline"
                 onClick={addLine}
-                className="w-full"
+                className="w-full border-dashed"
                 disabled={linePlans.length >= 12}
               >
                 <Plus className="h-4 w-4 mr-2" />
@@ -395,7 +404,7 @@ export function QuoteCalculator() {
             </div>
 
             <div className="space-y-2">
-              <label className="text-sm font-medium">Current Monthly Streaming Cost</label>
+              <label className="text-sm font-medium text-gray-700">Current Monthly Streaming Cost</label>
               <Input
                 type="number"
                 value={streamingBill}
