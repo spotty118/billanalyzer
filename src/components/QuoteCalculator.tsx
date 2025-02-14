@@ -1,4 +1,3 @@
-
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -38,20 +37,6 @@ const PlanSelector = ({
   const getDisplayPrice = (plan: Plan) => {
     const singleLinePrice = getSingleLinePrice(plan);
     return `${plan.name} - ${formatCurrency(singleLinePrice)}/line with autopay`;
-  };
-
-  const getMultiLineDisplayPrice = (plan: Plan) => {
-    let basePrice;
-    if (currentLines === 2) basePrice = plan.multiLineDiscounts.lines2;
-    else if (currentLines === 3) basePrice = plan.multiLineDiscounts.lines3;
-    else if (currentLines === 4) basePrice = plan.multiLineDiscounts.lines4;
-    else if (currentLines > 4) basePrice = plan.multiLineDiscounts.lines5Plus;
-    else return getDisplayPrice(plan);
-
-    const priceWithAutopay = basePrice - (plan.autopayDiscount || 0);
-    const totalPrice = priceWithAutopay * currentLines;
-
-    return `${plan.name} - ${formatCurrency(priceWithAutopay)}/line with autopay (${formatCurrency(totalPrice)} total for ${currentLines} lines)`;
   };
 
   return (
