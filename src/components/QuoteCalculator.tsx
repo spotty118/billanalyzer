@@ -38,8 +38,8 @@ const PlanSelector = ({
     else if (lines === 4) basePrice = plan.multiLineDiscounts.lines4;
     else basePrice = plan.multiLineDiscounts.lines5Plus;
 
-    // Apply $10 autopay discount
-    return basePrice - 10;
+    // Apply autopay discount if available
+    return basePrice - (plan.autopayDiscount || 0);
   };
 
   const getDisplayPrice = (plan: Plan) => {
