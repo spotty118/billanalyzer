@@ -42,6 +42,19 @@ const PlanSelector = ({
     return basePrice - 10;
   };
 
+  const getDisplayPrice = (plan: Plan) => {
+    // Always show single line price in dropdown
+    const singleLinePrice = getLinePrice(plan, 1);
+    
+    // If lines > 1, show the current multi-line price below
+    if (currentLines > 1) {
+      const multiLinePrice = getLinePrice(plan, currentLines);
+      return `${plan.name} - ${formatCurrency(singleLinePrice)}/mo per line with autopay (${formatCurrency(multiLinePrice)}/mo for ${currentLines} lines)`;
+    }
+    
+    return `${plan.name} - ${formatCurrency(singleLinePrice)}/mo per line with autopay`;
+  };
+
   return (
     <div className="space-y-2">
       <label className="text-sm font-medium">Select Plan</label>
@@ -52,7 +65,7 @@ const PlanSelector = ({
         <SelectContent>
           {myPlans.map((plan) => (
             <SelectItem key={plan.id} value={plan.id}>
-              {plan.name} - {formatCurrency(getLinePrice(plan, currentLines))}/mo per line with autopay
+              {getDisplayPrice(plan)}
             </SelectItem>
           ))}
         </SelectContent>
