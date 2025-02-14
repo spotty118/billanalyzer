@@ -1,4 +1,3 @@
-
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -71,7 +70,6 @@ interface QuoteResultProps {
   linePrice: number;
   total: number;
   hasDiscount: boolean;
-  lines: number;
   annualSavings: number;
   breakdown: {
     subtotal: number;
@@ -84,7 +82,6 @@ const QuoteResult = ({
   linePrice,
   total,
   hasDiscount,
-  lines,
   annualSavings,
   breakdown,
 }: QuoteResultProps) => (
@@ -260,7 +257,6 @@ export function QuoteCalculator() {
                 linePrice={calculation.linePrice}
                 total={calculation.total}
                 hasDiscount={calculation.hasDiscount}
-                lines={parseInt(lines)}
                 annualSavings={calculation.annualSavings}
                 breakdown={calculation.breakdown}
               />
