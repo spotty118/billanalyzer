@@ -45,9 +45,7 @@ export function CommissionCalculator() {
             upgrade_amount,
             new_line_amount,
             spiff_amount,
-            brand_id (
-              name
-            )
+            brand_id:commission_brands(name)
           `)
           .is('end_date', null)
           .order('model_name');
@@ -77,7 +75,7 @@ export function CommissionCalculator() {
         const formattedDevices = devicesData.map(device => ({
           device_id: device.device_id,
           model_name: device.model_name,
-          brand_name: device.brand_id?.name || 'Unknown Brand',
+          brand_name: device.brand_id?.[0]?.name || 'Unknown Brand',
           dpp_price: device.dpp_price,
           upgrade_amount: device.upgrade_amount,
           new_line_amount: device.new_line_amount,
