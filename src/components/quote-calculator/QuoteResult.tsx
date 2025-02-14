@@ -3,7 +3,11 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { formatCurrency } from "@/data/verizonPlans";
 
 interface QuoteResultProps {
-  linePrices: Array<{plan: string; price: number}>;
+  linePrices: Array<{
+    plan: string;
+    price: number;
+    perks?: string[]; // Add perks to the interface
+  }>;
   total: number;
   hasDiscount: boolean;
   annualSavings: number;
@@ -27,8 +31,8 @@ export function QuoteResult({
     <div className="mt-4 space-y-4">
       <div className="space-y-2">
         {linePrices.map((line, index) => {
-          const basePlanPrice = line.price - (line.perks?.length * 10 || 0);
-          const perksPrice = line.perks?.length * 10 || 0;
+          const basePlanPrice = line.price - (line.perks?.length || 0) * 10;
+          const perksPrice = (line.perks?.length || 0) * 10;
           
           return (
             <div key={index} className="space-y-1">
