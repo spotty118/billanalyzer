@@ -261,7 +261,6 @@ export function QuoteCalculator() {
     let totalMonthly = 0;
     let totalWithoutAutopay = 0;
     const streamingBillValue = parseFloat(streamingBill) || 0;
-    const totalLines = selectedPlans.length;
 
     selectedPlans.forEach(({ plan }, index) => {
       const linePosition = index + 1;
