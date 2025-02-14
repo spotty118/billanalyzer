@@ -4,6 +4,13 @@ export interface Device {
   name: string;
   baseCommission: number;
   category: 'phone' | 'tablet' | 'watch' | 'accessory';
+  brand: 'Apple' | 'Google' | 'Samsung';
+  dppPrice?: number;
+  spiffAmount: number;
+  welcomeUpgrade: number;
+  unlimitedPlusUpgrade: number;
+  welcomeNew: number;
+  unlimitedPlusNew: number;
 }
 
 export interface Addon {
@@ -14,59 +21,58 @@ export interface Addon {
 }
 
 export const devices: Device[] = [
+  // Apple Devices
   {
-    id: "iphone-15",
-    name: "iPhone 15",
+    id: "iphone-15-128",
+    name: "iPhone 15 128GB",
     baseCommission: 50,
-    category: "phone"
+    category: "phone",
+    brand: "Apple",
+    dppPrice: 840.00,
+    spiffAmount: 15.00,
+    welcomeUpgrade: 15.00,
+    unlimitedPlusUpgrade: 35.00,
+    welcomeNew: 35.00,
+    unlimitedPlusNew: 75.00
   },
   {
-    id: "iphone-15-pro",
-    name: "iPhone 15 Pro",
-    baseCommission: 75,
-    category: "phone"
-  },
-  {
-    id: "s24",
-    name: "Samsung Galaxy S24",
+    id: "iphone-15-256",
+    name: "iPhone 15 256GB",
     baseCommission: 50,
-    category: "phone"
+    category: "phone",
+    brand: "Apple",
+    dppPrice: 940.00,
+    spiffAmount: 15.00,
+    welcomeUpgrade: 15.00,
+    unlimitedPlusUpgrade: 35.00,
+    welcomeNew: 35.00,
+    unlimitedPlusNew: 75.00
   },
   {
-    id: "s24-ultra",
-    name: "Samsung Galaxy S24 Ultra",
-    baseCommission: 75,
-    category: "phone"
-  },
-  {
-    id: "pixel-8",
-    name: "Google Pixel 8",
+    id: "pixel-8-128",
+    name: "Google Pixel 8 128GB",
     baseCommission: 50,
-    category: "phone"
+    category: "phone",
+    brand: "Google",
+    dppPrice: 806.00,
+    spiffAmount: 0,
+    welcomeUpgrade: 45.00,
+    unlimitedPlusUpgrade: 65.00,
+    welcomeNew: 100.00,
+    unlimitedPlusNew: 140.00
   },
   {
-    id: "ipad",
-    name: "iPad",
-    baseCommission: 40,
-    category: "tablet"
-  },
-  {
-    id: "tab-s9",
-    name: "Samsung Galaxy Tab S9",
-    baseCommission: 40,
-    category: "tablet"
-  },
-  {
-    id: "watch-9",
-    name: "Apple Watch Series 9",
-    baseCommission: 30,
-    category: "watch"
-  },
-  {
-    id: "watch-6",
-    name: "Samsung Galaxy Watch 6",
-    baseCommission: 30,
-    category: "watch"
+    id: "s24-128",
+    name: "Samsung Galaxy S24 128GB",
+    baseCommission: 50,
+    category: "phone",
+    brand: "Samsung",
+    dppPrice: 817.00,
+    spiffAmount: 0,
+    welcomeUpgrade: 45.00,
+    unlimitedPlusUpgrade: 65.00,
+    welcomeNew: 100.00,
+    unlimitedPlusNew: 140.00
   }
 ];
 
