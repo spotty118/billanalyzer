@@ -1,3 +1,4 @@
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -22,6 +23,21 @@ interface CommissionService {
   name: string;
   base_commission: number | null;
   spiff_amount: number | null;
+}
+
+// Define the shape of the Supabase response
+interface DeviceWithBrand {
+  device_id: number;
+  model_name: string;
+  dpp_price: number | null;
+  welcome_unlimited_upgrade: number | null;
+  ultimate_upgrade: number | null;
+  welcome_unlimited_new: number | null;
+  ultimate_new: number | null;
+  spiff_amount: number | null;
+  commission_brands: {
+    name: string;
+  };
 }
 
 type PlanType = "welcome_unlimited_new" | "ultimate_new" | "welcome_unlimited_upgrade" | "ultimate_upgrade";
@@ -63,7 +79,8 @@ export function CommissionCalculator() {
           throw devicesError;
         }
 
-        const formattedDevices = devicesData.map(device => ({
+        // Type assert the response to be DeviceWithBrand[]
+        const formattedDevices = (devicesData as DeviceWithBrand[]).map(device => ({
           device_id: device.device_id,
           model_name: device.model_name,
           brand_name: device.commission_brands.name,
