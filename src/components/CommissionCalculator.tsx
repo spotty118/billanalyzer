@@ -3,95 +3,114 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useState, useMemo, useEffect } from "react";
-import { addons, type Addon } from "@/data/devices";
 import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/components/ui/use-toast";
 
-interface Device {
-  id: string;
-  external_id: string;
+interface CommissionDevice {
+  device_id: number;
+  model_name: string;
+  brand_name: string;
+  dpp_price: number | null;
+  upgrade_amount: number;
+  new_line_amount: number;
+  spiff_amount: number;
+}
+
+interface CommissionService {
+  service_id: number;
   name: string;
   base_commission: number;
-  category: 'phone' | 'tablet' | 'watch' | 'accessory';
-  brand: 'Apple' | 'Google' | 'Samsung';
-  dpp_price: number | null;
-  spiff_amount: number;
-  welcome_upgrade: number;
-  unlimited_plus_upgrade: number;
-  welcome_new: number;
-  unlimited_plus_new: number;
+  spiff_amount: number | null;
 }
 
 export function CommissionCalculator() {
   const [selectedDevice, setSelectedDevice] = useState<string>("");
-  const [selectedAddons, setSelectedAddons] = useState<string[]>([]);
-  const [devices, setDevices] = useState<Device[]>([]);
+  const [selectedServices, setSelectedServices] = useState<string[]>([]);
+  const [devices, setDevices] = useState<CommissionDevice[]>([]);
+  const [services, setServices] = useState<CommissionService[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const { toast } = useToast();
 
   useEffect(() => {
-    const fetchDevices = async () => {
+    const fetchDevicesAndServices = async () => {
       try {
         setLoading(true);
-        const { data, error } = await supabase
-          .from('devices')
+        
+        // Fetch devices with brand names
+        const { data: devicesData, error: devicesError } = await supabase
+          .from('commission_devices')
+          .select(`
+            device_id,
+            model_name,
+            dpp_price,
+            upgrade_amount,
+            new_line_amount,
+            spiff_amount,
+            commission_brands (name)
+          `)
+          .is('end_date', null)
+          .order('model_name');
+
+        if (devicesError) throw devicesError;
+
+        // Fetch services
+        const { data: servicesData, error: servicesError } = await supabase
+          .from('commission_services')
           .select('*')
+          .is('end_date', null)
           .order('name');
 
-        if (error) {
-          throw error;
-        }
+        if (servicesError) throw servicesError;
 
-        // Add type assertion to ensure the data matches our Device interface
-        const typedData = data.map(device => ({
-          ...device,
-          category: device.category as 'phone' | 'tablet' | 'watch' | 'accessory',
-          brand: device.brand as 'Apple' | 'Google' | 'Samsung'
+        // Transform the data to match our interface
+        const formattedDevices = devicesData.map(device => ({
+          device_id: device.device_id,
+          model_name: device.model_name,
+          brand_name: device.commission_brands?.name || 'Unknown Brand',
+          dpp_price: device.dpp_price,
+          upgrade_amount: device.upgrade_amount,
+          new_line_amount: device.new_line_amount,
+          spiff_amount: device.spiff_amount
         }));
 
-        setDevices(typedData);
+        setDevices(formattedDevices);
+        setServices(servicesData);
+
       } catch (err) {
-        console.error('Error fetching devices:', err);
-        setError('Failed to load devices. Please try again later.');
+        console.error('Error fetching data:', err);
+        toast({
+          title: "Error",
+          description: "Failed to load commission data. Please try again later.",
+          variant: "destructive"
+        });
       } finally {
         setLoading(false);
       }
     };
 
-    fetchDevices();
-  }, []);
+    fetchDevicesAndServices();
+  }, [toast]);
 
   // Calculate total commission
   const commission = useMemo(() => {
     let total = 0;
 
-    // Add device base commission
-    const device = devices.find(d => d.external_id === selectedDevice);
+    // Add device commission
+    const device = devices.find(d => d.device_id.toString() === selectedDevice);
     if (device) {
-      total += device.base_commission;
+      total += device.spiff_amount + device.new_line_amount; // Using new line amount as default
     }
 
-    // Add addon commissions
-    selectedAddons.forEach(addonId => {
-      const addon = addons.find(a => a.id === addonId);
-      if (addon) {
-        total += addon.commission;
+    // Add service commissions
+    selectedServices.forEach(serviceId => {
+      const service = services.find(s => s.service_id.toString() === serviceId);
+      if (service) {
+        total += service.base_commission + (service.spiff_amount || 0);
       }
     });
 
     return total;
-  }, [selectedDevice, selectedAddons, devices]);
-
-  // Group addons by category for better organization
-  const groupedAddons = useMemo(() => {
-    const groups: Record<string, Addon[]> = {};
-    addons.forEach(addon => {
-      if (!groups[addon.category]) {
-        groups[addon.category] = [];
-      }
-      groups[addon.category].push(addon);
-    });
-    return groups;
-  }, []);
+  }, [selectedDevice, selectedServices, devices, services]);
 
   if (loading) {
     return (
@@ -102,19 +121,7 @@ export function CommissionCalculator() {
               className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-900"
               data-testid="loading-spinner"
             ></div>
-            <div>Loading devices...</div>
-          </div>
-        </CardContent>
-      </Card>
-    );
-  }
-
-  if (error) {
-    return (
-      <Card>
-        <CardContent className="p-6">
-          <div className="text-red-600">
-            {error}
+            <div>Loading commission data...</div>
           </div>
         </CardContent>
       </Card>
@@ -137,11 +144,11 @@ export function CommissionCalculator() {
               </SelectTrigger>
               <SelectContent>
                 {devices.map((device) => (
-                  <SelectItem key={device.id} value={device.external_id}>
+                  <SelectItem key={device.device_id} value={device.device_id.toString()}>
                     <div className="flex justify-between items-center w-full">
-                      <span>{device.name}</span>
+                      <span>{device.brand_name} {device.model_name}</span>
                       <span className="text-sm text-muted-foreground">
-                        ${device.base_commission}
+                        ${device.new_line_amount + device.spiff_amount}
                       </span>
                     </div>
                   </SelectItem>
@@ -150,39 +157,36 @@ export function CommissionCalculator() {
             </Select>
           </div>
 
-          {/* Addons Selection */}
-          {selectedDevice && (
+          {/* Services Selection */}
+          {selectedDevice && services.length > 0 && (
             <div className="space-y-4">
-              <label className="text-sm font-medium">Add Features</label>
-              {Object.entries(groupedAddons).map(([category, categoryAddons]) => (
-                <div key={category} className="space-y-2">
-                  <label className="text-sm font-medium capitalize">{category}</label>
-                  <div className="space-y-2">
-                    {categoryAddons.map((addon) => (
-                      <div key={addon.id} className="flex items-center space-x-2">
-                        <Checkbox
-                          id={addon.id}
-                          checked={selectedAddons.includes(addon.id)}
-                          onCheckedChange={(checked) => {
-                            if (checked) {
-                              setSelectedAddons([...selectedAddons, addon.id]);
-                            } else {
-                              setSelectedAddons(selectedAddons.filter(id => id !== addon.id));
-                            }
-                          }}
-                        />
-                        <label
-                          htmlFor={addon.id}
-                          className="text-sm flex-1 flex justify-between items-center"
-                        >
-                          <span>{addon.name}</span>
-                          <span className="text-muted-foreground">+${addon.commission}</span>
-                        </label>
-                      </div>
-                    ))}
+              <label className="text-sm font-medium">Add Services</label>
+              <div className="space-y-2">
+                {services.map((service) => (
+                  <div key={service.service_id} className="flex items-center space-x-2">
+                    <Checkbox
+                      id={service.service_id.toString()}
+                      checked={selectedServices.includes(service.service_id.toString())}
+                      onCheckedChange={(checked) => {
+                        if (checked) {
+                          setSelectedServices([...selectedServices, service.service_id.toString()]);
+                        } else {
+                          setSelectedServices(selectedServices.filter(id => id !== service.service_id.toString()));
+                        }
+                      }}
+                    />
+                    <label
+                      htmlFor={service.service_id.toString()}
+                      className="text-sm flex-1 flex justify-between items-center"
+                    >
+                      <span>{service.name}</span>
+                      <span className="text-muted-foreground">
+                        +${(service.base_commission + (service.spiff_amount || 0)).toFixed(2)}
+                      </span>
+                    </label>
                   </div>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
           )}
 

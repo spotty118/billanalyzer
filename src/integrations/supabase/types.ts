@@ -9,6 +9,272 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      commission_accessories: {
+        Row: {
+          accessory_id: number
+          brand: string | null
+          category: string
+          commission_amount: number | null
+          commission_percentage: number | null
+          created_at: string | null
+          msrp: number | null
+          name: string
+          updated_at: string | null
+        }
+        Insert: {
+          accessory_id?: number
+          brand?: string | null
+          category: string
+          commission_amount?: number | null
+          commission_percentage?: number | null
+          created_at?: string | null
+          msrp?: number | null
+          name: string
+          updated_at?: string | null
+        }
+        Update: {
+          accessory_id?: number
+          brand?: string | null
+          category?: string
+          commission_amount?: number | null
+          commission_percentage?: number | null
+          created_at?: string | null
+          msrp?: number | null
+          name?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      commission_brands: {
+        Row: {
+          brand_id: number
+          created_at: string | null
+          name: string
+          updated_at: string | null
+        }
+        Insert: {
+          brand_id?: number
+          created_at?: string | null
+          name: string
+          updated_at?: string | null
+        }
+        Update: {
+          brand_id?: number
+          created_at?: string | null
+          name?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      commission_device_categories: {
+        Row: {
+          category_id: number
+          created_at: string | null
+          name: string
+          updated_at: string | null
+        }
+        Insert: {
+          category_id?: number
+          created_at?: string | null
+          name: string
+          updated_at?: string | null
+        }
+        Update: {
+          category_id?: number
+          created_at?: string | null
+          name?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      commission_devices: {
+        Row: {
+          brand_id: number | null
+          category_id: number | null
+          color: string | null
+          created_at: string | null
+          device_id: number
+          dpp_price: number | null
+          end_date: string | null
+          is_preowned: boolean | null
+          model_name: string
+          new_line_amount: number | null
+          spiff_amount: number | null
+          storage_size: string | null
+          updated_at: string | null
+          upgrade_amount: number | null
+        }
+        Insert: {
+          brand_id?: number | null
+          category_id?: number | null
+          color?: string | null
+          created_at?: string | null
+          device_id?: number
+          dpp_price?: number | null
+          end_date?: string | null
+          is_preowned?: boolean | null
+          model_name: string
+          new_line_amount?: number | null
+          spiff_amount?: number | null
+          storage_size?: string | null
+          updated_at?: string | null
+          upgrade_amount?: number | null
+        }
+        Update: {
+          brand_id?: number | null
+          category_id?: number | null
+          color?: string | null
+          created_at?: string | null
+          device_id?: number
+          dpp_price?: number | null
+          end_date?: string | null
+          is_preowned?: boolean | null
+          model_name?: string
+          new_line_amount?: number | null
+          spiff_amount?: number | null
+          storage_size?: string | null
+          updated_at?: string | null
+          upgrade_amount?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "commission_devices_brand_id_fkey"
+            columns: ["brand_id"]
+            isOneToOne: false
+            referencedRelation: "commission_brands"
+            referencedColumns: ["brand_id"]
+          },
+          {
+            foreignKeyName: "commission_devices_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "commission_device_categories"
+            referencedColumns: ["category_id"]
+          },
+        ]
+      }
+      commission_hot_deals: {
+        Row: {
+          additional_spiff: number | null
+          created_at: string | null
+          deal_id: number
+          device_id: number | null
+          discount_amount: number | null
+          end_date: string | null
+          promotion_name: string | null
+          unlimited_plus_commission: number | null
+          updated_at: string | null
+          welcome_unlimited_commission: number | null
+        }
+        Insert: {
+          additional_spiff?: number | null
+          created_at?: string | null
+          deal_id?: number
+          device_id?: number | null
+          discount_amount?: number | null
+          end_date?: string | null
+          promotion_name?: string | null
+          unlimited_plus_commission?: number | null
+          updated_at?: string | null
+          welcome_unlimited_commission?: number | null
+        }
+        Update: {
+          additional_spiff?: number | null
+          created_at?: string | null
+          deal_id?: number
+          device_id?: number | null
+          discount_amount?: number | null
+          end_date?: string | null
+          promotion_name?: string | null
+          unlimited_plus_commission?: number | null
+          updated_at?: string | null
+          welcome_unlimited_commission?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "commission_hot_deals_device_id_fkey"
+            columns: ["device_id"]
+            isOneToOne: false
+            referencedRelation: "commission_devices"
+            referencedColumns: ["device_id"]
+          },
+        ]
+      }
+      commission_plans: {
+        Row: {
+          base_commission: number | null
+          created_at: string | null
+          end_date: string | null
+          is_business: boolean | null
+          name: string
+          new_line_commission: number | null
+          plan_id: number
+          spiff_amount: number | null
+          type: string | null
+          updated_at: string | null
+          upgrade_commission: number | null
+        }
+        Insert: {
+          base_commission?: number | null
+          created_at?: string | null
+          end_date?: string | null
+          is_business?: boolean | null
+          name: string
+          new_line_commission?: number | null
+          plan_id?: number
+          spiff_amount?: number | null
+          type?: string | null
+          updated_at?: string | null
+          upgrade_commission?: number | null
+        }
+        Update: {
+          base_commission?: number | null
+          created_at?: string | null
+          end_date?: string | null
+          is_business?: boolean | null
+          name?: string
+          new_line_commission?: number | null
+          plan_id?: number
+          spiff_amount?: number | null
+          type?: string | null
+          updated_at?: string | null
+          upgrade_commission?: number | null
+        }
+        Relationships: []
+      }
+      commission_services: {
+        Row: {
+          base_commission: number | null
+          category: string | null
+          created_at: string | null
+          end_date: string | null
+          name: string
+          service_id: number
+          spiff_amount: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          base_commission?: number | null
+          category?: string | null
+          created_at?: string | null
+          end_date?: string | null
+          name: string
+          service_id?: number
+          spiff_amount?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          base_commission?: number | null
+          category?: string | null
+          created_at?: string | null
+          end_date?: string | null
+          name?: string
+          service_id?: number
+          spiff_amount?: number | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       devices: {
         Row: {
           base_commission: number
