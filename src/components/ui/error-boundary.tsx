@@ -1,6 +1,7 @@
 import React from 'react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
+import * as Sentry from '@sentry/react';
 
 interface Props {
   children: React.ReactNode;
@@ -28,6 +29,10 @@ export class ErrorBoundary extends React.Component<Props, State> {
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
     // Log error to error reporting service
     console.error('Error caught by boundary:', error, errorInfo);
+    // Log error to Sentry for enhanced error tracking
+    if (typeof Sentry !== 'undefined' && Sentry.captureException) {
+      Sentry.captureException(error, { extra: { componentStack: errorInfo.componentStack } });
+    }
   }
 
   render() {
