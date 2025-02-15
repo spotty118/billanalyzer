@@ -1,113 +1,111 @@
-import { Suspense, lazy } from 'react';
-import './App.css';
-import { AppSidebar } from './components/AppSidebar';
-import { Card, CardContent } from './components/ui/card';
-import { ErrorBoundary } from './components/ui/error-boundary';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 
-// Regular imports instead of lazy loading for main components
+import { Suspense, lazy } from 'react';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { AppSidebar } from './components/AppSidebar';
+import { ErrorBoundary } from './components/ui/error-boundary';
+import { DashboardLayout } from './components/layouts/DashboardLayout';
+import { MainContent } from './components/layouts/MainContent';
+import { PageHeader } from './components/layouts/PageHeader';
+import { ContentArea } from './components/layouts/ContentArea';
+
+// Regular imports for main components
 import { QuoteCalculator } from './components/QuoteCalculator';
 import { BillAnalyzer } from './components/BillAnalyzer';
 import { CommissionCalculator } from './components/CommissionCalculator';
 import { PromotionsOverview } from './components/PromotionsOverview';
 
-// Lazy load admin components only
+// Lazy load admin components
 const AdminLogin = lazy(() => import('./pages/AdminLogin'));
 const AdminDashboard = lazy(() => import('./pages/AdminDashboard'));
 
 const LoadingFallback = () => (
-  <Card>
-    <CardContent className="p-6">
-      <div>Loading...</div>
-    </CardContent>
-  </Card>
-);
-
-function MainLayout({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="flex">
-      <AppSidebar />
-      <main className="flex-1 p-6">
-        <div className="mx-auto max-w-5xl space-y-6">
-          <Suspense fallback={<LoadingFallback />}>
-            {children}
-          </Suspense>
-        </div>
-      </main>
+  <div className="p-4">
+    <div className="animate-pulse space-y-4">
+      <div className="h-4 bg-muted rounded w-3/4"></div>
+      <div className="h-8 bg-muted rounded"></div>
+      <div className="h-4 bg-muted rounded w-1/2"></div>
     </div>
-  );
-}
+  </div>
+);
 
 function Dashboard() {
   return (
-    <section className="grid gap-6">
-      <QuoteCalculator />
-      <BillAnalyzer />
-      <CommissionCalculator />
-      <PromotionsOverview />
-    </section>
+    <>
+      <PageHeader 
+        title="Dashboard" 
+        description="Welcome to your dashboard. Access all your tools and calculators here."
+      />
+      <ContentArea>
+        <QuoteCalculator />
+        <BillAnalyzer />
+        <CommissionCalculator />
+        <PromotionsOverview />
+      </ContentArea>
+    </>
   );
 }
 
 function App() {
   return (
-    <div className="min-h-screen bg-gray-100 dark:bg-gray-900">
-      <ErrorBoundary>
-        <Router basename="/">
-          <Routes>
-            <Route
-              path="/"
-              element={
-                <MainLayout>
-                  <Dashboard />
-                </MainLayout>
-              }
-            />
-            <Route
-              path="/quotes"
-              element={
-                <MainLayout>
-                  <QuoteCalculator />
-                </MainLayout>
-              }
-            />
-            <Route
-              path="/commissions"
-              element={
-                <MainLayout>
-                  <CommissionCalculator />
-                </MainLayout>
-              }
-            />
-            <Route
-              path="/promotions"
-              element={
-                <MainLayout>
-                  <PromotionsOverview />
-                </MainLayout>
-              }
-            />
-            <Route 
-              path="/admin-login" 
-              element={
-                <Suspense fallback={<LoadingFallback />}>
-                  <AdminLogin />
-                </Suspense>
-              } 
-            />
-            <Route 
-              path="/admin-dashboard" 
-              element={
-                <Suspense fallback={<LoadingFallback />}>
-                  <AdminDashboard />
-                </Suspense>
-              } 
-            />
-            <Route path="*" element={<Navigate to="/" replace />} />
-          </Routes>
-        </Router>
-      </ErrorBoundary>
-    </div>
+    <ErrorBoundary>
+      <Router basename="/">
+        <DashboardLayout>
+          <AppSidebar />
+          <MainContent>
+            <Suspense fallback={<LoadingFallback />}>
+              <Routes>
+                <Route path="/" element={<Dashboard />} />
+                <Route 
+                  path="/quotes" 
+                  element={
+                    <>
+                      <PageHeader 
+                        title="Quote Calculator" 
+                        description="Calculate quotes for different plan combinations"
+                      />
+                      <ContentArea>
+                        <QuoteCalculator />
+                      </ContentArea>
+                    </>
+                  }
+                />
+                <Route 
+                  path="/commissions" 
+                  element={
+                    <>
+                      <PageHeader 
+                        title="Commission Calculator" 
+                        description="Calculate your commission earnings"
+                      />
+                      <ContentArea>
+                        <CommissionCalculator />
+                      </ContentArea>
+                    </>
+                  }
+                />
+                <Route 
+                  path="/promotions" 
+                  element={
+                    <>
+                      <PageHeader 
+                        title="Promotions" 
+                        description="View and manage current promotions"
+                      />
+                      <ContentArea>
+                        <PromotionsOverview />
+                      </ContentArea>
+                    </>
+                  }
+                />
+                <Route path="/admin-login" element={<AdminLogin />} />
+                <Route path="/admin-dashboard" element={<AdminDashboard />} />
+                <Route path="*" element={<Navigate to="/" replace />} />
+              </Routes>
+            </Suspense>
+          </MainContent>
+        </DashboardLayout>
+      </Router>
+    </ErrorBoundary>
   );
 }
 
