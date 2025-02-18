@@ -1,18 +1,21 @@
 
 import { AppSidebar } from "@/components/AppSidebar";
 import { QuoteCalculator } from "@/components/QuoteCalculator";
+import { DashboardLayout } from "@/components/layouts/DashboardLayout";
+import { MainContent } from "@/components/layouts/MainContent";
+import { ContentArea } from "@/components/layouts/ContentArea";
 
 const Index = () => {
   return (
-    <div className="min-h-screen flex w-full">
+    <DashboardLayout>
       <AppSidebar />
-      <main className="flex-1 p-6 bg-gray-50">
-        <h1 className="text-3xl font-bold mb-6">Welcome, Employee</h1>
-        <div className="w-full max-w-2xl mx-auto">
+      <MainContent>
+        <h1 className="text-3xl font-bold tracking-tight mb-6">Welcome, Employee</h1>
+        <ContentArea>
           <QuoteCalculator />
-        </div>
-      </main>
-    </div>
+        </ContentArea>
+      </MainContent>
+    </DashboardLayout>
   );
 };
 
