@@ -134,6 +134,45 @@ export type Database = {
         }
         Relationships: []
       }
+      verizon_promotions: {
+        Row: {
+          category: string
+          created_at: string | null
+          description: string
+          end_date: string | null
+          id: number
+          requirements: string[]
+          start_date: string | null
+          title: string
+          updated_at: string | null
+          value: number | null
+        }
+        Insert: {
+          category: string
+          created_at?: string | null
+          description: string
+          end_date?: string | null
+          id?: number
+          requirements: string[]
+          start_date?: string | null
+          title: string
+          updated_at?: string | null
+          value?: number | null
+        }
+        Update: {
+          category?: string
+          created_at?: string | null
+          description?: string
+          end_date?: string | null
+          id?: number
+          requirements?: string[]
+          start_date?: string | null
+          title?: string
+          updated_at?: string | null
+          value?: number | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
