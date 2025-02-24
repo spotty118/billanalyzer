@@ -1,17 +1,50 @@
-# Verizon Plans Update Guide
+# Verizon Plans Update Guide (February 2025)
 
 This guide explains how to update the Verizon plans data in the database with the latest pricing and features.
 
-## Overview
+## Current Plan Details
 
-The Verizon plans data is stored in the Supabase database in the `verizon_plans` table. The data includes:
+### Unlimited Ultimate ($65/line with 4 lines)
+- 5G Ultra Wideband
+- 60GB Mobile Hotspot
+- International features in 210+ countries
+- 1080p streaming
+- Enhanced video calling
+- Up to 50% off 2 connected device plans
 
-- Plan names (Unlimited Ultimate, Unlimited Plus, Unlimited Welcome)
-- Pricing for 1, 2, 3, 4, and 5+ lines
-- Features for each plan
-- Data allowances
-- Streaming quality
-- Autopay discounts
+### Unlimited Plus ($55/line with 4 lines)
+- 5G Ultra Wideband
+- 30GB Mobile Hotspot
+- Mexico & Canada features
+- 720p streaming
+- Up to 50% off 1 connected device plan
+
+### Unlimited Welcome ($40/line with 4 lines)
+- 5G network access
+- Mexico & Canada features
+- 480p streaming
+- No mobile hotspot
+
+## Available Perks ($10/month each)
+- Disney Bundle (Disney+, Hulu, ESPN+) - Save $11.99/mo
+- Netflix & Max with Ads - Save $6.98/mo
+- Apple One - Save $9.95/mo
+- Apple Music Family - Save $6.99/mo
+- YouTube Premium - Save $3.99/mo
+- 100 GB Mobile Hotspot - Save $35/mo
+- 3 TravelPass Days - Save $26/mo
+- Unlimited Cloud Storage - Save $3.99/mo
+- Google One AI Premium - Save $9.99/mo
+
+## Line Pricing (per line)
+
+| Plan              | 1 Line | 2 Lines | 3 Lines | 4 Lines | 5+ Lines |
+|-------------------|--------|---------|---------|---------|-----------|
+| Ultimate          | $100   | $90     | $75     | $65     | $65      |
+| Plus             | $90    | $80     | $65     | $55     | $55      |
+| Welcome          | $75    | $65     | $50     | $40     | $40      |
+
+*All prices shown include Auto Pay & Paper-free billing discount ($10/mo)
 
 ## Files
 
@@ -22,49 +55,31 @@ The Verizon plans data is stored in the Supabase database in the `verizon_plans`
 
 Before running the update script, make sure you have the following environment variables set:
 
-- `SUPABASE_URL`: The URL of your Supabase project
-- `SUPABASE_KEY`: The service role key for your Supabase project
-
-You can set these environment variables in a `.env` file in the root of the project:
-
-```
+```bash
 SUPABASE_URL=https://your-project-id.supabase.co
 SUPABASE_KEY=your-service-role-key
 ```
 
 ## Running the Update Script
 
-You can run the update script using npm:
-
 ```bash
 npm run update-verizon-plans
 ```
 
 This will:
-
-1. Read the SQL file
-2. Split it into individual SQL statements
-3. Execute each statement against the Supabase database
-4. Log the results
-
-## Modifying the Plan Data
-
-If you need to update the plan data in the future, you can modify the `update_verizon_plans.sql` file with the new pricing and features. The SQL file is structured as follows:
-
-1. Create the `verizon_plans` table if it doesn't exist
-2. Delete existing Verizon plans to avoid duplicates
-3. Insert the updated Unlimited Ultimate plan
-4. Insert the updated Unlimited Plus plan
-5. Insert the updated Unlimited Welcome plan
-6. Update the timestamp
-7. Verify the data
+1. Create the verizon_plans table if it doesn't exist
+2. Delete existing plan data to avoid duplicates
+3. Insert the updated plan data
+4. Verify the data was inserted correctly
 
 ## Troubleshooting
 
-If you encounter any issues running the update script, check the following:
+If you encounter any issues:
+1. Check environment variables are set correctly
+2. Verify Supabase connection is working
+3. Check SQL syntax for any errors
+4. Verify exec_sql RPC function is enabled in Supabase
 
-1. Make sure the environment variables are set correctly
-2. Check that the SQL file is valid and doesn't contain any syntax errors
-3. Verify that the Supabase project has the `exec_sql` RPC function enabled
+## Support
 
-If you need to debug the script, you can modify it to log more information or to execute only specific SQL statements.
+For questions or issues, please contact the development team or refer to the internal documentation.
