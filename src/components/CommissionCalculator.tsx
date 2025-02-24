@@ -8,39 +8,27 @@ import { useState, useMemo, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
 
-interface CommissionDevice {
-  device_id: number;
-  model_name: string;
-  brand_name: string;
+interface DeviceContribution {
+  id: number;
+  device_name: string;
+  manufacturer: string;
   dpp_price: number | null;
+  base_spiff: number | null;
   welcome_unlimited_upgrade: number | null;
-  ultimate_upgrade: number | null;
+  plus_ultimate_upgrade: number | null;
   welcome_unlimited_new: number | null;
-  ultimate_new: number | null;  // Changed from just null to number | null
-  spiff_amount: number | null;
+  plus_ultimate_new: number | null;
+  end_date: string | null;
 }
 
-interface CommissionService {
-  service_id: number;
+interface ServiceContribution {
+  id: number;
   name: string;
-  base_commission: number | null;
-  spiff_amount: number | null;
-}
-
-interface DatabaseCommissionBrand {
-  name: string | null;
-}
-
-interface DatabaseCommissionDevice {
-  device_id: number;
-  model_name: string;
-  dpp_price: number | null;
-  welcome_unlimited_upgrade: number | null;
-  ultimate_upgrade: number | null;
-  welcome_unlimited_new: number | null;
-  ultimate_new: number | null;
-  spiff_amount: number | null;
-  commission_brands: DatabaseCommissionBrand | null;
+  category: string;
+  contribution: number | null;
+  spiff: number | null;
+  total_contribution: number | null;
+  end_date: string | null;
 }
 
 type PlanType = "welcome_unlimited_new" | "ultimate_new" | "welcome_unlimited_upgrade" | "ultimate_upgrade";
@@ -53,79 +41,49 @@ interface DevicePlan {
 export function CommissionCalculator() {
   const [devicePlans, setDevicePlans] = useState<DevicePlan[]>([]);
   const [selectedServices, setSelectedServices] = useState<string[]>([]);
-  const [devices, setDevices] = useState<CommissionDevice[]>([]);
-  const [services, setServices] = useState<CommissionService[]>([]);
+  const [devices, setDevices] = useState<DeviceContribution[]>([]);
+  const [services, setServices] = useState<ServiceContribution[]>([]);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
 
   useEffect(() => {
-    const fetchDevicesAndServices = async () => {
+    const fetchData = async () => {
       try {
         setLoading(true);
         
-        const { data: rawDevices, error: devicesError } = await supabase
-          .from('commission_devices')
-          .select(`
-            device_id,
-            model_name,
-            dpp_price,
-            welcome_unlimited_upgrade,
-            ultimate_upgrade,
-            welcome_unlimited_new,
-            ultimate_new,
-            spiff_amount,
-            commission_brands:brand_id(name)
-          `)
-          .is('end_date', null)
-          .order('model_name');
-
-        if (devicesError) {
-          console.error('Devices fetch error:', devicesError);
-          throw devicesError;
-        }
-
-        const devicesData = rawDevices as unknown as DatabaseCommissionDevice[];
-
-        const formattedDevices: CommissionDevice[] = devicesData.map(device => ({
-          device_id: device.device_id,
-          model_name: device.model_name,
-          brand_name: device.commission_brands?.name || '',
-          dpp_price: device.dpp_price,
-          welcome_unlimited_upgrade: device.welcome_unlimited_upgrade,
-          ultimate_upgrade: device.ultimate_upgrade,
-          welcome_unlimited_new: device.welcome_unlimited_new,
-          ultimate_new: device.ultimate_new,
-          spiff_amount: device.spiff_amount
-        }));
-
-        setDevices(formattedDevices);
-
-        const { data: servicesData, error: servicesError } = await supabase
-          .from('commission_services')
+        // Fetch devices
+        const { data: devicesData, error: devicesError } = await supabase
+          .from('device_contributions')
           .select('*')
-          .is('end_date', null)
-          .order('name');
+          .order('manufacturer', { ascending: true })
+          .order('device_name', { ascending: true });
 
-        if (servicesError) {
-          console.error('Services fetch error:', servicesError);
-          throw servicesError;
-        }
+        if (devicesError) throw devicesError;
+        setDevices(devicesData || []);
 
+        // Fetch services
+        const { data: servicesData, error: servicesError } = await supabase
+          .from('service_contributions')
+          .select('*')
+          .order('category', { ascending: true })
+          .order('name', { ascending: true });
+
+        if (servicesError) throw servicesError;
         setServices(servicesData || []);
 
       } catch (err) {
         console.error('Error fetching data:', err);
         toast({
+          variant: "destructive",
           title: "Error",
           description: "Failed to load commission data. Please try again later.",
-          variant: "destructive"
         });
       } finally {
         setLoading(false);
       }
     };
 
-    fetchDevicesAndServices();
+    fetchData();
   }, [toast]);
 
   const addDevicePlan = () => {
@@ -149,20 +107,21 @@ export function CommissionCalculator() {
     let total = 0;
 
     devicePlans.forEach(({ deviceId, planType }) => {
-      const device = devices.find(d => d.device_id.toString() === deviceId);
+      const device = devices.find(d => d.id.toString() === deviceId);
       if (device) {
-        const planAmount = device[planType] ?? 0;
-        const spiffAmount = device.spiff_amount ?? 0;
-        total += planAmount + spiffAmount;
+        const planAmount = planType === 'welcome_unlimited_new' ? device.welcome_unlimited_new :
+                         planType === 'ultimate_new' ? device.plus_ultimate_new :
+                         planType === 'welcome_unlimited_upgrade' ? device.welcome_unlimited_upgrade :
+                         device.plus_ultimate_upgrade;
+        const spiffAmount = device.base_spiff ?? 0;
+        total += (planAmount ?? 0) + spiffAmount;
       }
     });
 
     selectedServices.forEach(serviceId => {
-      const service = services.find(s => s.service_id.toString() === serviceId);
+      const service = services.find(s => s.id.toString() === serviceId);
       if (service) {
-        const baseCommission = service.base_commission ?? 0;
-        const spiffAmount = service.spiff_amount ?? 0;
-        total += baseCommission + spiffAmount;
+        total += (service.total_contribution ?? 0);
       }
     });
 
@@ -207,8 +166,8 @@ export function CommissionCalculator() {
                       </SelectTrigger>
                       <SelectContent>
                         {devices.map((device) => (
-                          <SelectItem key={device.device_id} value={device.device_id.toString()}>
-                            {device.brand_name} {device.model_name}
+                          <SelectItem key={device.id} value={device.id.toString()}>
+                            {device.manufacturer} {device.device_name}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -219,7 +178,7 @@ export function CommissionCalculator() {
                     <label className="text-sm font-medium">Select Plan Type</label>
                     <Select 
                       value={plan.planType} 
-                      onValueChange={(value) => updateDevicePlan(index, 'planType', value)}
+                      onValueChange={(value) => updateDevicePlan(index, 'planType', value as PlanType)}
                     >
                       <SelectTrigger>
                         <SelectValue placeholder="Choose a plan type" />
@@ -259,25 +218,25 @@ export function CommissionCalculator() {
               <label className="text-sm font-medium">Add Services</label>
               <div className="space-y-2">
                 {services.map((service) => (
-                  <div key={service.service_id} className="flex items-center space-x-2">
+                  <div key={service.id} className="flex items-center space-x-2">
                     <Checkbox
-                      id={service.service_id.toString()}
-                      checked={selectedServices.includes(service.service_id.toString())}
+                      id={service.id.toString()}
+                      checked={selectedServices.includes(service.id.toString())}
                       onCheckedChange={(checked) => {
                         if (checked) {
-                          setSelectedServices([...selectedServices, service.service_id.toString()]);
+                          setSelectedServices([...selectedServices, service.id.toString()]);
                         } else {
-                          setSelectedServices(selectedServices.filter(id => id !== service.service_id.toString()));
+                          setSelectedServices(selectedServices.filter(id => id !== service.id.toString()));
                         }
                       }}
                     />
                     <label
-                      htmlFor={service.service_id.toString()}
+                      htmlFor={service.id.toString()}
                       className="text-sm flex-1 flex justify-between items-center"
                     >
                       <span>{service.name}</span>
                       <span className="text-muted-foreground">
-                        +${((service.base_commission ?? 0) + (service.spiff_amount ?? 0)).toFixed(2)}
+                        +${service.total_contribution?.toFixed(2)}
                       </span>
                     </label>
                   </div>

@@ -9,6 +9,51 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      device_contributions: {
+        Row: {
+          base_spiff: number | null
+          created_at: string | null
+          device_name: string
+          dpp_price: number | null
+          end_date: string | null
+          id: number
+          manufacturer: string
+          plus_ultimate_new: number | null
+          plus_ultimate_upgrade: number | null
+          updated_at: string | null
+          welcome_unlimited_new: number | null
+          welcome_unlimited_upgrade: number | null
+        }
+        Insert: {
+          base_spiff?: number | null
+          created_at?: string | null
+          device_name: string
+          dpp_price?: number | null
+          end_date?: string | null
+          id?: number
+          manufacturer: string
+          plus_ultimate_new?: number | null
+          plus_ultimate_upgrade?: number | null
+          updated_at?: string | null
+          welcome_unlimited_new?: number | null
+          welcome_unlimited_upgrade?: number | null
+        }
+        Update: {
+          base_spiff?: number | null
+          created_at?: string | null
+          device_name?: string
+          dpp_price?: number | null
+          end_date?: string | null
+          id?: number
+          manufacturer?: string
+          plus_ultimate_new?: number | null
+          plus_ultimate_upgrade?: number | null
+          updated_at?: string | null
+          welcome_unlimited_new?: number | null
+          welcome_unlimited_upgrade?: number | null
+        }
+        Relationships: []
+      }
       files: {
         Row: {
           content: string | null
@@ -67,6 +112,42 @@ export type Database = {
           description?: string | null
           id?: string
           name?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      service_contributions: {
+        Row: {
+          category: string
+          contribution: number | null
+          created_at: string | null
+          end_date: string | null
+          id: number
+          name: string
+          spiff: number | null
+          total_contribution: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          category: string
+          contribution?: number | null
+          created_at?: string | null
+          end_date?: string | null
+          id?: number
+          name: string
+          spiff?: number | null
+          total_contribution?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          category?: string
+          contribution?: number | null
+          created_at?: string | null
+          end_date?: string | null
+          id?: number
+          name?: string
+          spiff?: number | null
+          total_contribution?: number | null
           updated_at?: string | null
         }
         Relationships: []
