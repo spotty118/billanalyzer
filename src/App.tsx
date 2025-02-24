@@ -36,10 +36,7 @@ function Dashboard() {
         description="Welcome to your dashboard. Access all your tools and calculators here."
       />
       <ContentArea>
-        <QuoteCalculator />
         <BillAnalyzer />
-        <CommissionCalculator />
-        <PromotionsOverview />
       </ContentArea>
     </>
   );
