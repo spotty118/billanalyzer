@@ -1,6 +1,6 @@
-# Verizon Plans Update Guide (February 2025)
+# Verizon Plans & Promotions Update Guide (February 2025)
 
-This guide explains how to update the Verizon plans data in the database with the latest pricing and features.
+This guide explains how to update the Verizon plans and promotions data in the database.
 
 ## Current Plan Details
 
@@ -25,6 +25,36 @@ This guide explains how to update the Verizon plans data in the database with th
 - 480p streaming
 - No mobile hotspot
 
+## Current Promotions
+
+### Phone Deals
+- iPhone 16 Pro Bundle ($2,000 value)
+  - iPhone 16 Pro, iPad, and Apple Watch Series 10
+  - Requires trade-in and new line
+- Samsung Galaxy S25+ ($999 value)
+  - Free with any phone trade-in
+  - New line on myPlan required
+- Google Pixel 9 Pro ($899 value)
+  - Free with new line on Unlimited Ultimate
+
+### Tablet & Watch Deals
+- iPad (up to $599 value)
+  - Free with select iPhone purchase
+- Samsung Galaxy Tab S9 FE ($499 value)
+  - Free with select Android phone purchase
+- Apple Watch Series 10 (from $9/mo)
+  - With eligible watch trade-in
+
+### Accessory Deals
+- Accessory Essential Bundle ($100)
+- $100 off Samsung Galaxy Buds3 Pro
+- $100 off Google Pixel Buds Pro 2
+
+### Service Discounts
+- Mobile + Home Bundle: Save up to $300/year
+- BYOD: Up to $540 credit or free smartwatch
+- Military/Student: Save up to $25/mo on myPlan
+
 ## Available Perks ($10/month each)
 - Disney Bundle (Disney+, Hulu, ESPN+) - Save $11.99/mo
 - Netflix & Max with Ads - Save $6.98/mo
@@ -48,8 +78,9 @@ This guide explains how to update the Verizon plans data in the database with th
 
 ## Files
 
-- `update_verizon_plans.sql`: SQL file containing the latest Verizon plan data
-- `server/update-verizon-plans.js`: Node.js script to execute the SQL file against the Supabase database
+- `update_verizon_plans.sql`: SQL file containing the latest plan data
+- `update_verizon_promotions.sql`: SQL file containing the latest promotions
+- `server/update-verizon-data.js`: Node.js script to execute both SQL files
 
 ## Prerequisites
 
@@ -63,14 +94,17 @@ SUPABASE_KEY=your-service-role-key
 ## Running the Update Script
 
 ```bash
-npm run update-verizon-plans
+npm run update-verizon
 ```
 
 This will:
-1. Create the verizon_plans table if it doesn't exist
-2. Delete existing plan data to avoid duplicates
-3. Insert the updated plan data
-4. Verify the data was inserted correctly
+1. Update the plans data
+   - Create/update the verizon_plans table
+   - Insert latest plan pricing and features
+   
+2. Update the promotions data
+   - Create/update the verizon_promotions table
+   - Insert latest deals and discounts
 
 ## Troubleshooting
 
