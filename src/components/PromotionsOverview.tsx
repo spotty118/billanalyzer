@@ -22,8 +22,11 @@ interface DatabasePromotion {
   category: string;
   description: string;
   requirements: string[];
-  value: number;
-  end_date: string;
+  value: number | null;  // Updated to allow null values
+  end_date: string | null;  // Updated to allow null values
+  created_at?: string | null;  // Added optional fields from DB
+  updated_at?: string | null;
+  start_date?: string | null;
 }
 
 const LoadingState = () => (
@@ -148,15 +151,19 @@ export function PromotionsOverview() {
                       <h3 className="font-medium text-lg text-gray-900">
                         {promo.title}
                       </h3>
-                      <span className="text-sm text-gray-500">
-                        Expires: {new Date(promo.end_date).toLocaleDateString()}
-                      </span>
+                      {promo.end_date && (
+                        <span className="text-sm text-gray-500">
+                          Expires: {new Date(promo.end_date).toLocaleDateString()}
+                        </span>
+                      )}
                     </div>
 
                     <div className="flex gap-2">
-                      <Badge variant="outline" className="capitalize">
-                        ${promo.value.toFixed(2)}
-                      </Badge>
+                      {promo.value !== null && (
+                        <Badge variant="outline" className="capitalize">
+                          ${promo.value.toFixed(2)}
+                        </Badge>
+                      )}
                       <Badge variant="outline" className="capitalize">
                         {promo.category.replace(/_/g, ' ')}
                       </Badge>
