@@ -1,3 +1,4 @@
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -6,7 +7,6 @@ import { Plus, Minus } from "lucide-react";
 import { useState, useMemo, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
-import { Json } from "@/integrations/supabase/types";
 
 interface CommissionDevice {
   device_id: number;
@@ -27,7 +27,7 @@ interface CommissionService {
   spiff_amount: number | null;
 }
 
-interface DatabaseResponse {
+interface DatabaseCommissionDevice {
   device_id: number;
   model_name: string;
   dpp_price: number | null;
@@ -61,7 +61,7 @@ export function CommissionCalculator() {
       try {
         setLoading(true);
         
-        const { data: devicesData, error: devicesError } = await supabase
+        const { data, error: devicesError } = await supabase
           .from('commission_devices')
           .select(`
             device_id,
@@ -84,11 +84,13 @@ export function CommissionCalculator() {
           throw devicesError;
         }
 
-        if (!devicesData) {
+        if (!data) {
           throw new Error('No devices data returned');
         }
 
-        const formattedDevices: CommissionDevice[] = (devicesData as DatabaseResponse[]).map(device => ({
+        const devicesData = data as DatabaseCommissionDevice[];
+
+        const formattedDevices: CommissionDevice[] = devicesData.map(device => ({
           device_id: device.device_id,
           model_name: device.model_name,
           brand_name: device.commission_brands?.name || '',

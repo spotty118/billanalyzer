@@ -1,4 +1,3 @@
-
 import { Plan, PlanType, StreamingQuality } from '../types/verizonTypes';
 import { supabase } from '@/integrations/supabase/client';
 import { Json } from '@/integrations/supabase/types';
@@ -27,10 +26,17 @@ class VerizonDataManager {
 
   private transformDataAllowance(data: Json): { premium: number | 'unlimited'; hotspot?: number } {
     if (typeof data === 'object' && data !== null) {
-      return {
-        premium: data.premium === 'unlimited' ? 'unlimited' : Number(data.premium) || 0,
-        ...(data.hotspot ? { hotspot: Number(data.hotspot) } : {})
-      };
+      const premium = typeof data.premium === 'string' && data.premium === 'unlimited' 
+        ? 'unlimited' 
+        : typeof data.premium === 'number' ? data.premium : 0;
+
+      const result: { premium: number | 'unlimited'; hotspot?: number } = { premium };
+      
+      if (typeof data.hotspot === 'number') {
+        result.hotspot = data.hotspot;
+      }
+      
+      return result;
     }
     return { premium: 0 };
   }
@@ -116,9 +122,9 @@ class VerizonDataManager {
         price_3_line: plan.price_3_line || plan.base_price,
         price_4_line: plan.price_4_line || plan.base_price,
         price_5plus_line: plan.price_5plus_line || plan.base_price,
-        features: Array.isArray(plan.features) ? plan.features : [],
+        features: this.transformFeatures(plan.features),
         type: plan.type as PlanType,
-        dataAllowance: plan.data_allowance,
+        dataAllowance: this.transformDataAllowance(plan.data_allowance),
         streamingQuality: plan.streaming_quality as StreamingQuality,
         autopayDiscount: plan.autopay_discount ?? undefined,
         paperlessDiscount: plan.paperless_discount ?? undefined,
