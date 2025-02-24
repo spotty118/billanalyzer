@@ -3,9 +3,6 @@ import axios from 'axios';
 import type { VerizonPlanDetails } from './types';
 import { supabase } from '@/integrations/supabase/client';
 
-/**
- * Scrapes and updates Verizon plan information using the Grid API
- */
 export async function scrapeVerizonPlans(): Promise<VerizonPlanDetails[]> {
   try {
     console.log('Starting Verizon plan scraping...');
@@ -37,12 +34,11 @@ export async function scrapeVerizonPlans(): Promise<VerizonPlanDetails[]> {
           external_id: planData.id || `plan-${planData.structure.name.toLowerCase().replace(/\s+/g, '-')}`,
           name: planData.structure.name,
           base_price: basePrice,
-          multi_line_discounts: {
-            lines2: 0,
-            lines3: 0,
-            lines4: 0,
-            lines5Plus: 0
-          },
+          price_1_line: basePrice,
+          price_2_line: basePrice,
+          price_3_line: basePrice,
+          price_4_line: basePrice,
+          price_5plus_line: basePrice,
           features: Array.isArray(planData.structure.features) ? planData.structure.features : [],
           type: 'consumer',
           data_allowance: {

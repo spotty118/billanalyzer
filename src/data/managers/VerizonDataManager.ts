@@ -48,12 +48,9 @@ class VerizonDataManager {
           price_3_line: plan.price_3_line || plan.base_price,
           price_4_line: plan.price_4_line || plan.base_price,
           price_5plus_line: plan.price_5plus_line || plan.base_price,
-          features: plan.features,
+          features: Array.isArray(plan.features) ? plan.features : [],
           type: plan.type as PlanType,
-          dataAllowance: plan.data_allowance as {
-            premium: number | 'unlimited';
-            hotspot?: number;
-          },
+          dataAllowance: plan.data_allowance,
           streamingQuality: plan.streaming_quality as StreamingQuality,
           autopayDiscount: plan.autopay_discount ?? undefined,
           paperlessDiscount: plan.paperless_discount ?? undefined,
@@ -101,12 +98,9 @@ class VerizonDataManager {
         price_3_line: plan.price_3_line || plan.base_price,
         price_4_line: plan.price_4_line || plan.base_price,
         price_5plus_line: plan.price_5plus_line || plan.base_price,
-        features: plan.features,
+        features: Array.isArray(plan.features) ? plan.features : [],
         type: plan.type as PlanType,
-        dataAllowance: plan.data_allowance as {
-          premium: number | 'unlimited';
-          hotspot?: number;
-        },
+        dataAllowance: plan.data_allowance,
         streamingQuality: plan.streaming_quality as StreamingQuality,
         autopayDiscount: plan.autopay_discount ?? undefined,
         paperlessDiscount: plan.paperless_discount ?? undefined,
