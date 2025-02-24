@@ -71,6 +71,69 @@ export type Database = {
         }
         Relationships: []
       }
+      verizon_plans: {
+        Row: {
+          autopay_discount: number | null
+          base_price: number
+          created_at: string | null
+          data_allowance: Json
+          external_id: string
+          features: Json
+          id: number
+          name: string
+          paperless_discount: number | null
+          plan_level: string | null
+          price_1_line: number
+          price_2_line: number
+          price_3_line: number
+          price_4_line: number
+          price_5plus_line: number
+          streaming_quality: string
+          type: string
+          updated_at: string | null
+        }
+        Insert: {
+          autopay_discount?: number | null
+          base_price: number
+          created_at?: string | null
+          data_allowance: Json
+          external_id: string
+          features: Json
+          id?: number
+          name: string
+          paperless_discount?: number | null
+          plan_level?: string | null
+          price_1_line: number
+          price_2_line: number
+          price_3_line: number
+          price_4_line: number
+          price_5plus_line: number
+          streaming_quality: string
+          type: string
+          updated_at?: string | null
+        }
+        Update: {
+          autopay_discount?: number | null
+          base_price?: number
+          created_at?: string | null
+          data_allowance?: Json
+          external_id?: string
+          features?: Json
+          id?: number
+          name?: string
+          paperless_discount?: number | null
+          plan_level?: string | null
+          price_1_line?: number
+          price_2_line?: number
+          price_3_line?: number
+          price_4_line?: number
+          price_5plus_line?: number
+          streaming_quality?: string
+          type?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

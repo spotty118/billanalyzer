@@ -84,7 +84,8 @@ export function CommissionCalculator() {
           throw devicesError;
         }
 
-        const formattedDevices = (devicesData as DeviceWithBrand[]).map(device => ({
+        // Properly type the devices data with proper transformation
+        const formattedDevices = (devicesData as unknown as DeviceWithBrand[]).map(device => ({
           device_id: device.device_id,
           model_name: device.model_name,
           brand_name: device.commission_brands.name,
