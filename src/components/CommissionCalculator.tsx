@@ -1,3 +1,4 @@
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -15,7 +16,7 @@ interface CommissionDevice {
   welcome_unlimited_upgrade: number | null;
   ultimate_upgrade: number | null;
   welcome_unlimited_new: number | null;
-  ultimate_new: number | null;
+  ultimate_new: null;
   spiff_amount: number | null;
 }
 
@@ -24,6 +25,10 @@ interface CommissionService {
   name: string;
   base_commission: number | null;
   spiff_amount: number | null;
+}
+
+interface DatabaseCommissionBrand {
+  name: string | null;
 }
 
 interface DatabaseCommissionDevice {
@@ -35,9 +40,7 @@ interface DatabaseCommissionDevice {
   welcome_unlimited_new: number | null;
   ultimate_new: number | null;
   spiff_amount: number | null;
-  commission_brands?: {
-    name: string;
-  } | null;
+  commission_brands: DatabaseCommissionBrand | null;
 }
 
 type PlanType = "welcome_unlimited_new" | "ultimate_new" | "welcome_unlimited_upgrade" | "ultimate_upgrade";
@@ -71,9 +74,7 @@ export function CommissionCalculator() {
             welcome_unlimited_new,
             ultimate_new,
             spiff_amount,
-            commission_brands (
-              name
-            )
+            commission_brands:brand_id(name)
           `)
           .is('end_date', null)
           .order('model_name');
@@ -83,7 +84,7 @@ export function CommissionCalculator() {
           throw devicesError;
         }
 
-        const devicesData = rawDevices as DatabaseCommissionDevice[];
+        const devicesData = rawDevices as unknown as DatabaseCommissionDevice[];
 
         const formattedDevices: CommissionDevice[] = devicesData.map(device => ({
           device_id: device.device_id,
