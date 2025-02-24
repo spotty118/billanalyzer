@@ -17,3 +17,16 @@ export interface VerizonPlanDetails {
   autopay_discount?: number | null;
   paperless_discount?: number | null;
 }
+
+export interface Promotion {
+  id: string;
+  title: string;
+  description: string;
+  expires: string;
+  type: 'device' | 'plan' | 'trade-in';
+  value: string;
+  terms?: string[];
+  eligiblePlans?: string[];
+  stackable?: boolean;
+  version?: string;
+}

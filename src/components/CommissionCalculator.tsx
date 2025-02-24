@@ -1,4 +1,3 @@
-
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -7,6 +6,7 @@ import { Plus, Minus } from "lucide-react";
 import { useState, useMemo, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
+import { Json } from "@/integrations/supabase/types";
 
 interface CommissionDevice {
   device_id: number;
@@ -27,7 +27,7 @@ interface CommissionService {
   spiff_amount: number | null;
 }
 
-interface DeviceWithBrand {
+interface DatabaseResponse {
   device_id: number;
   model_name: string;
   dpp_price: number | null;
@@ -38,14 +38,8 @@ interface DeviceWithBrand {
   spiff_amount: number | null;
   commission_brands: {
     name: string;
-  };
+  } | null;
 }
-
-type DatabaseDevice = Omit<DeviceWithBrand, 'commission_brands'> & {
-  commission_brands: {
-    name: string;
-  };
-};
 
 type PlanType = "welcome_unlimited_new" | "ultimate_new" | "welcome_unlimited_upgrade" | "ultimate_upgrade";
 
@@ -94,8 +88,7 @@ export function CommissionCalculator() {
           throw new Error('No devices data returned');
         }
 
-        // Properly type the devices data with proper transformation
-        const formattedDevices: CommissionDevice[] = (devicesData as DatabaseDevice[]).map(device => ({
+        const formattedDevices: CommissionDevice[] = (devicesData as DatabaseResponse[]).map(device => ({
           device_id: device.device_id,
           model_name: device.model_name,
           brand_name: device.commission_brands?.name || '',
@@ -157,7 +150,6 @@ export function CommissionCalculator() {
   const commission = useMemo(() => {
     let total = 0;
 
-    // Calculate commission for each device-plan combination
     devicePlans.forEach(({ deviceId, planType }) => {
       const device = devices.find(d => d.device_id.toString() === deviceId);
       if (device) {
@@ -167,7 +159,6 @@ export function CommissionCalculator() {
       }
     });
 
-    // Add service commissions
     selectedServices.forEach(serviceId => {
       const service = services.find(s => s.service_id.toString() === serviceId);
       if (service) {
