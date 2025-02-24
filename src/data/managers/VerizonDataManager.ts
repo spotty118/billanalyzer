@@ -1,3 +1,4 @@
+
 import { Plan, PlanType, StreamingQuality } from '../types/verizonTypes';
 import { supabase } from '@/integrations/supabase/client';
 import { Json } from '@/integrations/supabase/types';
@@ -25,20 +26,31 @@ class VerizonDataManager {
   }
 
   private transformDataAllowance(data: Json): { premium: number | 'unlimited'; hotspot?: number } {
-    if (typeof data === 'object' && data !== null) {
-      const premium = typeof data.premium === 'string' && data.premium === 'unlimited' 
-        ? 'unlimited' 
-        : typeof data.premium === 'number' ? data.premium : 0;
-
-      const result: { premium: number | 'unlimited'; hotspot?: number } = { premium };
-      
-      if (typeof data.hotspot === 'number') {
-        result.hotspot = data.hotspot;
-      }
-      
-      return result;
+    const defaultAllowance = { premium: 0 };
+    
+    if (!data || typeof data !== 'object' || Array.isArray(data)) {
+      return defaultAllowance;
     }
-    return { premium: 0 };
+
+    const typedData = data as Record<string, Json>;
+    
+    // Handle premium data
+    let premium: number | 'unlimited' = 0;
+    if (typedData.premium === 'unlimited') {
+      premium = 'unlimited';
+    } else if (typeof typedData.premium === 'number') {
+      premium = typedData.premium;
+    }
+
+    // Create result object
+    const result: { premium: number | 'unlimited'; hotspot?: number } = { premium };
+
+    // Handle optional hotspot data
+    if (typeof typedData.hotspot === 'number') {
+      result.hotspot = typedData.hotspot;
+    }
+
+    return result;
   }
 
   public async getPlans(): Promise<Plan[]> {
@@ -54,8 +66,12 @@ class VerizonDataManager {
           throw error;
         }
 
+        if (!plans) {
+          return [];
+        }
+
         // Remove duplicates based on external_id
-        const uniquePlans = plans.reduce((acc: any[], plan) => {
+        const uniquePlans = plans.reduce((acc: typeof plans, plan) => {
           const existingPlan = acc.find(p => p.external_id === plan.external_id);
           if (!existingPlan) {
             acc.push(plan);
