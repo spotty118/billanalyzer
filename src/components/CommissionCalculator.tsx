@@ -16,7 +16,7 @@ interface CommissionDevice {
   welcome_unlimited_upgrade: number | null;
   ultimate_upgrade: number | null;
   welcome_unlimited_new: number | null;
-  ultimate_new: null;
+  ultimate_new: number | null;  // Changed from just null to number | null
   spiff_amount: number | null;
 }
 
