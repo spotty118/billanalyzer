@@ -56,7 +56,7 @@ async function executeSQLFile(filePath, description) {
   }
 }
 
-// Execute both SQL files
+// Execute all SQL files
 async function updateVerizonData() {
   try {
     // Update plans
@@ -69,6 +69,12 @@ async function updateVerizonData() {
     await executeSQLFile(
       path.join(process.cwd(), 'update_verizon_promotions.sql'),
       'Verizon promotions'
+    );
+
+    // Update contributions
+    await executeSQLFile(
+      path.join(process.cwd(), 'update_verizon_contributions.sql'),
+      'Verizon contributions'
     );
 
     console.log('All Verizon data updated successfully!');

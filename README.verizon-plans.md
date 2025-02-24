@@ -1,8 +1,61 @@
-# Verizon Plans & Promotions Update Guide (February 2025)
+# Verizon Data Update Guide (February 2025)
 
-This guide explains how to update the Verizon plans and promotions data in the database.
+## 1. Device Contributions
 
-## Current Plan Details
+### Apple iPhone Contributions
+| Device | DPP Price | Base | Welcome Upgrade | Plus/Ultimate Upgrade | Welcome New | Plus/Ultimate New |
+|--------|-----------|------|-----------------|---------------------|-------------|------------------|
+| iPhone 16 128GB | $840.00 | $15.00 | $15.00 | $35.00 | $35.00 | $75.00 |
+| iPhone 16 Pro Max 1TB | $1,610.00 | $15.00 | $15.00 | $35.00 | $35.00 | $75.00 |
+| iPhone 16 Pro 128GB | $1,010.00 | $15.00 | $15.00 | $35.00 | $35.00 | $75.00 |
+
+### Samsung & Google Contributions
+| Device | DPP Price | Base | Welcome Upgrade | Plus/Ultimate Upgrade | Welcome New | Plus/Ultimate New |
+|--------|-----------|------|-----------------|---------------------|-------------|------------------|
+| Galaxy S24 Ultra 512GB | $1,419.00 | - | $45.00 | $65.00 | $100.00 | $140.00 |
+| Pixel 9 Pro 512GB | $1,219.99 | - | $45.00 | $65.00 | $100.00 | $140.00 |
+| Galaxy S24 128GB | $818.00 | - | $45.00 | $65.00 | $100.00 | $140.00 |
+
+## 2. Service Contributions
+
+### Home Internet Services
+| Service | Contribution | Spiff | Total |
+|---------|-------------|-------|--------|
+| MTM LTE Home Internet Plus | $100.00 | $120.00 | $220.00 |
+| MTM 5G Home Internet Plus | $100.00 | $120.00 | $220.00 |
+| MTM LTE/5G Home Internet | $50.00 | $100.00 | $150.00 |
+
+### Business Internet
+| Service | Total Contribution |
+|---------|-------------------|
+| 5G Business Internet 400M | $320.00 |
+| 5G Business Internet 200M | $300.00 |
+| 5G Business Internet 100M | $260.00 |
+
+### Protection Services
+| Service | Contribution | Spiff | Total |
+|---------|-------------|-------|--------|
+| Verizon Mobile Protect Multi/Single | $30.00 | $45.00 | $75.00 |
+| Verizon Home Device Protect | $15.00 | $60.00 | $75.00 |
+| Verizon Protect (NY) | $55.00 | - | $55.00 |
+
+### Perks & Add-ons
+| Service | Contribution | Spiff | Total |
+|---------|-------------|-------|--------|
+| VZ Perks | $20.00 | $15.00 | $35.00 |
+| 3rd Party Perks | $10.00 | $25.00 | $35.00 |
+| Redux Family | $35.99 | - | $35.99 |
+| Redux Single | $20.00 | - | $20.00 |
+
+### Eargo Services
+| Service | Total Contribution |
+|---------|-------------------|
+| Eargo 7 Sale (instore) | $700.00 |
+| Eargo 7 Sale (website) | $300.00 |
+| Welcome Call | $300.00 |
+| Link Sale | $281.00 |
+
+## 3. Plan Details
 
 ### Unlimited Ultimate ($65/line with 4 lines)
 - 5G Ultra Wideband
@@ -25,71 +78,22 @@ This guide explains how to update the Verizon plans and promotions data in the d
 - 480p streaming
 - No mobile hotspot
 
-## Current Promotions
-
-### Phone Deals
-- iPhone 16 Pro Bundle ($2,000 value)
-  - iPhone 16 Pro, iPad, and Apple Watch Series 10
-  - Requires trade-in and new line
-- Samsung Galaxy S25+ ($999 value)
-  - Free with any phone trade-in
-  - New line on myPlan required
-- Google Pixel 9 Pro ($899 value)
-  - Free with new line on Unlimited Ultimate
-
-### Tablet & Watch Deals
-- iPad (up to $599 value)
-  - Free with select iPhone purchase
-- Samsung Galaxy Tab S9 FE ($499 value)
-  - Free with select Android phone purchase
-- Apple Watch Series 10 (from $9/mo)
-  - With eligible watch trade-in
-
-### Accessory Deals
-- Accessory Essential Bundle ($100)
-- $100 off Samsung Galaxy Buds3 Pro
-- $100 off Google Pixel Buds Pro 2
-
-### Service Discounts
-- Mobile + Home Bundle: Save up to $300/year
-- BYOD: Up to $540 credit or free smartwatch
-- Military/Student: Save up to $25/mo on myPlan
-
-## Available Perks ($10/month each)
-- Disney Bundle (Disney+, Hulu, ESPN+) - Save $11.99/mo
-- Netflix & Max with Ads - Save $6.98/mo
-- Apple One - Save $9.95/mo
-- Apple Music Family - Save $6.99/mo
-- YouTube Premium - Save $3.99/mo
-- 100 GB Mobile Hotspot - Save $35/mo
-- 3 TravelPass Days - Save $26/mo
-- Unlimited Cloud Storage - Save $3.99/mo
-- Google One AI Premium - Save $9.99/mo
-
 ## Line Pricing (per line)
 
-| Plan              | 1 Line | 2 Lines | 3 Lines | 4 Lines | 5+ Lines |
-|-------------------|--------|---------|---------|---------|-----------|
-| Ultimate          | $100   | $90     | $75     | $65     | $65      |
-| Plus             | $90    | $80     | $65     | $55     | $55      |
-| Welcome          | $75    | $65     | $50     | $40     | $40      |
+| Plan      | 1 Line | 2 Lines | 3 Lines | 4 Lines | 5+ Lines |
+|-----------|--------|---------|---------|---------|-----------|
+| Ultimate  | $100   | $90     | $75     | $65     | $65      |
+| Plus      | $90    | $80     | $65     | $55     | $55      |
+| Welcome   | $75    | $65     | $50     | $40     | $40      |
 
 *All prices shown include Auto Pay & Paper-free billing discount ($10/mo)
 
 ## Files
 
-- `update_verizon_plans.sql`: SQL file containing the latest plan data
-- `update_verizon_promotions.sql`: SQL file containing the latest promotions
-- `server/update-verizon-data.js`: Node.js script to execute both SQL files
-
-## Prerequisites
-
-Before running the update script, make sure you have the following environment variables set:
-
-```bash
-SUPABASE_URL=https://your-project-id.supabase.co
-SUPABASE_KEY=your-service-role-key
-```
+- `update_verizon_plans.sql`: Plan pricing and features
+- `update_verizon_promotions.sql`: Current deals and offers
+- `update_verizon_contributions.sql`: Device and service contributions
+- `server/update-verizon-data.js`: Update script for all data
 
 ## Running the Update Script
 
@@ -97,23 +101,19 @@ SUPABASE_KEY=your-service-role-key
 npm run update-verizon
 ```
 
-This will:
-1. Update the plans data
-   - Create/update the verizon_plans table
-   - Insert latest plan pricing and features
-   
-2. Update the promotions data
-   - Create/update the verizon_promotions table
-   - Insert latest deals and discounts
+This will update:
+1. Plan pricing and features
+2. Current promotions and deals
+3. Device and service contributions
 
-## Troubleshooting
+## Prerequisites
 
-If you encounter any issues:
-1. Check environment variables are set correctly
-2. Verify Supabase connection is working
-3. Check SQL syntax for any errors
-4. Verify exec_sql RPC function is enabled in Supabase
+Environment variables required:
+```bash
+SUPABASE_URL=https://your-project-id.supabase.co
+SUPABASE_KEY=your-service-role-key
+```
 
 ## Support
 
-For questions or issues, please contact the development team or refer to the internal documentation.
+For questions about contribution amounts or other issues, please contact the development team.
