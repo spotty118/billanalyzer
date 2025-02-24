@@ -41,6 +41,12 @@ interface DeviceWithBrand {
   };
 }
 
+type DatabaseDevice = Omit<DeviceWithBrand, 'commission_brands'> & {
+  commission_brands: {
+    name: string;
+  };
+};
+
 type PlanType = "welcome_unlimited_new" | "ultimate_new" | "welcome_unlimited_upgrade" | "ultimate_upgrade";
 
 interface DevicePlan {
@@ -72,7 +78,7 @@ export function CommissionCalculator() {
             welcome_unlimited_new,
             ultimate_new,
             spiff_amount,
-            commission_brands!inner (
+            commission_brands (
               name
             )
           `)
@@ -84,11 +90,15 @@ export function CommissionCalculator() {
           throw devicesError;
         }
 
+        if (!devicesData) {
+          throw new Error('No devices data returned');
+        }
+
         // Properly type the devices data with proper transformation
-        const formattedDevices = (devicesData as unknown as DeviceWithBrand[]).map(device => ({
+        const formattedDevices: CommissionDevice[] = (devicesData as DatabaseDevice[]).map(device => ({
           device_id: device.device_id,
           model_name: device.model_name,
-          brand_name: device.commission_brands.name,
+          brand_name: device.commission_brands?.name || '',
           dpp_price: device.dpp_price,
           welcome_unlimited_upgrade: device.welcome_unlimited_upgrade,
           ultimate_upgrade: device.ultimate_upgrade,
@@ -110,7 +120,7 @@ export function CommissionCalculator() {
           throw servicesError;
         }
 
-        setServices(servicesData);
+        setServices(servicesData || []);
 
       } catch (err) {
         console.error('Error fetching data:', err);
