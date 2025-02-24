@@ -10,7 +10,8 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "test": "vitest",
-    "coverage": "vitest run --coverage"
+    "coverage": "vitest run --coverage",
+    "update-verizon-plans": "node server/update-verizon-plans.js"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.0",
