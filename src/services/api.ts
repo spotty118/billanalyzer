@@ -4,9 +4,10 @@ import {
 } from 'axios';
 import { ApiResponse, ApiError } from '@/types';
 import * as pdfjsLib from 'pdfjs-dist';
+import pdfjsWorker from 'pdfjs-dist/build/pdf.worker.entry';
 
-// Set up PDF.js worker
-pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
+// Set up PDF.js worker properly
+pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorker;
 
 interface ErrorResponse {
   message?: string;
@@ -91,7 +92,14 @@ function extractMatch(pattern: RegExp, text: string): string | null {
 
 async function convertPdfToText(pdfBuffer: ArrayBuffer): Promise<string[]> {
   try {
-    const pdf = await pdfjsLib.getDocument({ data: pdfBuffer }).promise;
+    // Load the document with explicit worker configuration
+    const loadingTask = pdfjsLib.getDocument({
+      data: pdfBuffer,
+      useWorkerFetch: false,
+      isEvalSupported: false
+    });
+    
+    const pdf = await loadingTask.promise;
     const pages: string[] = [];
     
     for (let i = 1; i <= pdf.numPages; i++) {
