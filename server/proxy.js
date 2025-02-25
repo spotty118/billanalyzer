@@ -387,8 +387,17 @@ app.post('/api/analyze-bill', upload.single('file'), async (req, res) => {
       throw new Error(`Bill analysis failed: ${response.statusText}`);
     }
 
-    const analysis = await response.json();
-    res.json(analysis);
+    const result = await response.json();
+    // Ensure we properly format the analysis string with the summary
+    if (result.analysis) {
+      res.json({
+        data: {
+          analysis: result.analysis.summary
+        }
+      });
+    } else {
+      throw new Error('Invalid analysis result format');
+    }
   } catch (error) {
     logger.error('Bill analysis error:', error);
     res.status(500).json({
