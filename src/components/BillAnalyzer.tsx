@@ -1,4 +1,3 @@
-
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Upload } from "lucide-react";
@@ -134,6 +133,7 @@ const AnalysisResults = ({ analysis }: { analysis: BillAnalysis }) => (
 
 export function BillAnalyzer() {
   const [analysisResult, setAnalysisResult] = useState<BillAnalysis | null>(null);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
   const {
     file,
     isLoading,
@@ -149,19 +149,39 @@ export function BillAnalyzer() {
     if (!file) return;
 
     try {
+      setIsAnalyzing(true);
+      console.log('Starting bill analysis...');
+      
       const result = await analyzeBill(file);
+      console.log('Analysis result:', result);
       
       if (result.error) {
+        console.error('API returned error:', result.error);
         throw new Error(result.error.message);
       }
 
+      if (!result.data) {
+        console.error('No data in analysis result');
+        throw new Error('No analysis data received');
+      }
+
+      // Validate the response data structure
+      if (!result.data.totalAmount && result.data.totalAmount !== 0) {
+        console.error('Invalid analysis data - missing totalAmount');
+        throw new Error('Invalid analysis data structure');
+      }
+
       setAnalysisResult(result.data);
+      console.log('Analysis successful:', result.data);
     } catch (error) {
+      console.error('Bill analysis error:', error);
       reset();
       if (error instanceof Error) {
         throw error;
       }
       throw new Error('Failed to analyze bill');
+    } finally {
+      setIsAnalyzing(false);
     }
   };
 
@@ -172,7 +192,7 @@ export function BillAnalyzer() {
           <CardTitle>Bill Analyzer</CardTitle>
         </CardHeader>
         <CardContent>
-          {isLoading ? (
+          {isLoading || isAnalyzing ? (
             <LoadingState />
           ) : (
             <div className="space-y-4">
@@ -187,9 +207,9 @@ export function BillAnalyzer() {
               <Button
                 onClick={handleAnalyze}
                 className="w-full"
-                disabled={!file || isLoading}
+                disabled={!file || isLoading || isAnalyzing}
               >
-                {isLoading ? "Analyzing..." : "Analyze Bill"}
+                {isAnalyzing ? "Analyzing..." : "Analyze Bill"}
               </Button>
               {analysisResult && (
                 <AnalysisResults analysis={analysisResult} />
