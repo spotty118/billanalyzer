@@ -1,3 +1,4 @@
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Upload } from "lucide-react";
@@ -6,9 +7,27 @@ import { analyzeBill } from "@/services/api";
 import { ErrorBoundary } from "@/components/ui/error-boundary";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useState } from "react";
+import { formatCurrency } from "@/data/verizonPlans";
 
-interface AnalysisResult {
-  analysis: string;
+interface BillAnalysis {
+  totalAmount: number | null;
+  accountNumber: string | null;
+  billingPeriod: string | null;
+  charges: Array<{
+    description: string;
+    amount: number;
+    type: string;
+  }>;
+  lineItems: Array<{
+    description: string;
+    amount: number;
+    type: string;
+  }>;
+  subtotals: {
+    lineItems: number;
+    otherCharges: number;
+  };
+  summary: string;
 }
 
 const FileUploadArea = ({ onFileChange, file, isLoading }: {
@@ -44,8 +63,77 @@ const LoadingState = () => (
   </div>
 );
 
+const AnalysisResults = ({ analysis }: { analysis: BillAnalysis }) => (
+  <div className="mt-4 space-y-4">
+    <div className="bg-gray-50 rounded-lg p-6">
+      <div className="space-y-4">
+        <div className="flex justify-between items-center">
+          <h4 className="font-medium">Account Details</h4>
+          <span className="text-sm text-gray-500">Account #{analysis.accountNumber}</span>
+        </div>
+        
+        <div className="space-y-2">
+          <div className="flex justify-between text-sm">
+            <span>Billing Period</span>
+            <span>{analysis.billingPeriod}</span>
+          </div>
+          <div className="flex justify-between text-sm font-medium">
+            <span>Total Amount Due</span>
+            <span>{analysis.totalAmount ? formatCurrency(analysis.totalAmount) : '$0.00'}</span>
+          </div>
+        </div>
+
+        <div className="border-t pt-4 mt-4">
+          <h4 className="font-medium mb-3">Line Items</h4>
+          <div className="space-y-2">
+            {analysis.lineItems.map((item, index) => (
+              <div key={index} className="flex justify-between text-sm">
+                <span>{item.description}</span>
+                <span>{formatCurrency(item.amount)}</span>
+              </div>
+            ))}
+            {analysis.lineItems.length === 0 && (
+              <p className="text-sm text-gray-500">No line items found</p>
+            )}
+          </div>
+        </div>
+
+        <div className="border-t pt-4 mt-4">
+          <h4 className="font-medium mb-3">Other Charges</h4>
+          <div className="space-y-2">
+            {analysis.charges.map((charge, index) => (
+              <div key={index} className="flex justify-between text-sm">
+                <span>{charge.description}</span>
+                <span>{formatCurrency(charge.amount)}</span>
+              </div>
+            ))}
+            {analysis.charges.length === 0 && (
+              <p className="text-sm text-gray-500">No additional charges found</p>
+            )}
+          </div>
+        </div>
+
+        <div className="border-t pt-4 mt-4">
+          <div className="flex justify-between text-sm font-medium">
+            <span>Subtotal (Line Items)</span>
+            <span>{formatCurrency(analysis.subtotals.lineItems)}</span>
+          </div>
+          <div className="flex justify-between text-sm font-medium mt-2">
+            <span>Subtotal (Other Charges)</span>
+            <span>{formatCurrency(analysis.subtotals.otherCharges)}</span>
+          </div>
+          <div className="flex justify-between text-base font-bold mt-4">
+            <span>Total</span>
+            <span>{analysis.totalAmount ? formatCurrency(analysis.totalAmount) : '$0.00'}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+);
+
 export function BillAnalyzer() {
-  const [analysisResult, setAnalysisResult] = useState<AnalysisResult | null>(null);
+  const [analysisResult, setAnalysisResult] = useState<BillAnalysis | null>(null);
   const {
     file,
     isLoading,
@@ -67,7 +155,7 @@ export function BillAnalyzer() {
         throw new Error(result.error.message);
       }
 
-      setAnalysisResult(result.data);
+      setAnalysisResult(result.data as BillAnalysis);
     } catch (error) {
       reset();
       if (error instanceof Error) {
@@ -104,12 +192,7 @@ export function BillAnalyzer() {
                 {isLoading ? "Analyzing..." : "Analyze Bill"}
               </Button>
               {analysisResult && (
-                <div className="mt-4 p-4 bg-gray-50 rounded-lg">
-                  <h3 className="font-medium mb-2">Analysis Results</h3>
-                  <p className="text-sm text-gray-600">
-                    {analysisResult.analysis}
-                  </p>
-                </div>
+                <AnalysisResults analysis={analysisResult} />
               )}
             </div>
           )}
