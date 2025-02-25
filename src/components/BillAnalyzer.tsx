@@ -155,7 +155,7 @@ export function BillAnalyzer() {
         throw new Error(result.error.message);
       }
 
-      setAnalysisResult(result.data as BillAnalysis);
+      setAnalysisResult(result.data);
     } catch (error) {
       reset();
       if (error instanceof Error) {

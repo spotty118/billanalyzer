@@ -21,6 +21,27 @@ interface RequestConfig extends Omit<InternalAxiosRequestConfig, 'headers'> {
   headers?: AxiosHeaders;
 }
 
+interface BillAnalysis {
+  totalAmount: number | null;
+  accountNumber: string | null;
+  billingPeriod: string | null;
+  charges: Array<{
+    description: string;
+    amount: number;
+    type: string;
+  }>;
+  lineItems: Array<{
+    description: string;
+    amount: number;
+    type: string;
+  }>;
+  subtotals: {
+    lineItems: number;
+    otherCharges: number;
+  };
+  summary: string;
+}
+
 interface Cache {
   [key: string]: {
     data: unknown;
@@ -163,7 +184,7 @@ class ApiService {
     return true;
   }
 
-  public async analyzeBill(file: File): Promise<ApiResponse<{ analysis: string }>> {
+  public async analyzeBill(file: File): Promise<ApiResponse<BillAnalysis>> {
     try {
       this.sanitizeFile(file);
 
@@ -179,7 +200,7 @@ class ApiService {
         retryDelay: this.RETRY_DELAY,
       };
 
-      const response = await this.api.post<{ analysis: string }>(
+      const response = await this.api.post<BillAnalysis>(
         '/analyze-bill',
         formData,
         config
@@ -211,6 +232,6 @@ class ApiService {
 // Export singleton instance and its methods
 export const apiService = ApiService.getInstance();
 
-export const analyzeBill = (file: File): Promise<ApiResponse<{ analysis: string }>> => {
+export const analyzeBill = (file: File): Promise<ApiResponse<BillAnalysis>> => {
   return apiService.analyzeBill(file);
 };
