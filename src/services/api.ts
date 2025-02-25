@@ -61,8 +61,10 @@ class ApiService {
   private readonly SERVER_STARTUP_MAX_RETRIES = 5;
 
   private constructor() {
+    const baseURL = import.meta.env.DEV ? 'http://localhost:3001/api' : '/api';
+    
     this.api = axios.create({
-      baseURL: '/api',
+      baseURL,
       timeout: 10000,
       headers: new AxiosHeaders({
         'Content-Type': 'application/json',
@@ -160,7 +162,7 @@ class ApiService {
     }
     if (error.request) {
       return {
-        message: 'No response received from server',
+        message: 'No response received from server. Please ensure the server is running on port 3001.',
         code: 'NETWORK_ERROR',
       };
     }
@@ -192,8 +194,11 @@ class ApiService {
       const formData = new FormData();
       formData.append('file', file);
 
+      console.log('Sending request to analyze bill...');
+      
       const headers = new AxiosHeaders();
-      headers.set('Content-Type', 'multipart/form-data');
+      // Important: Remove Content-Type header for multipart/form-data
+      headers.delete('Content-Type');
 
       const config: RequestConfig = {
         headers,
@@ -219,7 +224,7 @@ class ApiService {
 
       // Create a properly structured response
       const analyzedData: BillAnalysis = {
-        totalAmount: response.data.totalAmount || 0,
+        totalAmount: response.data.totalAmount ?? 0,
         accountNumber: response.data.accountNumber || null,
         billingPeriod: response.data.billingPeriod || null,
         charges: Array.isArray(response.data.charges) ? response.data.charges : [],
