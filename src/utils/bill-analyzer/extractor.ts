@@ -57,7 +57,7 @@ export async function extractVerizonBill(pdfData: ArrayBuffer): Promise<VerizonB
 export function analyzeBill(bill: VerizonBill) {
   const analysis = {
     accountNumber: bill.accountInfo.accountNumber,
-    billingPeriod: bill.accountInfo.billingPeriod,
+    billingPeriod: `${bill.accountInfo.billingPeriod.start} to ${bill.accountInfo.billingPeriod.end}`,
     totalAmount: bill.billSummary.totalDue,
     lineCount: bill.lineItems.length,
     linesBreakdown: [] as Array<{
@@ -69,6 +69,11 @@ export function analyzeBill(bill: VerizonBill) {
       servicesCharges: number;
       surcharges: number;
       taxes: number;
+      planDetails: Array<{description: string; amount: number}>;
+      deviceDetails: Array<{description: string; amount: number; remaining?: number}>;
+      serviceDetails: Array<{description: string; amount: number}>;
+      surchargeDetails: Array<{description: string; amount: number}>;
+      taxDetails: Array<{description: string; amount: number}>;
     }>,
     callActivity: {
       totalCalls: 0,
@@ -78,6 +83,13 @@ export function analyzeBill(bill: VerizonBill) {
         callCount: number;
         totalMinutes: number;
       }>
+    },
+    summary: {
+      planChargesTotal: 0,
+      deviceChargesTotal: 0,
+      servicesChargesTotal: 0,
+      surchargesTotal: 0,
+      taxesTotal: 0
     }
   };
   
@@ -86,16 +98,50 @@ export function analyzeBill(bill: VerizonBill) {
     // Skip account-wide charges
     if (!line.phoneNumber) continue;
     
+    const planChargesAmount = line.planCharges.reduce((sum, charge) => sum + charge.amount, 0);
+    const deviceChargesAmount = line.deviceCharges.reduce((sum, charge) => sum + charge.amount, 0);
+    const servicesChargesAmount = line.servicesCharges.reduce((sum, charge) => sum + charge.amount, 0);
+    const surchargesAmount = line.surcharges.reduce((sum, charge) => sum + charge.amount, 0);
+    const taxesAmount = line.taxes.reduce((sum, charge) => sum + charge.amount, 0);
+    
     const lineSummary = {
       phoneNumber: line.phoneNumber,
-      deviceType: line.deviceType,
+      deviceType: line.deviceType || 'Unknown Device',
       totalCharges: line.totalAmount,
-      planCharges: line.planCharges.reduce((sum, charge) => sum + charge.amount, 0),
-      deviceCharges: line.deviceCharges.reduce((sum, charge) => sum + charge.amount, 0),
-      servicesCharges: line.servicesCharges.reduce((sum, charge) => sum + charge.amount, 0),
-      surcharges: line.surcharges.reduce((sum, charge) => sum + charge.amount, 0),
-      taxes: line.taxes.reduce((sum, charge) => sum + charge.amount, 0)
+      planCharges: planChargesAmount,
+      deviceCharges: deviceChargesAmount,
+      servicesCharges: servicesChargesAmount,
+      surcharges: surchargesAmount,
+      taxes: taxesAmount,
+      planDetails: line.planCharges.map(charge => ({
+        description: charge.description,
+        amount: charge.amount
+      })),
+      deviceDetails: line.deviceCharges.map(charge => ({
+        description: charge.description,
+        amount: charge.amount,
+        remaining: charge.remaining
+      })),
+      serviceDetails: line.servicesCharges.map(charge => ({
+        description: charge.description,
+        amount: charge.amount
+      })),
+      surchargeDetails: line.surcharges.map(charge => ({
+        description: charge.description,
+        amount: charge.amount
+      })),
+      taxDetails: line.taxes.map(tax => ({
+        description: tax.description,
+        amount: tax.amount
+      }))
     };
+    
+    // Update totals
+    analysis.summary.planChargesTotal += planChargesAmount;
+    analysis.summary.deviceChargesTotal += deviceChargesAmount;
+    analysis.summary.servicesChargesTotal += servicesChargesAmount;
+    analysis.summary.surchargesTotal += surchargesAmount;
+    analysis.summary.taxesTotal += taxesAmount;
     
     analysis.linesBreakdown.push(lineSummary);
   }
