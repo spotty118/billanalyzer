@@ -1,14 +1,9 @@
+
 import { AxiosError } from 'axios';
 import { ApiResponse, ApiError } from '@/types';
-import * as pdfjsLib from 'pdfjs-dist';
 import { VerizonBillAnalyzer } from '@/utils/bill-analyzer/analyzer';
-import { parseVerizonBill } from '@/utils/bill-analyzer/parser';
+import { extractVerizonBill, analyzeBill as analyzeVerizonBill } from '@/utils/bill-analyzer/extractor';
 import type { BillData, VerizonBill } from '@/utils/bill-analyzer/types';
-
-pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
-  'pdfjs-dist/build/pdf.worker.mjs',
-  import.meta.url
-).toString();
 
 interface ErrorResponse {
   message?: string;
@@ -46,37 +41,6 @@ interface BillAnalysis {
     high_talk_users: string[];
     high_text_users: string[];
   };
-}
-
-async function convertPdfToText(pdfBuffer: ArrayBuffer): Promise<string[]> {
-  try {
-    const loadingTask = pdfjsLib.getDocument({
-      data: pdfBuffer,
-      useWorkerFetch: false,
-      isEvalSupported: false
-    });
-    
-    const pdf = await loadingTask.promise;
-    const pages: string[] = [];
-    
-    for (let i = 1; i <= pdf.numPages; i++) {
-      const page = await pdf.getPage(i);
-      const content = await page.getTextContent();
-      const pageText = content.items
-        .map((item: any) => item.str)
-        .join(' ');
-      pages.push(pageText);
-    }
-    
-    if (pages.length === 0) {
-      throw new Error('No text content found in PDF');
-    }
-    
-    return pages;
-  } catch (error) {
-    console.error('Error converting PDF to text:', error);
-    throw error;
-  }
 }
 
 class ApiService {
@@ -160,13 +124,12 @@ class ApiService {
       }
 
       const buffer = await file.arrayBuffer();
-      const pages = await convertPdfToText(buffer);
       
       console.log('Starting bill analysis...');
-      const verizonBill = parseVerizonBill(pages);
+      const verizonBill = await extractVerizonBill(buffer);
+      const billAnalysis = analyzeVerizonBill(verizonBill);
       
       const billData = this.convertVerizonBillToBillData(verizonBill);
-      
       const analyzer = new VerizonBillAnalyzer(billData);
       
       const summary = analyzer.getBillSummary();
@@ -174,12 +137,12 @@ class ApiService {
       const usageAnalysis = analyzer.getUsageAnalysis();
 
       const analysis: BillAnalysis = {
-        totalAmount: summary.total_charges.total_due || 0,
-        accountNumber: summary.account_number || 'Unknown',
-        billingPeriod: `${summary.billing_period.start} to ${summary.billing_period.end}`,
-        charges: verizonBill.lineItems.map(item => ({
-          description: `${item.owner} (${item.phoneNumber})`,
-          amount: item.totalAmount,
+        totalAmount: billAnalysis.totalAmount,
+        accountNumber: billAnalysis.accountNumber,
+        billingPeriod: `${verizonBill.accountInfo.billingPeriod.start} to ${verizonBill.accountInfo.billingPeriod.end}`,
+        charges: billAnalysis.linesBreakdown.map(item => ({
+          description: `${item.phoneNumber} - ${item.deviceType}`,
+          amount: item.totalCharges,
           type: 'line'
         })),
         lineItems: [],
@@ -187,7 +150,7 @@ class ApiService {
           lineItems: summary.total_charges.current_charges || 0,
           otherCharges: 0
         },
-        summary: `Bill analysis for ${summary.billing_period.start}`,
+        summary: `Bill analysis for account ${billAnalysis.accountNumber}`,
         recommendations: optimization.line_recommendations,
         usageAnalysis
       };
