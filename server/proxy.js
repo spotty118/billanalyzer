@@ -4,6 +4,8 @@ import dotenv from 'dotenv';
 import { spawn } from 'child_process';
 import bodyParser from 'body-parser';
 import puppeteer from 'puppeteer';
+import multer from 'multer';
+import FormData from 'form-data';
 
 // Utility function for launching browser with consistent configuration and error handling
 const launchBrowser = async () => {
@@ -345,6 +347,56 @@ app.use(cors({ origin: allowedOrigins }));
 // Add body parsing middleware
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
+
+// Configure multer for file uploads
+const upload = multer({
+  limits: {
+    fileSize: 10 * 1024 * 1024 // 10MB limit
+  }
+});
+
+// Handle bill analysis through proxy
+app.post('/api/analyze-bill', upload.single('file'), async (req, res) => {
+  try {
+    logger.info('Received bill analysis request');
+    
+    if (!req.file) {
+      logger.error('No file uploaded');
+      return res.status(400).json({ error: 'No file uploaded' });
+    }
+
+    // Forward to the Verizon MCP server
+    const server = mcpServers.get('verizon') || await startMcpServer('verizon');
+    
+    if (!server || !server.isReady()) {
+      throw new Error('Verizon MCP server not ready');
+    }
+
+    const formData = new FormData();
+    formData.append('file', req.file.buffer, {
+      filename: req.file.originalname,
+      contentType: 'application/pdf'
+    });
+
+    const response = await fetch('http://localhost:4000/analyze-bill', {
+      method: 'POST',
+      body: formData
+    });
+
+    if (!response.ok) {
+      throw new Error(`Bill analysis failed: ${response.statusText}`);
+    }
+
+    const analysis = await response.json();
+    res.json(analysis);
+  } catch (error) {
+    logger.error('Bill analysis error:', error);
+    res.status(500).json({
+      error: 'Failed to analyze bill',
+      message: error.message
+    });
+  }
+});
 
 // Add request logging middleware
 app.use((req, res, next) => {

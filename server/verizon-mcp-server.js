@@ -1,9 +1,18 @@
 import express from 'express';
 import * as cheerio from 'cheerio';
 import fetch from 'node-fetch';
+import multer from 'multer';
+import { extractVerizonBillData } from './bill-parser.js';
 
 const app = express();
 const port = process.env.PORT || 4000; // Default port for Verizon MCP Server
+
+// Configure multer for handling file uploads
+const upload = multer({
+  limits: {
+    fileSize: 10 * 1024 * 1024 // 10MB limit
+  }
+});
 
 app.use(express.json());
 
@@ -274,4 +283,23 @@ app.get('/scrape-tags', async (req, res) => {
 
 app.listen(port, () => {
   console.log(`Verizon MCP Server running on port ${port}`);
+});
+
+// Endpoint for bill analysis
+app.post('/analyze-bill', upload.single('file'), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: 'No file uploaded' });
+    }
+
+    if (!req.file.buffer) {
+      return res.status(400).json({ error: 'Invalid file data' });
+    }
+
+    const analysis = await extractVerizonBillData(req.file.buffer);
+    res.json({ analysis });
+  } catch (error) {
+    console.error('Error analyzing bill:', error);
+    res.status(500).json({ error: 'Failed to analyze bill' });
+  }
 });
