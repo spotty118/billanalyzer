@@ -4,7 +4,10 @@ import axios, {
   AxiosInstance
 } from 'axios';
 import { ApiResponse, ApiError } from '@/types';
-import * as pdfParse from 'pdf-parse';
+import * as pdfjsLib from 'pdfjs-dist';
+
+// Set up PDF.js worker
+pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
 
 interface ErrorResponse {
   message?: string;
@@ -52,9 +55,25 @@ function extractMatch(pattern: RegExp, text: string): string | null {
   return match ? match[1] : null;
 }
 
-async function convertPdfToText(pdfBuffer: Buffer): Promise<string> {
-  const data = await pdfParse(pdfBuffer);
-  return data.text;
+async function convertPdfToText(pdfBuffer: ArrayBuffer): Promise<string> {
+  try {
+    const pdf = await pdfjsLib.getDocument({ data: pdfBuffer }).promise;
+    let fullText = '';
+    
+    for (let i = 1; i <= pdf.numPages; i++) {
+      const page = await pdf.getPage(i);
+      const content = await page.getTextContent();
+      const pageText = content.items
+        .map((item: any) => item.str)
+        .join(' ');
+      fullText += pageText + '\n';
+    }
+    
+    return fullText;
+  } catch (error) {
+    console.error('Error converting PDF to text:', error);
+    throw error;
+  }
 }
 
 function parseLineItems(text: string): Array<{ device: string; charge: string }> {
@@ -79,7 +98,7 @@ function parseLineItems(text: string): Array<{ device: string; charge: string }>
   return lineItems;
 }
 
-async function parseVerizonBill(pdfBuffer: Buffer): Promise<BillData> {
+async function parseVerizonBill(pdfBuffer: ArrayBuffer): Promise<BillData> {
   const rawText = await convertPdfToText(pdfBuffer);
   const text = normalizeText(rawText);
   
@@ -197,9 +216,8 @@ class ApiService {
     try {
       this.sanitizeFile(file);
       const buffer = await file.arrayBuffer();
-      const pdfBuffer = Buffer.from(buffer);
       
-      const billData = await parseVerizonBill(pdfBuffer);
+      const billData = await parseVerizonBill(buffer);
       const analysis = this.convertBillDataToAnalysis(billData);
 
       if (!this.validateBillAnalysis(analysis)) {
