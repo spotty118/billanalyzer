@@ -1,8 +1,7 @@
 
 import axios, { 
   AxiosError, 
-  AxiosInstance, 
-  AxiosResponse, 
+  AxiosInstance,
   InternalAxiosRequestConfig,
   AxiosHeaders
 } from 'axios';
@@ -10,16 +9,6 @@ import { ApiResponse, ApiError } from '@/types';
 
 interface ErrorResponse {
   message?: string;
-}
-
-interface RequestConfig extends Omit<InternalAxiosRequestConfig, 'headers'> {
-  retry?: boolean;
-  retryCount?: number;
-  retryDelay?: number;
-  cache?: boolean;
-  cacheKey?: string;
-  cacheDuration?: number;
-  headers?: AxiosHeaders;
 }
 
 interface BillAnalysis {
@@ -41,13 +30,6 @@ interface BillAnalysis {
     otherCharges: number;
   };
   summary: string;
-}
-
-interface Cache {
-  [key: string]: {
-    data: unknown;
-    timestamp: number;
-  };
 }
 
 class ApiService {
