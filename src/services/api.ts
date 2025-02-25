@@ -1,3 +1,4 @@
+
 import { 
   AxiosError
 } from 'axios';
@@ -44,6 +45,41 @@ interface BillData {
   }>;
 }
 
+interface AccountInfo {
+  account_number?: string;
+  customer_name?: string;
+  billing_period_start?: string;
+  billing_period_end?: string;
+}
+
+interface BillSummary {
+  previous_balance?: number;
+  payments?: number;
+  current_charges?: number;
+  total_due?: number;
+}
+
+interface ChargeItem {
+  description: string;
+  amount: number;
+}
+
+interface UsageDetail {
+  data_usage: string;
+  talk_minutes: string;
+  text_count?: string;
+}
+
+interface DetailedBillData {
+  account_info: AccountInfo;
+  bill_summary: BillSummary;
+  plan_charges: ChargeItem[];
+  equipment_charges: ChargeItem[];
+  one_time_charges: ChargeItem[];
+  taxes_and_fees: ChargeItem[];
+  usage_details: Record<string, UsageDetail[]>;
+}
+
 function normalizeText(text: string): string {
   return text.replace(/\s+/g, ' ').trim();
 }
@@ -53,10 +89,10 @@ function extractMatch(pattern: RegExp, text: string): string | null {
   return match ? match[1] : null;
 }
 
-async function convertPdfToText(pdfBuffer: ArrayBuffer): Promise<string> {
+async function convertPdfToText(pdfBuffer: ArrayBuffer): Promise<string[]> {
   try {
     const pdf = await pdfjsLib.getDocument({ data: pdfBuffer }).promise;
-    let fullText = '';
+    const pages: string[] = [];
     
     for (let i = 1; i <= pdf.numPages; i++) {
       const page = await pdf.getPage(i);
@@ -64,58 +100,75 @@ async function convertPdfToText(pdfBuffer: ArrayBuffer): Promise<string> {
       const pageText = content.items
         .map((item: any) => item.str)
         .join(' ');
-      fullText += pageText + '\n';
+      pages.push(pageText);
     }
     
-    return fullText;
+    return pages;
   } catch (error) {
     console.error('Error converting PDF to text:', error);
     throw error;
   }
 }
 
-function parseLineItems(text: string): Array<{ device: string; charge: string }> {
-  const lineItems: Array<{ device: string; charge: string }> = [];
-  const sectionMatch = text.match(/Bill summary by line(.*?)Charges by line details/i);
-  
-  if (sectionMatch) {
-    const sectionText = sectionMatch[1];
-    const entries = sectionText.split(/\n/);
+class VerizonBillParser {
+  private textPages: string[];
+  private billData: DetailedBillData;
+
+  constructor(textPages: string[]) {
+    this.textPages = textPages;
+    this.billData = {
+      account_info: {},
+      bill_summary: {},
+      plan_charges: [],
+      equipment_charges: [],
+      one_time_charges: [],
+      taxes_and_fees: [],
+      usage_details: {}
+    };
+  }
+
+  private parseAccountInfo(): void {
+    const accountPattern = /Account Number:\s*(\d{10})/;
+    const billingPeriodPattern = /Bill Period:\s*([\w\s,]+\d{4})\s*to\s*([\w\s,]+\d{4})/;
     
-    for (const entry of entries) {
-      const deviceMatch = entry.match(/(.*?)\s+\$\s*([\d,.]+)/);
-      if (deviceMatch) {
-        lineItems.push({
-          device: deviceMatch[1].trim(),
-          charge: deviceMatch[2].trim()
-        });
+    for (const page of this.textPages.slice(0, 2)) {
+      const accountMatch = page.match(accountPattern);
+      if (accountMatch) {
+        this.billData.account_info.account_number = accountMatch[1];
+      }
+      
+      const billingPeriodMatch = page.match(billingPeriodPattern);
+      if (billingPeriodMatch) {
+        this.billData.account_info.billing_period_start = billingPeriodMatch[1].trim();
+        this.billData.account_info.billing_period_end = billingPeriodMatch[2].trim();
       }
     }
   }
-  
-  return lineItems;
-}
 
-async function parseVerizonBill(pdfBuffer: ArrayBuffer): Promise<BillData> {
-  const rawText = await convertPdfToText(pdfBuffer);
-  const text = normalizeText(rawText);
-  
-  const billDate = extractMatch(/Bill date\s*(\w+\s+\d{1,2},\s+\d{4})/i, text) || '';
-  const accountNumber = extractMatch(/Account number\s*([\d-]+)/i, text) || '';
-  const invoiceNumber = extractMatch(/Invoice number\s*([\d]+)/i, text) || '';
-  const totalDue = extractMatch(/Total Amount Due\s*\$\s*([\d,.]+)/i, text) || '';
-  const billingPeriod = extractMatch(/Billing period:\s*(.+?)(?:\s+Account|$)/i, text) || '';
-  
-  const lineItems = parseLineItems(text);
-  
-  return {
-    billDate,
-    accountNumber,
-    invoiceNumber,
-    totalDue,
-    billingPeriod,
-    lineItems
-  };
+  private parseBillSummary(): void {
+    const summaryPatterns = {
+      previous_balance: /Previous Balance\s*\$\s*([\d,]+\.\d{2})/,
+      payments: /Payments\s*-\s*\$\s*([\d,]+\.\d{2})/,
+      current_charges: /Current Charges\s*\$\s*([\d,]+\.\d{2})/,
+      total_due: /Total Due\s*\$\s*([\d,]+\.\d{2})/
+    };
+    
+    for (const page of this.textPages.slice(0, 3)) {
+      for (const [key, pattern] of Object.entries(summaryPatterns)) {
+        const match = page.match(pattern);
+        if (match) {
+          const amount = parseFloat(match[1].replace(',', ''));
+          this.billData.bill_summary[key as keyof BillSummary] = amount;
+        }
+      }
+    }
+  }
+
+  public parseAll(): DetailedBillData {
+    this.parseAccountInfo();
+    this.parseBillSummary();
+    return this.billData;
+  }
 }
 
 class ApiService {
@@ -203,7 +256,19 @@ class ApiService {
       this.sanitizeFile(file);
       const buffer = await file.arrayBuffer();
       
-      const billData = await parseVerizonBill(buffer);
+      const textPages = await convertPdfToText(buffer);
+      const parser = new VerizonBillParser(textPages);
+      const detailedData = parser.parseAll();
+      
+      const billData: BillData = {
+        billDate: detailedData.account_info.billing_period_start || '',
+        accountNumber: detailedData.account_info.account_number || '',
+        invoiceNumber: '', // Not available in detailed data
+        totalDue: detailedData.bill_summary.total_due?.toString() || '0',
+        billingPeriod: `${detailedData.account_info.billing_period_start || ''} to ${detailedData.account_info.billing_period_end || ''}`,
+        lineItems: [] // Would need to convert from plan_charges
+      };
+
       const analysis = this.convertBillDataToAnalysis(billData);
 
       if (!this.validateBillAnalysis(analysis)) {
