@@ -4,6 +4,17 @@ import { parseVerizonBill } from './parser';
 
 interface TextItem {
   str: string;
+  dir: string;
+  transform: number[];
+  width: number;
+  height: number;
+  fontName: string;
+  hasEOL: boolean;
+}
+
+interface TextMarkedContent {
+  type: string;
+  items: TextItem[];
 }
 
 /**
