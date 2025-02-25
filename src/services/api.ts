@@ -1,12 +1,12 @@
+
 import { 
   AxiosError
 } from 'axios';
 import { ApiResponse, ApiError } from '@/types';
 import * as pdfjsLib from 'pdfjs-dist';
-import pdfjsWorker from 'pdfjs-dist/build/pdf.worker.min.js?url';
 
-// Set up PDF.js worker properly by using the imported worker URL
-pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorker;
+// Configure worker directly from node_modules
+pdfjsLib.GlobalWorkerOptions.workerSrc = '/node_modules/pdfjs-dist/build/pdf.worker.js';
 
 interface ErrorResponse {
   message?: string;
