@@ -1,3 +1,4 @@
+
 import axios, { 
   AxiosError, 
   AxiosInstance, 
@@ -200,17 +201,46 @@ class ApiService {
         retryDelay: this.RETRY_DELAY,
       };
 
+      // Make the request to analyze the bill
       const response = await this.api.post<BillAnalysis>(
         '/analyze-bill',
         formData,
         config
       );
 
-      return { data: response.data };
+      // Log the raw response for debugging
+      console.log('Raw API response:', response);
+
+      // Validate the response structure
+      if (!response.data || typeof response.data !== 'object') {
+        console.error('Invalid response format:', response.data);
+        throw new Error('Invalid response format from server');
+      }
+
+      // Create a properly structured response
+      const analyzedData: BillAnalysis = {
+        totalAmount: response.data.totalAmount || 0,
+        accountNumber: response.data.accountNumber || null,
+        billingPeriod: response.data.billingPeriod || null,
+        charges: Array.isArray(response.data.charges) ? response.data.charges : [],
+        lineItems: Array.isArray(response.data.lineItems) ? response.data.lineItems : [],
+        subtotals: {
+          lineItems: response.data.subtotals?.lineItems || 0,
+          otherCharges: response.data.subtotals?.otherCharges || 0,
+        },
+        summary: response.data.summary || ''
+      };
+
+      return { data: analyzedData };
     } catch (error) {
+      console.error('API Error:', error);
+      
       if (error instanceof AxiosError) {
+        console.error('Response data:', error.response?.data);
+        console.error('Response status:', error.response?.status);
         return { error: this.handleError(error) };
       }
+      
       if (error instanceof Error) {
         return {
           error: {
@@ -219,6 +249,7 @@ class ApiService {
           },
         };
       }
+      
       return {
         error: {
           message: 'An unexpected error occurred',
