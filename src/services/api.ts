@@ -1,7 +1,5 @@
-
-import axios, { 
-  AxiosError, 
-  AxiosInstance
+import { 
+  AxiosError
 } from 'axios';
 import { ApiResponse, ApiError } from '@/types';
 import * as pdfjsLib from 'pdfjs-dist';
@@ -122,20 +120,8 @@ async function parseVerizonBill(pdfBuffer: ArrayBuffer): Promise<BillData> {
 
 class ApiService {
   private static instance: ApiService;
-  private api: AxiosInstance;
 
-  private constructor() {
-    this.api = axios.create({
-      baseURL: '/api',
-      headers: {
-        'Accept': 'application/json',
-        'Content-Type': 'application/json'
-      },
-      validateStatus: (status) => {
-        return status >= 200 && status < 300;
-      }
-    });
-  }
+  private constructor() {}
 
   public static getInstance(): ApiService {
     if (!ApiService.instance) {
