@@ -3,6 +3,8 @@ import {
 } from 'axios';
 import { ApiResponse, ApiError } from '@/types';
 import * as pdfjsLib from 'pdfjs-dist';
+import { VerizonBillAnalyzer } from '@/utils/bill-analyzer/analyzer';
+import type { BillData } from '@/utils/bill-analyzer/types';
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
   'pdfjs-dist/build/pdf.worker.mjs',
@@ -13,58 +15,10 @@ interface ErrorResponse {
   message?: string;
 }
 
-interface BillData {
-  billDate: string;
-  accountNumber: string;
-  invoiceNumber: string;
-  totalDue: string;
-  billingPeriod: string;
-  lineItems: Array<{
-    device: string;
-    charge: string;
-  }>;
-}
-
-interface AccountInfo {
-  account_number?: string;
-  customer_name?: string;
-  billing_period_start?: string;
-  billing_period_end?: string;
-}
-
-interface BillSummary {
-  previous_balance?: number;
-  payments?: number;
-  current_charges?: number;
-  total_due?: number;
-  [key: string]: number | undefined; // Add index signature
-}
-
-interface ChargeItem {
-  description: string;
-  amount: number;
-}
-
-interface UsageDetail {
-  data_usage: string;
-  talk_minutes: string;
-  text_count?: string;
-}
-
-interface DetailedBillData {
-  account_info: AccountInfo;
-  bill_summary: BillSummary;
-  plan_charges: ChargeItem[];
-  equipment_charges: ChargeItem[];
-  one_time_charges: ChargeItem[];
-  taxes_and_fees: ChargeItem[];
-  usage_details: Record<string, UsageDetail[]>;
-}
-
 interface BillAnalysis {
-  totalAmount: number | null;
-  accountNumber: string | null;
-  billingPeriod: string | null;
+  totalAmount: number;
+  accountNumber: string;
+  billingPeriod: string;
   charges: Array<{
     description: string;
     amount: number;
@@ -80,18 +34,19 @@ interface BillAnalysis {
     otherCharges: number;
   };
   summary: string;
-}
-
-interface Charge {
-  description: string;
-  amount: number;
-  type: string;
-}
-
-interface LineItem {
-  description: string;
-  amount: number;
-  type: string;
+  recommendations?: Array<{
+    phone_number: string;
+    recommendation: string;
+    potential_savings: string;
+  }>;
+  usageAnalysis?: {
+    avg_data_usage_gb: number;
+    avg_talk_minutes: number;
+    avg_text_count: number;
+    high_data_users: string[];
+    high_talk_users: string[];
+    high_text_users: string[];
+  };
 }
 
 async function convertPdfToText(pdfBuffer: ArrayBuffer): Promise<string[]> {
@@ -125,69 +80,6 @@ async function convertPdfToText(pdfBuffer: ArrayBuffer): Promise<string[]> {
   }
 }
 
-class VerizonBillParser {
-  private textPages: string[];
-  private billData: DetailedBillData;
-
-  constructor(textPages: string[]) {
-    this.textPages = textPages;
-    this.billData = {
-      account_info: {},
-      bill_summary: {
-        total_due: 0 // Set default value
-      },
-      plan_charges: [],
-      equipment_charges: [],
-      one_time_charges: [],
-      taxes_and_fees: [],
-      usage_details: {}
-    };
-  }
-
-  private parseAccountInfo(): void {
-    const accountPattern = /Account Number:\s*(\d{10})/;
-    const billingPeriodPattern = /Bill Period:\s*([\w\s,]+\d{4})\s*to\s*([\w\s,]+\d{4})/;
-    
-    for (const page of this.textPages.slice(0, 2)) {
-      const accountMatch = page.match(accountPattern);
-      if (accountMatch) {
-        this.billData.account_info.account_number = accountMatch[1];
-      }
-      
-      const billingPeriodMatch = page.match(billingPeriodPattern);
-      if (billingPeriodMatch) {
-        this.billData.account_info.billing_period_start = billingPeriodMatch[1].trim();
-        this.billData.account_info.billing_period_end = billingPeriodMatch[2].trim();
-      }
-    }
-  }
-
-  private parseBillSummary(): void {
-    const summaryPatterns = {
-      previous_balance: /Previous Balance\s*\$\s*([\d,]+\.\d{2})/,
-      payments: /Payments\s*-\s*\$\s*([\d,]+\.\d{2})/,
-      current_charges: /Current Charges\s*\$\s*([\d,]+\.\d{2})/,
-      total_due: /Total Due\s*\$\s*([\d,]+\.\d{2})/
-    };
-    
-    for (const page of this.textPages.slice(0, 3)) {
-      for (const [key, pattern] of Object.entries(summaryPatterns)) {
-        const match = page.match(pattern);
-        if (match) {
-          const amount = parseFloat(match[1].replace(',', ''));
-          this.billData.bill_summary[key] = amount;
-        }
-      }
-    }
-  }
-
-  public parseAll(): DetailedBillData {
-    this.parseAccountInfo();
-    this.parseBillSummary();
-    return this.billData;
-  }
-}
-
 class ApiService {
   private static instance: ApiService;
 
@@ -208,107 +100,58 @@ class ApiService {
     };
   }
 
-  private convertBillDataToAnalysis(billData: BillData): BillAnalysis {
-    const totalAmount = parseFloat(billData.totalDue.replace(/[^0-9.]/g, '')) || 0; // Default to 0 instead of null
-    
-    const lineItems = billData.lineItems.map(item => ({
-      description: item.device || 'Unknown device',
-      amount: parseFloat(item.charge.replace(/[^0-9.]/g, '')) || 0,
-      type: 'line'
-    }));
-
-    const lineItemsTotal = lineItems.reduce((sum, item) => sum + item.amount, 0);
-    const otherChargesTotal = totalAmount - lineItemsTotal;
-
-    const analysis: BillAnalysis = {
-      totalAmount: totalAmount || 0, // Default to 0 instead of null
-      accountNumber: billData.accountNumber || 'Unknown',
-      billingPeriod: billData.billingPeriod || 'Unknown billing period',
-      charges: [{
-        description: 'Other Charges and Credits',
-        amount: otherChargesTotal,
-        type: 'other'
-      }],
-      lineItems,
-      subtotals: {
-        lineItems: lineItemsTotal,
-        otherCharges: otherChargesTotal
+  private extractBillData(pages: string[]): BillData {
+    return {
+      account_info: {
+        account_number: pages[0].match(/Account Number:\s*(\d+)/)?.[1] || 'Unknown',
+        billing_period_start: pages[0].match(/Billing Period:\s*([\w\s,]+\d{4})/)?.[1] || 'Unknown',
+        billing_period_end: pages[0].match(/to\s*([\w\s,]+\d{4})/)?.[1] || 'Unknown'
       },
-      summary: `Bill analysis for ${billData.billDate || 'Unknown date'}`
+      bill_summary: {
+        total_due: parseFloat(pages[0].match(/Total Due[^\d]*(\d+\.\d{2})/)?.[1] || '0'),
+        current_charges: parseFloat(pages[0].match(/Current Charges[^\d]*(\d+\.\d{2})/)?.[1] || '0')
+      },
+      plan_charges: [],
+      equipment_charges: [],
+      one_time_charges: [],
+      taxes_and_fees: [],
+      usage_details: {}
     };
-
-    return analysis;
-  }
-
-  private validateBillAnalysis(data: any): data is BillAnalysis {
-    if (!data || typeof data !== 'object') return false;
-    
-    // Allow numbers including 0, but not null
-    if (typeof data.totalAmount !== 'number') return false;
-    if (!data.subtotals || typeof data.subtotals.lineItems !== 'number' || typeof data.subtotals.otherCharges !== 'number') return false;
-    
-    if (!Array.isArray(data.charges) || !Array.isArray(data.lineItems)) return false;
-    
-    // Allow strings, but not null
-    if (typeof data.accountNumber !== 'string') return false;
-    if (typeof data.billingPeriod !== 'string') return false;
-    if (typeof data.summary !== 'string') return false;
-
-    // Validate charges and line items
-    if (!data.charges.every((charge: Charge) => 
-      typeof charge.description === 'string' &&
-      typeof charge.amount === 'number' &&
-      typeof charge.type === 'string'
-    )) return false;
-
-    if (!data.lineItems.every((item: LineItem) =>
-      typeof item.description === 'string' &&
-      typeof item.amount === 'number' &&
-      typeof item.type === 'string'
-    )) return false;
-
-    return true;
-  }
-
-  private sanitizeFile(file: File): boolean {
-    const allowedTypes = ['application/pdf', 'text/plain', 'image/jpeg', 'image/png'];
-    const maxSize = 10 * 1024 * 1024; // 10MB
-
-    if (!allowedTypes.includes(file.type)) {
-      throw new Error('Invalid file type');
-    }
-
-    if (file.size > maxSize) {
-      throw new Error('File size too large');
-    }
-
-    return true;
   }
 
   public async analyzeBill(file: File): Promise<ApiResponse<BillAnalysis>> {
     try {
-      this.sanitizeFile(file);
-      const buffer = await file.arrayBuffer();
-      
-      const textPages = await convertPdfToText(buffer);
-      const parser = new VerizonBillParser(textPages);
-      const detailedData = parser.parseAll();
-      
-      const billData: BillData = {
-        billDate: detailedData.account_info.billing_period_start || 'Unknown',
-        accountNumber: detailedData.account_info.account_number || 'Unknown',
-        invoiceNumber: 'N/A',
-        totalDue: detailedData.bill_summary.total_due?.toString() || '0',
-        billingPeriod: `${detailedData.account_info.billing_period_start || 'Unknown'} to ${detailedData.account_info.billing_period_end || 'Unknown'}`,
-        lineItems: []
-      };
-
-      const analysis = this.convertBillDataToAnalysis(billData);
-
-      if (!this.validateBillAnalysis(analysis)) {
-        console.error('Invalid bill analysis structure:', analysis);
-        throw new Error('Invalid bill analysis structure');
+      if (!file.type.includes('pdf')) {
+        throw new Error('Invalid file type');
       }
+
+      const buffer = await file.arrayBuffer();
+      const pages = await convertPdfToText(buffer);
+      
+      const billData = this.extractBillData(pages);
+      
+      const analyzer = new VerizonBillAnalyzer(billData);
+      
+      const summary = analyzer.getBillSummary();
+      
+      const optimization = analyzer.optimizePlan();
+      
+      const usageAnalysis = analyzer.getUsageAnalysis();
+
+      const analysis: BillAnalysis = {
+        totalAmount: summary.total_charges.total_due || 0,
+        accountNumber: summary.account_number || 'Unknown',
+        billingPeriod: `${summary.billing_period.start} to ${summary.billing_period.end}`,
+        charges: [],
+        lineItems: [],
+        subtotals: {
+          lineItems: summary.total_charges.current_charges || 0,
+          otherCharges: 0
+        },
+        summary: `Bill analysis for ${summary.billing_period.start}`,
+        recommendations: optimization.line_recommendations,
+        usageAnalysis
+      };
 
       return { data: analysis };
     } catch (error) {
