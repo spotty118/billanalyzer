@@ -1,12 +1,10 @@
 
-import { 
-  AxiosError
-} from 'axios';
+import { AxiosError } from 'axios';
 import { ApiResponse, ApiError } from '@/types';
 import * as pdfjsLib from 'pdfjs-dist';
 import { VerizonBillAnalyzer } from '@/utils/bill-analyzer/analyzer';
 import { parseVerizonBill } from '@/utils/bill-analyzer/parser';
-import type { BillData, ChargeItem, UsageDetail, VerizonBill } from '@/utils/bill-analyzer/types';
+import type { BillData, VerizonBill } from '@/utils/bill-analyzer/types';
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
   'pdfjs-dist/build/pdf.worker.mjs',
@@ -103,6 +101,9 @@ class ApiService {
   }
 
   private convertVerizonBillToBillData(verizonBill: VerizonBill): BillData {
+    const sumMinutes = (activity: { calls: { minutes: number }[] }): number => 
+      activity.calls.reduce((sum: number, call) => sum + call.minutes, 0);
+
     return {
       account_info: {
         account_number: verizonBill.accountInfo.accountNumber,
@@ -143,8 +144,12 @@ class ApiService {
         verizonBill.lineItems.map(item => [
           item.phoneNumber,
           [{
-            data_usage: '0 GB', // You'll need to calculate this from call activity
-            talk_minutes: item.calls?.reduce((sum, call) => sum + call.minutes, 0).toString() || '0:00',
+            data_usage: '0 GB',
+            talk_minutes: (
+              verizonBill.callActivity
+                .find(a => a.phoneNumber === item.phoneNumber)
+                ?.calls?.reduce((sum: number, call) => sum + call.minutes, 0) || 0
+            ).toString(),
             text_count: '0'
           }]
         ])
