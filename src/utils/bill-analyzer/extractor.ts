@@ -17,6 +17,8 @@ interface TextMarkedContent {
   items: TextItem[];
 }
 
+type TextContent = TextItem | TextMarkedContent;
+
 /**
  * Extract text from a PDF file and parse the Verizon bill
  */
@@ -45,7 +47,7 @@ export async function extractVerizonBill(pdfData: ArrayBuffer): Promise<VerizonB
       const page = await pdf.getPage(i);
       const content = await page.getTextContent();
       const pageText = content.items
-        .filter((item): item is TextItem => 'str' in item)
+        .filter((item: TextContent): item is TextItem => 'str' in item && !('type' in item))
         .map(item => item.str)
         .join(' ');
       pages.push(pageText);
