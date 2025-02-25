@@ -2,6 +2,15 @@
 import { VerizonBill } from './types';
 import { parseVerizonBill } from './parser';
 
+interface TextItem {
+  str: string;
+}
+
+interface TextMarkedContent {
+  type: string;
+  items: TextItem[];
+}
+
 /**
  * Extract text from a PDF file and parse the Verizon bill
  */
@@ -30,7 +39,8 @@ export async function extractVerizonBill(pdfData: ArrayBuffer): Promise<VerizonB
       const page = await pdf.getPage(i);
       const content = await page.getTextContent();
       const pageText = content.items
-        .map((item: { str: string }) => item.str)
+        .filter((item): item is TextItem => 'str' in item)
+        .map(item => item.str)
         .join(' ');
       pages.push(pageText);
     }
