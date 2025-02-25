@@ -81,15 +81,6 @@ interface DetailedBillData {
   usage_details: Record<string, UsageDetail[]>;
 }
 
-function normalizeText(text: string): string {
-  return text.replace(/\s+/g, ' ').trim();
-}
-
-function extractMatch(pattern: RegExp, text: string): string | null {
-  const match = pattern.exec(text);
-  return match ? match[1] : null;
-}
-
 async function convertPdfToText(pdfBuffer: ArrayBuffer): Promise<string[]> {
   try {
     // Load the document with explicit worker configuration
