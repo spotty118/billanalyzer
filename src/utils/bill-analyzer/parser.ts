@@ -1,5 +1,4 @@
-
-import type { VerizonBill, LineItem, PlanCharges, DeviceCharges, ServiceCharges, Surcharge, Tax, CallActivity, Call } from './types';
+import type { VerizonBill, LineItem, CallActivity } from './types';
 
 export class VerizonBillParser {
   private pdfText: string[];
@@ -29,11 +28,6 @@ export class VerizonBillParser {
       lineItems: [],
       callActivity: [],
     };
-  }
-
-  private extractWithRegExp(pattern: RegExp, text: string, group: number = 1): string {
-    const match = pattern.exec(text);
-    return match ? match[group] : '';
   }
 
   private parseAmount(amountStr: string): number {

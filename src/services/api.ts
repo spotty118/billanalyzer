@@ -1,4 +1,3 @@
-
 import { AxiosError } from 'axios';
 import { ApiResponse, ApiError } from '@/types';
 import * as pdfjsLib from 'pdfjs-dist';
@@ -101,9 +100,6 @@ class ApiService {
   }
 
   private convertVerizonBillToBillData(verizonBill: VerizonBill): BillData {
-    const sumMinutes = (activity: { calls: { minutes: number }[] }): number => 
-      activity.calls.reduce((sum: number, call) => sum + call.minutes, 0);
-
     return {
       account_info: {
         account_number: verizonBill.accountInfo.accountNumber,
@@ -166,17 +162,13 @@ class ApiService {
       const buffer = await file.arrayBuffer();
       const pages = await convertPdfToText(buffer);
       
-      // Parse the bill using the new parser
       console.log('Starting bill analysis...');
       const verizonBill = parseVerizonBill(pages);
       
-      // Convert to BillData format
       const billData = this.convertVerizonBillToBillData(verizonBill);
       
-      // Create analyzer instance
       const analyzer = new VerizonBillAnalyzer(billData);
       
-      // Get analysis results
       const summary = analyzer.getBillSummary();
       const optimization = analyzer.optimizePlan();
       const usageAnalysis = analyzer.getUsageAnalysis();
