@@ -4,6 +4,7 @@ import axios, {
   AxiosInstance
 } from 'axios';
 import { ApiResponse, ApiError } from '@/types';
+import * as pdfParse from 'pdf-parse';
 
 interface ErrorResponse {
   message?: string;
@@ -28,6 +29,76 @@ interface BillAnalysis {
     otherCharges: number;
   };
   summary: string;
+}
+
+interface BillData {
+  billDate: string;
+  accountNumber: string;
+  invoiceNumber: string;
+  totalDue: string;
+  billingPeriod: string;
+  lineItems: Array<{
+    device: string;
+    charge: string;
+  }>;
+}
+
+function normalizeText(text: string): string {
+  return text.replace(/\s+/g, ' ').trim();
+}
+
+function extractMatch(pattern: RegExp, text: string): string | null {
+  const match = pattern.exec(text);
+  return match ? match[1] : null;
+}
+
+async function convertPdfToText(pdfBuffer: Buffer): Promise<string> {
+  const data = await pdfParse(pdfBuffer);
+  return data.text;
+}
+
+function parseLineItems(text: string): Array<{ device: string; charge: string }> {
+  const lineItems: Array<{ device: string; charge: string }> = [];
+  const sectionMatch = text.match(/Bill summary by line(.*?)Charges by line details/i);
+  
+  if (sectionMatch) {
+    const sectionText = sectionMatch[1];
+    const entries = sectionText.split(/\n/);
+    
+    for (const entry of entries) {
+      const deviceMatch = entry.match(/(.*?)\s+\$\s*([\d,.]+)/);
+      if (deviceMatch) {
+        lineItems.push({
+          device: deviceMatch[1].trim(),
+          charge: deviceMatch[2].trim()
+        });
+      }
+    }
+  }
+  
+  return lineItems;
+}
+
+async function parseVerizonBill(pdfBuffer: Buffer): Promise<BillData> {
+  const rawText = await convertPdfToText(pdfBuffer);
+  const text = normalizeText(rawText);
+  
+  const billDate = extractMatch(/Bill date\s*(\w+\s+\d{1,2},\s+\d{4})/i, text) || '';
+  const accountNumber = extractMatch(/Account number\s*([\d-]+)/i, text) || '';
+  const invoiceNumber = extractMatch(/Invoice number\s*([\d]+)/i, text) || '';
+  const totalDue = extractMatch(/Total Amount Due\s*\$\s*([\d,.]+)/i, text) || '';
+  const billingPeriod = extractMatch(/Billing period:\s*(.+?)(?:\s+Account|$)/i, text) || '';
+  
+  const lineItems = parseLineItems(text);
+  
+  return {
+    billDate,
+    accountNumber,
+    invoiceNumber,
+    totalDue,
+    billingPeriod,
+    lineItems
+  };
 }
 
 class ApiService {
@@ -62,17 +133,44 @@ class ApiService {
     };
   }
 
+  private convertBillDataToAnalysis(billData: BillData): BillAnalysis {
+    const totalAmount = parseFloat(billData.totalDue.replace(/[^0-9.]/g, '')) || null;
+    
+    const lineItems = billData.lineItems.map(item => ({
+      description: item.device,
+      amount: parseFloat(item.charge.replace(/[^0-9.]/g, '')) || 0,
+      type: 'line'
+    }));
+
+    const lineItemsTotal = lineItems.reduce((sum, item) => sum + item.amount, 0);
+    const otherChargesTotal = totalAmount ? totalAmount - lineItemsTotal : 0;
+
+    return {
+      totalAmount,
+      accountNumber: billData.accountNumber || null,
+      billingPeriod: billData.billingPeriod || null,
+      charges: [{
+        description: 'Other Charges and Credits',
+        amount: otherChargesTotal,
+        type: 'other'
+      }],
+      lineItems,
+      subtotals: {
+        lineItems: lineItemsTotal,
+        otherCharges: otherChargesTotal
+      },
+      summary: `Bill analysis for ${billData.billDate}`
+    };
+  }
+
   private validateBillAnalysis(data: any): data is BillAnalysis {
     if (!data || typeof data !== 'object') return false;
     
-    // Check required number fields
     if (typeof data.totalAmount !== 'number' && data.totalAmount !== null) return false;
     if (!data.subtotals || typeof data.subtotals.lineItems !== 'number' || typeof data.subtotals.otherCharges !== 'number') return false;
     
-    // Check array fields
     if (!Array.isArray(data.charges) || !Array.isArray(data.lineItems)) return false;
     
-    // Check string fields
     if (typeof data.accountNumber !== 'string' && data.accountNumber !== null) return false;
     if (typeof data.billingPeriod !== 'string' && data.billingPeriod !== null) return false;
     if (typeof data.summary !== 'string') return false;
@@ -98,35 +196,18 @@ class ApiService {
   public async analyzeBill(file: File): Promise<ApiResponse<BillAnalysis>> {
     try {
       this.sanitizeFile(file);
+      const buffer = await file.arrayBuffer();
+      const pdfBuffer = Buffer.from(buffer);
+      
+      const billData = await parseVerizonBill(pdfBuffer);
+      const analysis = this.convertBillDataToAnalysis(billData);
 
-      const formData = new FormData();
-      formData.append('file', file);
-
-      console.log('Sending request to analyze bill...');
-
-      const response = await this.api.post<any>(
-        '/analyze-bill',
-        formData,
-        {
-          headers: {
-            'Content-Type': 'multipart/form-data',
-            'Accept': 'application/json'
-          }
-        }
-      );
-
-      const responseData = response.data;
-
-      if (!responseData) {
-        throw new Error('No response data received');
+      if (!this.validateBillAnalysis(analysis)) {
+        console.error('Invalid bill analysis structure:', analysis);
+        throw new Error('Invalid bill analysis structure');
       }
 
-      if (!this.validateBillAnalysis(responseData)) {
-        console.error('Invalid response data structure:', responseData);
-        throw new Error('Invalid response data structure');
-      }
-
-      return { data: responseData };
+      return { data: analysis };
     } catch (error) {
       console.error('Error analyzing bill:', error);
       
