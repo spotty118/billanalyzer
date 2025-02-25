@@ -1,5 +1,11 @@
 import * as pdfjsLib from 'pdfjs-dist';
-pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.js`;
+import { fileURLToPath } from 'url';
+import path from 'path';
+
+// Set up the worker source
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+pdfjsLib.GlobalWorkerOptions.workerSrc = path.join(__dirname, '../node_modules/pdfjs-dist/build/pdf.worker.js');
 
 const extractPdfText = async (buffer) => {
   try {
