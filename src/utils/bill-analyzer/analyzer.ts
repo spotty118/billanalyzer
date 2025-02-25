@@ -1,26 +1,11 @@
 
-import { BillData, UsageAnalysisResult, UsageSegment, PlanOptimizationResult } from './types';
+import { BillData, UsageAnalysisResult, PlanOptimizationResult, LineRecommendation } from './types';
 
 export class VerizonBillAnalyzer {
   private billData: BillData;
 
   constructor(billData: BillData) {
     this.billData = billData;
-  }
-
-  private parseDateString(dateStr?: string): Date | null {
-    if (!dateStr) return null;
-    
-    try {
-      const date = new Date(dateStr);
-      if (!isNaN(date.getTime())) {
-        return date;
-      }
-      return null;
-    } catch (e) {
-      console.error(`Error parsing date: ${dateStr}`, e);
-      return null;
-    }
   }
 
   public getBillSummary(): { [key: string]: any } {
