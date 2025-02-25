@@ -1,9 +1,7 @@
 
 import axios, { 
   AxiosError, 
-  AxiosInstance,
-  InternalAxiosRequestConfig,
-  AxiosHeaders
+  AxiosInstance
 } from 'axios';
 import { ApiResponse, ApiError } from '@/types';
 
