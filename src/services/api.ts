@@ -1,10 +1,12 @@
+
 import { 
   AxiosError
 } from 'axios';
 import { ApiResponse, ApiError } from '@/types';
 import * as pdfjsLib from 'pdfjs-dist';
 import { VerizonBillAnalyzer } from '@/utils/bill-analyzer/analyzer';
-import type { BillData, ChargeItem, UsageDetail } from '@/utils/bill-analyzer/types';
+import { parseVerizonBill } from '@/utils/bill-analyzer/parser';
+import type { BillData, ChargeItem, UsageDetail, VerizonBill } from '@/utils/bill-analyzer/types';
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
   'pdfjs-dist/build/pdf.worker.mjs',
@@ -100,103 +102,53 @@ class ApiService {
     };
   }
 
-  private extractBillData(pages: string[]): BillData {
-    const extractAmount = (text: string): number => {
-      const match = text.match(/\$?([\d,]+\.\d{2})/);
-      return match ? parseFloat(match[1].replace(',', '')) : 0;
-    };
-
-    // Find account number - usually in format (XXX-XXX-XXXX)
-    const accountNumMatch = pages[0].match(/Account number[:\s]*([0-9-]+)/i);
-    const accountNumber = accountNumMatch ? accountNumMatch[1] : 'Unknown';
-
-    // Extract bill summary information
-    let currentCharges = 0;
-    let totalDue = 0;
-    let previousBalance = 0;
-    let payments = 0;
-
-    // Look for bill summary section in first few pages
-    const summaryText = pages.slice(0, 3).join(' ');
-    
-    // Match "Total:" followed by amount
-    const totalMatch = summaryText.match(/Total:?\s*\$?([\d,]+\.\d{2})/i);
-    if (totalMatch) {
-      totalDue = extractAmount(totalMatch[1]);
-    }
-
-    // Match "You paid" or "Payment" amounts
-    const paymentMatch = summaryText.match(/You paid \$?([\d,]+\.\d{2})/i);
-    if (paymentMatch) {
-      payments = extractAmount(paymentMatch[1]);
-    }
-
-    // Extract billing period
-    const periodMatch = summaryText.match(/Bill period:?\s*([A-Za-z]+\s+\d{1,2},\s*\d{4})\s*(?:to|through|-)\s*([A-Za-z]+\s+\d{1,2},\s*\d{4})/i);
-    const startDate = periodMatch ? periodMatch[1] : 'Unknown';
-    const endDate = periodMatch ? periodMatch[2] : 'Unknown';
-
-    // Create charges arrays
-    const planCharges: ChargeItem[] = [];
-    const equipmentCharges: ChargeItem[] = [];
-    const oneTimeCharges: ChargeItem[] = [];
-    const taxesAndFees: ChargeItem[] = [];
-
-    // Extract line items from the bill
-    const lines = pages.join(' ').split('\n');
-    lines.forEach(line => {
-      const chargeMatch = line.match(/(.+?)\s+\$?([\d,]+\.\d{2})\s*$/);
-      if (chargeMatch) {
-        const [_, description, amount] = chargeMatch;
-        const charge = {
-          description: description.trim(),
-          amount: extractAmount(amount)
-        };
-
-        // Categorize charges based on description
-        if (description.toLowerCase().includes('equipment') || description.toLowerCase().includes('device')) {
-          equipmentCharges.push(charge);
-        } else if (description.toLowerCase().includes('tax') || description.toLowerCase().includes('fee')) {
-          taxesAndFees.push(charge);
-        } else if (description.toLowerCase().includes('one-time')) {
-          oneTimeCharges.push(charge);
-        } else {
-          planCharges.push(charge);
-        }
-      }
-    });
-
-    // Extract usage details
-    const usageDetails: Record<string, UsageDetail[]> = {};
-    
-    // Look for phone numbers and their usage
-    const phoneMatches = pages.join(' ').match(/\(\d{3}-\d{3}-\d{4}\)/g) || [];
-    phoneMatches.forEach(phone => {
-      const cleanPhone = phone.replace(/[()-]/g, '');
-      usageDetails[cleanPhone] = [{
-        data_usage: '0 GB', // You'll need to find actual usage data
-        talk_minutes: '0:00',
-        text_count: '0'
-      }];
-    });
-
+  private convertVerizonBillToBillData(verizonBill: VerizonBill): BillData {
     return {
       account_info: {
-        account_number: accountNumber,
-        billing_period_start: startDate,
-        billing_period_end: endDate
+        account_number: verizonBill.accountInfo.accountNumber,
+        customer_name: verizonBill.accountInfo.customerName,
+        billing_period_start: verizonBill.accountInfo.billingPeriod.start,
+        billing_period_end: verizonBill.accountInfo.billingPeriod.end
       },
       bill_summary: {
-        previous_balance: previousBalance,
-        payments: payments,
-        current_charges: currentCharges,
-        total_due: totalDue
+        previous_balance: verizonBill.billSummary.previousBalance,
+        payments: verizonBill.billSummary.payments,
+        current_charges: verizonBill.billSummary.currentCharges,
+        total_due: verizonBill.billSummary.totalDue
       },
-      plan_charges: planCharges,
-      equipment_charges: equipmentCharges,
-      one_time_charges: oneTimeCharges,
-      taxes_and_fees: taxesAndFees,
-      usage_details: usageDetails
+      plan_charges: verizonBill.lineItems.flatMap(item => 
+        item.planCharges.map(charge => ({
+          description: charge.description,
+          amount: charge.amount
+        }))
+      ),
+      equipment_charges: verizonBill.lineItems.flatMap(item => 
+        item.deviceCharges.map(charge => ({
+          description: charge.description,
+          amount: charge.amount
+        }))
+      ),
+      one_time_charges: [],
+      taxes_and_fees: verizonBill.lineItems.flatMap(item => [
+        ...item.surcharges.map(charge => ({
+          description: charge.description,
+          amount: charge.amount
+        })),
+        ...item.taxes.map(tax => ({
+          description: tax.description,
+          amount: tax.amount
+        }))
+      ]),
+      usage_details: Object.fromEntries(
+        verizonBill.lineItems.map(item => [
+          item.phoneNumber,
+          [{
+            data_usage: '0 GB', // You'll need to calculate this from call activity
+            talk_minutes: item.calls?.reduce((sum, call) => sum + call.minutes, 0).toString() || '0:00',
+            text_count: '0'
+          }]
+        ])
+      )
     };
   }
 
@@ -209,21 +161,30 @@ class ApiService {
       const buffer = await file.arrayBuffer();
       const pages = await convertPdfToText(buffer);
       
-      const billData = this.extractBillData(pages);
+      // Parse the bill using the new parser
+      console.log('Starting bill analysis...');
+      const verizonBill = parseVerizonBill(pages);
       
+      // Convert to BillData format
+      const billData = this.convertVerizonBillToBillData(verizonBill);
+      
+      // Create analyzer instance
       const analyzer = new VerizonBillAnalyzer(billData);
       
+      // Get analysis results
       const summary = analyzer.getBillSummary();
-      
       const optimization = analyzer.optimizePlan();
-      
       const usageAnalysis = analyzer.getUsageAnalysis();
 
       const analysis: BillAnalysis = {
         totalAmount: summary.total_charges.total_due || 0,
         accountNumber: summary.account_number || 'Unknown',
         billingPeriod: `${summary.billing_period.start} to ${summary.billing_period.end}`,
-        charges: [],
+        charges: verizonBill.lineItems.map(item => ({
+          description: `${item.owner} (${item.phoneNumber})`,
+          amount: item.totalAmount,
+          type: 'line'
+        })),
         lineItems: [],
         subtotals: {
           lineItems: summary.total_charges.current_charges || 0,
@@ -234,6 +195,7 @@ class ApiService {
         usageAnalysis
       };
 
+      console.log('Analysis successful:', analysis);
       return { data: analysis };
     } catch (error) {
       console.error('Error analyzing bill:', error);

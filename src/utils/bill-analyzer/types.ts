@@ -1,4 +1,3 @@
-
 export interface AccountInfo {
   account_number?: string;
   customer_name?: string;
@@ -33,6 +32,86 @@ export interface BillData {
   one_time_charges: ChargeItem[];
   taxes_and_fees: ChargeItem[];
   usage_details: Record<string, UsageDetail[]>;
+}
+
+export interface PlanCharges {
+  description: string;
+  amount: number;
+  period?: string;
+}
+
+export interface DeviceCharges {
+  description: string;
+  amount: number;
+  payment?: string;
+  agreement?: string;
+  remaining?: number;
+}
+
+export interface ServiceCharges {
+  description: string;
+  amount: number;
+  period?: string;
+}
+
+export interface Surcharge {
+  description: string;
+  amount: number;
+}
+
+export interface Tax {
+  description: string;
+  amount: number;
+}
+
+export interface LineItem {
+  phoneNumber: string;
+  deviceType: string;
+  owner: string;
+  totalAmount: number;
+  planCharges: PlanCharges[];
+  deviceCharges: DeviceCharges[];
+  servicesCharges: ServiceCharges[];
+  surcharges: Surcharge[];
+  taxes: Tax[];
+}
+
+export interface CallActivity {
+  phoneNumber: string;
+  deviceType: string;
+  calls: Call[];
+}
+
+export interface Call {
+  date: string;
+  time: string;
+  number: string;
+  origination: string;
+  destination: string;
+  minutes: number;
+}
+
+export interface VerizonBill {
+  accountInfo: {
+    accountNumber: string;
+    customerName: string;
+    billingPeriod: {
+      start: string;
+      end: string;
+    };
+    billDate: string;
+    invoiceNumber: string;
+  };
+  billSummary: {
+    previousBalance: number;
+    payments: number;
+    lateFee: number;
+    currentCharges: number;
+    totalDue: number;
+    dueDate: string;
+  };
+  lineItems: LineItem[];
+  callActivity: CallActivity[];
 }
 
 export interface UsageAnalysisResult {
