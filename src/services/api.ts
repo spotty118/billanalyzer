@@ -1,11 +1,9 @@
-
 import { 
   AxiosError
 } from 'axios';
 import { ApiResponse, ApiError } from '@/types';
 import * as pdfjsLib from 'pdfjs-dist';
 
-// Configure worker using a dynamic import
 pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
   'pdfjs-dist/build/pdf.worker.mjs',
   import.meta.url
@@ -13,27 +11,6 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
 
 interface ErrorResponse {
   message?: string;
-}
-
-interface BillAnalysis {
-  totalAmount: number | null;
-  accountNumber: string | null;
-  billingPeriod: string | null;
-  charges: Array<{
-    description: string;
-    amount: number;
-    type: string;
-  }>;
-  lineItems: Array<{
-    description: string;
-    amount: number;
-    type: string;
-  }>;
-  subtotals: {
-    lineItems: number;
-    otherCharges: number;
-  };
-  summary: string;
 }
 
 interface BillData {
@@ -60,6 +37,7 @@ interface BillSummary {
   payments?: number;
   current_charges?: number;
   total_due?: number;
+  [key: string]: number | undefined; // Add index signature
 }
 
 interface ChargeItem {
@@ -81,6 +59,39 @@ interface DetailedBillData {
   one_time_charges: ChargeItem[];
   taxes_and_fees: ChargeItem[];
   usage_details: Record<string, UsageDetail[]>;
+}
+
+interface BillAnalysis {
+  totalAmount: number | null;
+  accountNumber: string | null;
+  billingPeriod: string | null;
+  charges: Array<{
+    description: string;
+    amount: number;
+    type: string;
+  }>;
+  lineItems: Array<{
+    description: string;
+    amount: number;
+    type: string;
+  }>;
+  subtotals: {
+    lineItems: number;
+    otherCharges: number;
+  };
+  summary: string;
+}
+
+interface Charge {
+  description: string;
+  amount: number;
+  type: string;
+}
+
+interface LineItem {
+  description: string;
+  amount: number;
+  type: string;
 }
 
 async function convertPdfToText(pdfBuffer: ArrayBuffer): Promise<string[]> {
@@ -244,13 +255,13 @@ class ApiService {
     if (typeof data.summary !== 'string') return false;
 
     // Validate charges and line items
-    if (!data.charges.every(charge => 
+    if (!data.charges.every((charge: Charge) => 
       typeof charge.description === 'string' &&
       typeof charge.amount === 'number' &&
       typeof charge.type === 'string'
     )) return false;
 
-    if (!data.lineItems.every(item =>
+    if (!data.lineItems.every((item: LineItem) =>
       typeof item.description === 'string' &&
       typeof item.amount === 'number' &&
       typeof item.type === 'string'
