@@ -3,9 +3,10 @@ import {
 } from 'axios';
 import { ApiResponse, ApiError } from '@/types';
 import * as pdfjsLib from 'pdfjs-dist';
+import pdfjsWorker from 'pdfjs-dist/build/pdf.worker.min.js?url';
 
-// Set up PDF.js worker properly
-pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
+// Set up PDF.js worker properly by using the imported worker URL
+pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorker;
 
 interface ErrorResponse {
   message?: string;
