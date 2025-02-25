@@ -85,7 +85,6 @@ interface DetailedBillData {
 
 async function convertPdfToText(pdfBuffer: ArrayBuffer): Promise<string[]> {
   try {
-    // Load the document with explicit worker configuration
     const loadingTask = pdfjsLib.getDocument({
       data: pdfBuffer,
       useWorkerFetch: false,
@@ -104,6 +103,10 @@ async function convertPdfToText(pdfBuffer: ArrayBuffer): Promise<string[]> {
       pages.push(pageText);
     }
     
+    if (pages.length === 0) {
+      throw new Error('No text content found in PDF');
+    }
+    
     return pages;
   } catch (error) {
     console.error('Error converting PDF to text:', error);
@@ -119,7 +122,9 @@ class VerizonBillParser {
     this.textPages = textPages;
     this.billData = {
       account_info: {},
-      bill_summary: {},
+      bill_summary: {
+        total_due: 0 // Set default value
+      },
       plan_charges: [],
       equipment_charges: [],
       one_time_charges: [],
@@ -159,7 +164,7 @@ class VerizonBillParser {
         const match = page.match(pattern);
         if (match) {
           const amount = parseFloat(match[1].replace(',', ''));
-          this.billData.bill_summary[key as keyof BillSummary] = amount;
+          this.billData.bill_summary[key] = amount;
         }
       }
     }
@@ -193,21 +198,21 @@ class ApiService {
   }
 
   private convertBillDataToAnalysis(billData: BillData): BillAnalysis {
-    const totalAmount = parseFloat(billData.totalDue.replace(/[^0-9.]/g, '')) || null;
+    const totalAmount = parseFloat(billData.totalDue.replace(/[^0-9.]/g, '')) || 0; // Default to 0 instead of null
     
     const lineItems = billData.lineItems.map(item => ({
-      description: item.device,
+      description: item.device || 'Unknown device',
       amount: parseFloat(item.charge.replace(/[^0-9.]/g, '')) || 0,
       type: 'line'
     }));
 
     const lineItemsTotal = lineItems.reduce((sum, item) => sum + item.amount, 0);
-    const otherChargesTotal = totalAmount ? totalAmount - lineItemsTotal : 0;
+    const otherChargesTotal = totalAmount - lineItemsTotal;
 
-    return {
-      totalAmount,
-      accountNumber: billData.accountNumber || null,
-      billingPeriod: billData.billingPeriod || null,
+    const analysis: BillAnalysis = {
+      totalAmount: totalAmount || 0, // Default to 0 instead of null
+      accountNumber: billData.accountNumber || 'Unknown',
+      billingPeriod: billData.billingPeriod || 'Unknown billing period',
       charges: [{
         description: 'Other Charges and Credits',
         amount: otherChargesTotal,
@@ -218,21 +223,38 @@ class ApiService {
         lineItems: lineItemsTotal,
         otherCharges: otherChargesTotal
       },
-      summary: `Bill analysis for ${billData.billDate}`
+      summary: `Bill analysis for ${billData.billDate || 'Unknown date'}`
     };
+
+    return analysis;
   }
 
   private validateBillAnalysis(data: any): data is BillAnalysis {
     if (!data || typeof data !== 'object') return false;
     
-    if (typeof data.totalAmount !== 'number' && data.totalAmount !== null) return false;
+    // Allow numbers including 0, but not null
+    if (typeof data.totalAmount !== 'number') return false;
     if (!data.subtotals || typeof data.subtotals.lineItems !== 'number' || typeof data.subtotals.otherCharges !== 'number') return false;
     
     if (!Array.isArray(data.charges) || !Array.isArray(data.lineItems)) return false;
     
-    if (typeof data.accountNumber !== 'string' && data.accountNumber !== null) return false;
-    if (typeof data.billingPeriod !== 'string' && data.billingPeriod !== null) return false;
+    // Allow strings, but not null
+    if (typeof data.accountNumber !== 'string') return false;
+    if (typeof data.billingPeriod !== 'string') return false;
     if (typeof data.summary !== 'string') return false;
+
+    // Validate charges and line items
+    if (!data.charges.every(charge => 
+      typeof charge.description === 'string' &&
+      typeof charge.amount === 'number' &&
+      typeof charge.type === 'string'
+    )) return false;
+
+    if (!data.lineItems.every(item =>
+      typeof item.description === 'string' &&
+      typeof item.amount === 'number' &&
+      typeof item.type === 'string'
+    )) return false;
 
     return true;
   }
@@ -262,11 +284,11 @@ class ApiService {
       const detailedData = parser.parseAll();
       
       const billData: BillData = {
-        billDate: detailedData.account_info.billing_period_start || '',
-        accountNumber: detailedData.account_info.account_number || '',
-        invoiceNumber: '',
+        billDate: detailedData.account_info.billing_period_start || 'Unknown',
+        accountNumber: detailedData.account_info.account_number || 'Unknown',
+        invoiceNumber: 'N/A',
         totalDue: detailedData.bill_summary.total_due?.toString() || '0',
-        billingPeriod: `${detailedData.account_info.billing_period_start || ''} to ${detailedData.account_info.billing_period_end || ''}`,
+        billingPeriod: `${detailedData.account_info.billing_period_start || 'Unknown'} to ${detailedData.account_info.billing_period_end || 'Unknown'}`,
         lineItems: []
       };
 
