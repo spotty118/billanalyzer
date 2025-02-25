@@ -5,8 +5,11 @@ import {
 import { ApiResponse, ApiError } from '@/types';
 import * as pdfjsLib from 'pdfjs-dist';
 
-// Configure worker directly from node_modules
-pdfjsLib.GlobalWorkerOptions.workerSrc = '/node_modules/pdfjs-dist/build/pdf.worker.js';
+// Configure worker using a dynamic import
+pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
+  'pdfjs-dist/build/pdf.worker.mjs',
+  import.meta.url
+).toString();
 
 interface ErrorResponse {
   message?: string;
