@@ -4,7 +4,7 @@ import {
 import { ApiResponse, ApiError } from '@/types';
 import * as pdfjsLib from 'pdfjs-dist';
 import { VerizonBillAnalyzer } from '@/utils/bill-analyzer/analyzer';
-import type { BillData } from '@/utils/bill-analyzer/types';
+import type { BillData, ChargeItem, UsageDetail } from '@/utils/bill-analyzer/types';
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
   'pdfjs-dist/build/pdf.worker.mjs',
@@ -101,21 +101,102 @@ class ApiService {
   }
 
   private extractBillData(pages: string[]): BillData {
+    const extractAmount = (text: string): number => {
+      const match = text.match(/\$?([\d,]+\.\d{2})/);
+      return match ? parseFloat(match[1].replace(',', '')) : 0;
+    };
+
+    // Find account number - usually in format (XXX-XXX-XXXX)
+    const accountNumMatch = pages[0].match(/Account number[:\s]*([0-9-]+)/i);
+    const accountNumber = accountNumMatch ? accountNumMatch[1] : 'Unknown';
+
+    // Extract bill summary information
+    let currentCharges = 0;
+    let totalDue = 0;
+    let previousBalance = 0;
+    let payments = 0;
+
+    // Look for bill summary section in first few pages
+    const summaryText = pages.slice(0, 3).join(' ');
+    
+    // Match "Total:" followed by amount
+    const totalMatch = summaryText.match(/Total:?\s*\$?([\d,]+\.\d{2})/i);
+    if (totalMatch) {
+      totalDue = extractAmount(totalMatch[1]);
+    }
+
+    // Match "You paid" or "Payment" amounts
+    const paymentMatch = summaryText.match(/You paid \$?([\d,]+\.\d{2})/i);
+    if (paymentMatch) {
+      payments = extractAmount(paymentMatch[1]);
+    }
+
+    // Extract billing period
+    const periodMatch = summaryText.match(/Bill period:?\s*([A-Za-z]+\s+\d{1,2},\s*\d{4})\s*(?:to|through|-)\s*([A-Za-z]+\s+\d{1,2},\s*\d{4})/i);
+    const startDate = periodMatch ? periodMatch[1] : 'Unknown';
+    const endDate = periodMatch ? periodMatch[2] : 'Unknown';
+
+    // Create charges arrays
+    const planCharges: ChargeItem[] = [];
+    const equipmentCharges: ChargeItem[] = [];
+    const oneTimeCharges: ChargeItem[] = [];
+    const taxesAndFees: ChargeItem[] = [];
+
+    // Extract line items from the bill
+    const lines = pages.join(' ').split('\n');
+    lines.forEach(line => {
+      const chargeMatch = line.match(/(.+?)\s+\$?([\d,]+\.\d{2})\s*$/);
+      if (chargeMatch) {
+        const [_, description, amount] = chargeMatch;
+        const charge = {
+          description: description.trim(),
+          amount: extractAmount(amount)
+        };
+
+        // Categorize charges based on description
+        if (description.toLowerCase().includes('equipment') || description.toLowerCase().includes('device')) {
+          equipmentCharges.push(charge);
+        } else if (description.toLowerCase().includes('tax') || description.toLowerCase().includes('fee')) {
+          taxesAndFees.push(charge);
+        } else if (description.toLowerCase().includes('one-time')) {
+          oneTimeCharges.push(charge);
+        } else {
+          planCharges.push(charge);
+        }
+      }
+    });
+
+    // Extract usage details
+    const usageDetails: Record<string, UsageDetail[]> = {};
+    
+    // Look for phone numbers and their usage
+    const phoneMatches = pages.join(' ').match(/\(\d{3}-\d{3}-\d{4}\)/g) || [];
+    phoneMatches.forEach(phone => {
+      const cleanPhone = phone.replace(/[()-]/g, '');
+      usageDetails[cleanPhone] = [{
+        data_usage: '0 GB', // You'll need to find actual usage data
+        talk_minutes: '0:00',
+        text_count: '0'
+      }];
+    });
+
     return {
       account_info: {
-        account_number: pages[0].match(/Account Number:\s*(\d+)/)?.[1] || 'Unknown',
-        billing_period_start: pages[0].match(/Billing Period:\s*([\w\s,]+\d{4})/)?.[1] || 'Unknown',
-        billing_period_end: pages[0].match(/to\s*([\w\s,]+\d{4})/)?.[1] || 'Unknown'
+        account_number: accountNumber,
+        billing_period_start: startDate,
+        billing_period_end: endDate
       },
       bill_summary: {
-        total_due: parseFloat(pages[0].match(/Total Due[^\d]*(\d+\.\d{2})/)?.[1] || '0'),
-        current_charges: parseFloat(pages[0].match(/Current Charges[^\d]*(\d+\.\d{2})/)?.[1] || '0')
+        previous_balance: previousBalance,
+        payments: payments,
+        current_charges: currentCharges,
+        total_due: totalDue
       },
-      plan_charges: [],
-      equipment_charges: [],
-      one_time_charges: [],
-      taxes_and_fees: [],
-      usage_details: {}
+      plan_charges: planCharges,
+      equipment_charges: equipmentCharges,
+      one_time_charges: oneTimeCharges,
+      taxes_and_fees: taxesAndFees,
+      usage_details: usageDetails
     };
   }
 
