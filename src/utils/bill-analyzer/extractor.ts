@@ -6,11 +6,6 @@ interface TextItem {
   str: string;
 }
 
-interface TextMarkedContent {
-  type: string;
-  items: TextItem[];
-}
-
 /**
  * Extract text from a PDF file and parse the Verizon bill
  */
