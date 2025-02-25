@@ -38,7 +38,11 @@ class ApiService {
     this.api = axios.create({
       baseURL: '/api',
       headers: {
-        'Accept': 'application/json'
+        'Accept': 'application/json',
+        'Content-Type': 'application/json'
+      },
+      validateStatus: (status) => {
+        return status >= 200 && status < 300;
       }
     });
   }
@@ -56,6 +60,24 @@ class ApiService {
       message: error.response?.data?.message || error.message || 'An error occurred',
       code: 'API_ERROR',
     };
+  }
+
+  private validateBillAnalysis(data: any): data is BillAnalysis {
+    if (!data || typeof data !== 'object') return false;
+    
+    // Check required number fields
+    if (typeof data.totalAmount !== 'number' && data.totalAmount !== null) return false;
+    if (!data.subtotals || typeof data.subtotals.lineItems !== 'number' || typeof data.subtotals.otherCharges !== 'number') return false;
+    
+    // Check array fields
+    if (!Array.isArray(data.charges) || !Array.isArray(data.lineItems)) return false;
+    
+    // Check string fields
+    if (typeof data.accountNumber !== 'string' && data.accountNumber !== null) return false;
+    if (typeof data.billingPeriod !== 'string' && data.billingPeriod !== null) return false;
+    if (typeof data.summary !== 'string') return false;
+
+    return true;
   }
 
   private sanitizeFile(file: File): boolean {
@@ -82,21 +104,29 @@ class ApiService {
 
       console.log('Sending request to analyze bill...');
 
-      const response = await this.api.post<BillAnalysis>(
+      const response = await this.api.post<any>(
         '/analyze-bill',
         formData,
         {
           headers: {
-            'Content-Type': 'multipart/form-data'
+            'Content-Type': 'multipart/form-data',
+            'Accept': 'application/json'
           }
         }
       );
 
-      if (!response.data) {
+      const responseData = response.data;
+
+      if (!responseData) {
         throw new Error('No response data received');
       }
 
-      return { data: response.data };
+      if (!this.validateBillAnalysis(responseData)) {
+        console.error('Invalid response data structure:', responseData);
+        throw new Error('Invalid response data structure');
+      }
+
+      return { data: responseData };
     } catch (error) {
       console.error('Error analyzing bill:', error);
       
