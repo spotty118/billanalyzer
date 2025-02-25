@@ -263,10 +263,10 @@ class ApiService {
       const billData: BillData = {
         billDate: detailedData.account_info.billing_period_start || '',
         accountNumber: detailedData.account_info.account_number || '',
-        invoiceNumber: '', // Not available in detailed data
+        invoiceNumber: '',
         totalDue: detailedData.bill_summary.total_due?.toString() || '0',
         billingPeriod: `${detailedData.account_info.billing_period_start || ''} to ${detailedData.account_info.billing_period_end || ''}`,
-        lineItems: [] // Would need to convert from plan_charges
+        lineItems: []
       };
 
       const analysis = this.convertBillDataToAnalysis(billData);
