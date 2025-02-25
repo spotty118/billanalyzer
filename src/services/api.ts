@@ -1,4 +1,3 @@
-
 import axios, { 
   AxiosError, 
   AxiosInstance, 
@@ -61,10 +60,8 @@ class ApiService {
   private readonly SERVER_STARTUP_MAX_RETRIES = 5;
 
   private constructor() {
-    const baseURL = import.meta.env.DEV ? 'http://localhost:3001/api' : '/api';
-    
     this.api = axios.create({
-      baseURL,
+      baseURL: '/api',
       timeout: 10000,
       headers: new AxiosHeaders({
         'Content-Type': 'application/json',
@@ -99,40 +96,38 @@ class ApiService {
 
     this.api.interceptors.response.use(
       (response: AxiosResponse) => {
-      const config = response.config as RequestConfig;
-      if (config.cache && config.cacheKey) {
-        this.setCachedData(config.cacheKey, response.data);
-      }
-      return response;
+        const config = response.config as RequestConfig;
+        if (config.cache && config.cacheKey) {
+          this.setCachedData(config.cacheKey, response.data);
+        }
+        return response;
       },
       async (error: AxiosError | { cachedData: unknown }) => {
-      if ('cachedData' in error) {
-        return Promise.resolve({ data: error.cachedData });
-      }
-
-      const config = (error as AxiosError).config as RequestConfig;
-      const currentRetryCount = config?.retryCount || 0;
-      
-      // Handle server startup issues
-      if (error.response?.status === 503) {
-        if (currentRetryCount < this.SERVER_STARTUP_MAX_RETRIES) {
-        config.retryCount = currentRetryCount + 1;
-        const delay = this.SERVER_STARTUP_DELAY * Math.pow(2, currentRetryCount);
-        console.log(`Server starting up, waiting ${delay}ms...`);
-        await new Promise(resolve => setTimeout(resolve, delay));
-        return this.api.request(config);
+        if ('cachedData' in error) {
+          return Promise.resolve({ data: error.cachedData });
         }
-      }
-      
-      // Handle other retries
-      if (config?.retry && currentRetryCount < this.MAX_RETRIES) {
-        config.retryCount = currentRetryCount + 1;
-        const delay = config.retryDelay || this.RETRY_DELAY * Math.pow(2, currentRetryCount);
-        await new Promise(resolve => setTimeout(resolve, delay));
-        return this.api.request(config);
-      }
 
-      return Promise.reject(error);
+        const config = (error as AxiosError).config as RequestConfig;
+        const currentRetryCount = config?.retryCount || 0;
+        
+        if (error.response?.status === 503) {
+          if (currentRetryCount < this.SERVER_STARTUP_MAX_RETRIES) {
+            config.retryCount = currentRetryCount + 1;
+            const delay = this.SERVER_STARTUP_DELAY * Math.pow(2, currentRetryCount);
+            console.log(`Server starting up, waiting ${delay}ms...`);
+            await new Promise(resolve => setTimeout(resolve, delay));
+            return this.api.request(config);
+          }
+        }
+        
+        if (config?.retry && currentRetryCount < this.MAX_RETRIES) {
+          config.retryCount = currentRetryCount + 1;
+          const delay = config.retryDelay || this.RETRY_DELAY * Math.pow(2, currentRetryCount);
+          await new Promise(resolve => setTimeout(resolve, delay));
+          return this.api.request(config);
+        }
+
+        return Promise.reject(error);
       }
     );
   }
@@ -197,7 +192,6 @@ class ApiService {
       console.log('Sending request to analyze bill...');
       
       const headers = new AxiosHeaders();
-      // Important: Remove Content-Type header for multipart/form-data
       headers.delete('Content-Type');
 
       const config: RequestConfig = {
@@ -206,23 +200,19 @@ class ApiService {
         retryDelay: this.RETRY_DELAY,
       };
 
-      // Make the request to analyze the bill
       const response = await this.api.post<BillAnalysis>(
         '/analyze-bill',
         formData,
         config
       );
 
-      // Log the raw response for debugging
       console.log('Raw API response:', response);
 
-      // Validate the response structure
       if (!response.data || typeof response.data !== 'object') {
         console.error('Invalid response format:', response.data);
         throw new Error('Invalid response format from server');
       }
 
-      // Create a properly structured response
       const analyzedData: BillAnalysis = {
         totalAmount: response.data.totalAmount ?? 0,
         accountNumber: response.data.accountNumber || null,
@@ -265,7 +255,6 @@ class ApiService {
   }
 }
 
-// Export singleton instance and its methods
 export const apiService = ApiService.getInstance();
 
 export const analyzeBill = (file: File): Promise<ApiResponse<BillAnalysis>> => {
