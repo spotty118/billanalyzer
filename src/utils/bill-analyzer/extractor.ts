@@ -7,7 +7,6 @@ import { parseVerizonBill } from './parser';
  */
 export async function extractVerizonBill(pdfData: ArrayBuffer): Promise<VerizonBill> {
   try {
-    const { PDFDocumentProxy } = await import('pdfjs-dist');
     const pdfjsLib = await import('pdfjs-dist');
     
     // Set up pdf.js worker
@@ -31,7 +30,7 @@ export async function extractVerizonBill(pdfData: ArrayBuffer): Promise<VerizonB
       const page = await pdf.getPage(i);
       const content = await page.getTextContent();
       const pageText = content.items
-        .map((item: any) => item.str)
+        .map((item: { str: string }) => item.str)
         .join(' ');
       pages.push(pageText);
     }
@@ -127,4 +126,3 @@ export function analyzeBill(bill: VerizonBill) {
   
   return analysis;
 }
-
