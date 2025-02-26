@@ -1,4 +1,4 @@
-import { Plan, PerkType } from "@/types";
+import { Plan } from "@/types";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { formatCurrency } from "@/data/verizonPlans";
 import { isPerkSelectionValid, calculateLinePriceForPosition } from "@/utils/pricing-calculator";

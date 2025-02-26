@@ -1,4 +1,3 @@
-
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -6,7 +5,7 @@ import { Plus, Info } from "lucide-react";
 import { ErrorBoundary } from "@/components/ui/error-boundary";
 import { LineItem } from "./quote-calculator/LineItem";
 import { QuoteResult } from "./quote-calculator/QuoteResult";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useQuoteState, MAX_ALLOWED_LINES } from "@/hooks/use-quote-state";
 import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from "@/components/ui/tooltip";
 

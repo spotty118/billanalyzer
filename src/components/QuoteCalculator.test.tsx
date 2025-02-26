@@ -44,6 +44,7 @@ const mockPlans: Plan[] = [
 		},
 		streamingQuality: '720p',
 		autopayDiscount: 10,
+		planLevel: 'welcome' // Added required planLevel property
 	},
 ];
 
@@ -407,6 +408,7 @@ describe('QuoteCalculator', () => {
 				},
 				streamingQuality: '4K',
 				autopayDiscount: 10,
+				planLevel: 'welcome'
 			},
 		];
 		
