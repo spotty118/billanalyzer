@@ -3,6 +3,8 @@ import { Button } from "@/components/ui/button";
 import { useQuery } from "@tanstack/react-query";
 import { getPlans } from "@/data/verizonPlans";
 import { RefreshCw } from "lucide-react";
+import { useState } from "react";
+import { toast } from "@/components/ui/use-toast";
 
 function Dashboard() {
   const { 
@@ -16,8 +18,27 @@ function Dashboard() {
     staleTime: 5 * 60 * 1000,
   });
 
+  const [refreshing, setRefreshing] = useState(false);
+
   const handleRefreshData = async () => {
-    await refetchPlans();
+    setRefreshing(true);
+    try {
+      await refetchPlans();
+      toast({
+        title: "Data Refreshed",
+        description: "The data has been successfully refreshed.",
+        status: "success",
+      });
+    } catch (error) {
+      console.error("Error refreshing data:", error);
+      toast({
+        title: "Error",
+        description: "Failed to refresh data. Please try again later.",
+        status: "error",
+      });
+    } finally {
+      setRefreshing(false);
+    }
   };
 
   // Calculate plan type counts
@@ -33,9 +54,10 @@ function Dashboard() {
         <Button 
           onClick={handleRefreshData}
           className="flex items-center gap-2"
+          disabled={refreshing}
         >
-          <RefreshCw className="h-4 w-4" />
-          Refresh Data
+          <RefreshCw className={`h-4 w-4 ${refreshing ? "animate-spin" : ""}`} />
+          {refreshing ? "Refreshing..." : "Refresh Data"}
         </Button>
       </div>
       
@@ -86,9 +108,10 @@ function Dashboard() {
                 variant="outline" 
                 className="w-full justify-start" 
                 onClick={handleRefreshData}
+                disabled={refreshing}
               >
-                <RefreshCw className="h-4 w-4 mr-2" />
-                Refresh All Data
+                <RefreshCw className={`h-4 w-4 mr-2 ${refreshing ? "animate-spin" : ""}`} />
+                {refreshing ? "Refreshing..." : "Refresh All Data"}
               </Button>
             </div>
           </CardContent>

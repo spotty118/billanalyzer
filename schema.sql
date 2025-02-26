@@ -125,3 +125,68 @@ INSERT INTO device_categories (name) VALUES
 
 -- Sample comment explaining the schema
 COMMENT ON DATABASE veriplan IS 'Verizon product catalog and pricing database';
+
+-- Create Device Contributions table
+CREATE TABLE IF NOT EXISTS device_contributions (
+    id SERIAL PRIMARY KEY,
+    device_name VARCHAR(100) NOT NULL,
+    manufacturer VARCHAR(50) NOT NULL,
+    dpp_price DECIMAL(10,2),
+    base_spiff DECIMAL(10,2),
+    welcome_unlimited_upgrade DECIMAL(10,2),
+    plus_ultimate_upgrade DECIMAL(10,2),
+    welcome_unlimited_new DECIMAL(10,2),
+    plus_ultimate_new DECIMAL(10,2),
+    end_date DATE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Create Service Contributions table
+CREATE TABLE IF NOT EXISTS service_contributions (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    category VARCHAR(50) NOT NULL,
+    contribution DECIMAL(10,2),
+    spiff DECIMAL(10,2),
+    total_contribution DECIMAL(10,2),
+    end_date DATE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Create Verizon Plans table
+CREATE TABLE IF NOT EXISTS verizon_plans (
+    id SERIAL PRIMARY KEY,
+    external_id VARCHAR(50) UNIQUE NOT NULL,
+    name VARCHAR(100) NOT NULL,
+    base_price DECIMAL(10,2) NOT NULL,
+    price_1_line DECIMAL(10,2) NOT NULL,
+    price_2_line DECIMAL(10,2) NOT NULL,
+    price_3_line DECIMAL(10,2) NOT NULL,
+    price_4_line DECIMAL(10,2) NOT NULL,
+    price_5plus_line DECIMAL(10,2) NOT NULL,
+    features JSONB NOT NULL,
+    type VARCHAR(50) NOT NULL,
+    data_allowance JSONB NOT NULL,
+    streaming_quality VARCHAR(20) NOT NULL,
+    autopay_discount DECIMAL(10,2),
+    paperless_discount DECIMAL(10,2),
+    plan_level VARCHAR(20),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Create Verizon Promotions table
+CREATE TABLE IF NOT EXISTS verizon_promotions (
+    id SERIAL PRIMARY KEY,
+    title VARCHAR(255) NOT NULL,
+    category VARCHAR(50) NOT NULL,
+    description TEXT NOT NULL,
+    requirements TEXT[] NOT NULL,
+    value DECIMAL(10,2),
+    start_date DATE,
+    end_date DATE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);

@@ -147,3 +147,27 @@ INSERT INTO redux_pricing VALUES
 ('Redux for Business Lines 1-24', 99.99, '2025-03-31'),
 ('Redux for Business Lines 25-40', 149.99, '2025-03-31'),
 ('Redux for Business Lines 51+', 199.99, '2025-03-31');
+
+-- Verify the data
+SELECT 
+    device_name,
+    manufacturer,
+    dpp_price,
+    base_spiff,
+    welcome_unlimited_upgrade,
+    plus_ultimate_upgrade,
+    welcome_unlimited_new,
+    plus_ultimate_new,
+    end_date
+FROM device_contributions
+ORDER BY manufacturer, dpp_price DESC;
+
+SELECT 
+    name,
+    category,
+    contribution,
+    spiff,
+    total_contribution,
+    end_date
+FROM service_contributions
+ORDER BY category, total_contribution DESC;
