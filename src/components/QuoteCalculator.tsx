@@ -1,3 +1,4 @@
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -7,7 +8,7 @@ import { LineItem } from "./quote-calculator/LineItem";
 import { QuoteResult } from "./quote-calculator/QuoteResult";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useQuoteState, MAX_ALLOWED_LINES } from "@/hooks/use-quote-state";
-import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
+import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from "@/components/ui/tooltip";
 
 /**
  * Quote Calculator component for calculating plan prices with perks
@@ -80,14 +81,16 @@ export function QuoteCalculator() {
               >
                 Military Discount (Coming Soon)
               </Button>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Info className="ml-2 h-4 w-4 text-gray-400" />
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Military discount feature is currently under development</p>
-                </TooltipContent>
-              </Tooltip>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Info className="ml-2 h-4 w-4 text-gray-400" />
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Military discount feature is currently under development</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
             </div>
 
             <div className="mt-6 space-y-4">
