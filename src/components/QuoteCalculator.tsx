@@ -1,153 +1,33 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Plus } from "lucide-react";
-import { useState, useEffect, useMemo } from "react";
-import { Plan, ApiError } from "@/types";
-import { getPlans } from "@/data/verizonPlans";
+import { Plus, Info } from "lucide-react";
 import { ErrorBoundary } from "@/components/ui/error-boundary";
 import { LineItem } from "./quote-calculator/LineItem";
 import { QuoteResult } from "./quote-calculator/QuoteResult";
-import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { useQuoteState, MAX_ALLOWED_LINES } from "@/hooks/use-quote-state";
+import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 
-interface LinePlan {
-  plan: string;
-  perks: string[];
-}
-
-const getLinePriceForPosition = (planName: string, totalLines: number): number => {
-  // Use the price tier based on total number of lines
-  const priceTier = Math.min(totalLines, 5); // Cap at 5+ lines pricing
-
-  if (planName.includes('ultimate')) {
-    switch (priceTier) {
-      case 1: return 90;
-      case 2: return 80;
-      case 3: return 65;
-      case 4: return 55;
-      default: return 52; // 5+ lines
-    }
-  }
-  if (planName.includes('plus')) {
-    switch (priceTier) {
-      case 1: return 80;
-      case 2: return 70;
-      case 3: return 55;
-      case 4: return 45;
-      default: return 42; // 5+ lines
-    }
-  }
-  if (planName.includes('welcome')) {
-    switch (priceTier) {
-      case 1: return 65;
-      case 2: return 55;
-      case 3: return 40;
-      case 4: return 30;
-      default: return 27; // 5+ lines
-    }
-  }
-  return 0;
-};
-
+/**
+ * Quote Calculator component for calculating plan prices with perks
+ * Uses the useQuoteState hook for state management and calculations
+ */
 export function QuoteCalculator() {
-  const [linePlans, setLinePlans] = useState<LinePlan[]>([{ plan: "", perks: [] }]);
-  const [streamingBill, setStreamingBill] = useState("");
-  const [availablePlans, setAvailablePlans] = useState<Plan[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<ApiError | null>(null);
-
-  useEffect(() => {
-    const fetchPlans = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-        const plans = await getPlans();
-        if (!Array.isArray(plans)) {
-          throw new Error('Invalid response format');
-        }
-        setAvailablePlans(plans);
-        setLoading(false);
-      } catch (err) {
-        console.error('Error fetching plans:', err);
-        const apiError: ApiError = {
-          message: 'Failed to load plans. Please try again later.',
-          details: err instanceof Error ? err.message : 'Unknown error occurred'
-        };
-        setError(apiError);
-        setLoading(false);
-      }
-    };
-
-    fetchPlans();
-  }, []);
-
-  const addLine = () => {
-    setLinePlans([...linePlans, { plan: "", perks: [] }]);
-  };
-
-  const removeLine = (index: number) => {
-    setLinePlans(linePlans.filter((_, i) => i !== index));
-  };
-
-  const updateLinePlan = (index: number, plan: string) => {
-    const newLinePlans = [...linePlans];
-    newLinePlans[index] = { ...newLinePlans[index], plan };
-    setLinePlans(newLinePlans);
-  };
-
-  const updateLinePerks = (index: number, perks: string[]) => {
-    const newLinePlans = [...linePlans];
-    newLinePlans[index] = { ...newLinePlans[index], perks };
-    setLinePlans(newLinePlans);
-  };
-
-  const totalCalculation = useMemo(() => {
-    const selectedPlans = linePlans
-      .filter(lp => lp.plan)
-      .map(lp => ({
-        plan: availablePlans.find(p => p.id === lp.plan)!,
-        perks: lp.perks
-      }));
-
-    if (selectedPlans.length === 0) return null;
-
-    let totalMonthly = 0;
-    let totalWithoutAutopay = 0;
-    const streamingBillValue = parseFloat(streamingBill) || 0;
-    const totalLines = selectedPlans.length;
-
-    const linePrices = selectedPlans.map(({ plan, perks }) => {
-      const planName = plan.name.toLowerCase();
-      const linePrice = getLinePriceForPosition(planName, totalLines);
-      const perksPrice = perks.length * 10;
-      totalMonthly += linePrice + perksPrice;
-      totalWithoutAutopay += linePrice + 10 + perksPrice;
-      return {
-        plan: plan.name,
-        price: linePrice + perksPrice,
-        perks
-      };
-    });
-
-    const perksValue = linePlans.reduce((acc, lp) => acc + (lp.perks.length * 10), 0);
-    const discount = totalWithoutAutopay - totalMonthly;
-    const annualSavings = (streamingBillValue * 12) + (perksValue * 12) + (discount * 12);
-
-    return {
-      linePrices,
-      total: totalMonthly,
-      hasDiscount: true,
-      annualSavings,
-      selectedPerks: linePlans.flatMap(lp => lp.perks),
-      breakdown: {
-        subtotal: totalWithoutAutopay,
-        discount,
-        total: totalMonthly,
-        streamingSavings: streamingBillValue,
-        totalSavings: annualSavings,
-      },
-    };
-  }, [linePlans, availablePlans, streamingBill]);
+  const {
+    linePlans,
+    streamingBill,
+    availablePlans,
+    loading,
+    error,
+    totalCalculation,
+    allSelectedPerks,
+    addLine,
+    removeLine,
+    updateLinePlan,
+    updateLinePerks,
+    setStreamingBill
+  } = useQuoteState();
 
   if (loading) {
     return (
@@ -184,8 +64,6 @@ export function QuoteCalculator() {
     );
   }
 
-  const allSelectedPerks = linePlans.flatMap(lp => lp.perks);
-
   return (
     <ErrorBoundary>
       <Card>
@@ -194,13 +72,23 @@ export function QuoteCalculator() {
         </CardHeader>
         <CardContent>
           <div className="space-y-6">
-            <Button 
-              variant="outline" 
-              className="w-full text-gray-400 cursor-not-allowed bg-gray-50"
-              disabled
-            >
-              Military Discount (Coming Soon)
-            </Button>
+            <div className="flex items-center">
+              <Button 
+                variant="outline" 
+                className="w-full text-gray-400 cursor-not-allowed bg-gray-50"
+                disabled
+              >
+                Military Discount (Coming Soon)
+              </Button>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Info className="ml-2 h-4 w-4 text-gray-400" />
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Military discount feature is currently under development</p>
+                </TooltipContent>
+              </Tooltip>
+            </div>
 
             <div className="mt-6 space-y-4">
               {linePlans.map((linePlan, index) => (
@@ -221,10 +109,10 @@ export function QuoteCalculator() {
                 variant="outline"
                 onClick={addLine}
                 className="w-full border-dashed"
-                disabled={linePlans.length >= 12}
+                disabled={linePlans.length >= MAX_ALLOWED_LINES}
               >
                 <Plus className="h-4 w-4 mr-2" />
-                Add Line
+                Add Line {linePlans.length >= MAX_ALLOWED_LINES && `(Maximum ${MAX_ALLOWED_LINES} lines)`}
               </Button>
             </div>
 
@@ -235,16 +123,18 @@ export function QuoteCalculator() {
                 value={streamingBill}
                 onChange={(e) => setStreamingBill(e.target.value)}
                 placeholder="Enter monthly streaming cost"
+                min="0"
+                step="0.01"
                 className="mt-1"
               />
             </div>
 
-            {totalCalculation && (
+            {totalCalculation && totalCalculation.linePrices && totalCalculation.linePrices.length > 0 && (
               <QuoteResult
                 linePrices={totalCalculation.linePrices}
                 total={totalCalculation.total}
                 hasDiscount={totalCalculation.hasDiscount}
-                annualSavings={totalCalculation.annualSavings}
+                annualSavings={totalCalculation.annualSavings || 0}
                 breakdown={totalCalculation.breakdown}
               />
             )}

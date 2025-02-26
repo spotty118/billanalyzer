@@ -1,7 +1,8 @@
-
-import { Plan } from "@/types";
+import { Plan, PerkType } from "@/types";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { formatCurrency } from "@/data/verizonPlans";
+import { isPerkSelectionValid, calculateLinePriceForPosition } from "@/utils/pricing-calculator";
+import { PERKS } from "@/config/perks";
 
 interface PlanSelectorProps {
   selectedPlan: string;
@@ -28,24 +29,15 @@ export function PlanSelector({
             planName.includes('ultimate'));
   });
 
-  const getPlanBasePrice = (plan: Plan) => {
-    const planName = plan.name.toLowerCase();
-    if (planName.includes('ultimate')) return 90;
-    if (planName.includes('plus')) return 80;
-    if (planName.includes('welcome')) return 65;
-    return plan.basePrice;
-  };
-
-  const getDisplayPrice = (plan: Plan) => {
-    const basePrice = getPlanBasePrice(plan);
+  const getDisplayPrice = (plan: Plan | undefined) => {
+    if (!plan) return "Select a plan";
+    // Use the common calculation function
+    const basePrice = calculateLinePriceForPosition(plan.name, 1);
     return `${plan.name} - ${formatCurrency(basePrice)}/line`;
   };
 
   const isEntertainmentPerkDisabled = (perk: string) => {
-    if ((perk === 'disney' || perk === 'netflix') && !selectedPerks.includes(perk)) {
-      return allSelectedPerks.includes(perk);
-    }
-    return false;
+    return !isPerkSelectionValid(allSelectedPerks, selectedPerks, perk);
   };
 
   return (
@@ -55,7 +47,7 @@ export function PlanSelector({
         <Select onValueChange={onPlanChange} value={selectedPlan}>
           <SelectTrigger className="bg-white">
             <SelectValue placeholder="Choose a plan">
-              {selectedPlan && getDisplayPrice(plans.find(p => p.id === selectedPlan)!)}
+              {selectedPlan && getDisplayPrice(plans.find(p => p.id === selectedPlan))}
             </SelectValue>
           </SelectTrigger>
           <SelectContent className="bg-white">
@@ -71,31 +63,21 @@ export function PlanSelector({
       <div className="space-y-2">
         <label className="text-sm font-medium">Select Perks ($10/month each)</label>
         <div className="space-y-2 border rounded-md p-4">
-          {[
-            ['apple_music', 'Apple Music'],
-            ['apple_one', 'Apple One'],
-            ['disney', 'Disney Bundle'],
-            ['google', 'Google One'],
-            ['netflix', 'Netflix & Max (with Ads)'],
-            ['cloud', 'Cloud'],
-            ['youtube', 'YouTube'],
-            ['hotspot', 'Hotspot'],
-            ['travelpass', 'TravelPass']
-          ].map(([value, label]) => (
-            <div key={value} className="flex items-center space-x-2">
+          {PERKS.map(({ id, label }) => (
+            <div key={id} className="flex items-center space-x-2">
               <input
                 type="checkbox"
-                id={value}
-                checked={selectedPerks.includes(value)}
-                disabled={isEntertainmentPerkDisabled(value)}
+                id={id}
+                checked={selectedPerks.includes(id)}
+                disabled={isEntertainmentPerkDisabled(id)}
                 onChange={(e) => {
                   const newPerks = e.target.checked 
-                    ? [...selectedPerks, value]
-                    : selectedPerks.filter(p => p !== value);
+                    ? [...selectedPerks, id]
+                    : selectedPerks.filter(p => p !== id);
                   onPerksChange(newPerks);
                 }}
               />
-              <label htmlFor={value} className="text-sm">
+              <label htmlFor={id} className="text-sm">
                 {label}
               </label>
             </div>

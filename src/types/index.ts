@@ -2,6 +2,7 @@ export interface Plan {
   id: string;
   name: string;
   basePrice: number;
+  // These fields could be derived from the calculator function
   price_1_line: number;
   price_2_line: number;
   price_3_line: number;
@@ -16,8 +17,20 @@ export interface Plan {
   streamingQuality: '480p' | '720p' | '1080p' | '4K';
   autopayDiscount?: number;
   paperlessDiscount?: number;
-  planLevel?: 'welcome' | 'plus' | 'unlimited';
+  planLevel: 'welcome' | 'plus' | 'unlimited'; // Making this required
 }
+
+// Add a type for perks
+export type PerkType = 
+  | 'apple_music' 
+  | 'apple_one' 
+  | 'disney' 
+  | 'netflix' 
+  | 'google' 
+  | 'cloud' 
+  | 'youtube' 
+  | 'hotspot' 
+  | 'travelpass';
 
 export interface Promotion {
   id: string;
@@ -45,6 +58,11 @@ export interface QuoteCalculation {
     totalSavings?: number;
   };
   selectedPerks?: string[];
+}
+
+export interface LinePlan {
+  plan: string;
+  perks: string[];
 }
 
 export interface ApiError {
