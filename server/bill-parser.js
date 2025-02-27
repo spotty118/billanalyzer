@@ -116,9 +116,26 @@ const extractVerizonBillData = async (buffer) => {
       billData.totalAmount = parseFloat(amountMatch[1]);
     }
 
-    // Extract line items and charges
-    const lines = text.split('\n');
+    // Helper function for calculating subtotals
+    const calculateSubtotal = (items) => {
+      return items.reduce((sum, item) => sum + item.amount, 0);
+    };
+
+    // Common Verizon bill sections
+    const sectionPatterns = {
+      monthly: /^#+\s*(Monthly\s+(Charges|Service)|Account\s+Charges)/i,
+      equipment: /^#+\s*(Equipment\s+Charges|Devices\s*&\s*Equipment)/i,
+      lines: /^#+\s*(Breakdown\s+by\s+Line|Line\s+Details|Phone\s+Lines)/i,
+      onetime: /^#+\s*One[-\s]time\s+Charges/i,
+      taxes: /^#+\s*(Taxes|Fees|Surcharges)/i,
+      credits: /^#+\s*(Credits|Adjustments|Discounts)/i
+    };
+
+    // Extract line items and charges from markdown structure
+    const lines = markdown.split('\n');
     let currentSection = null;
+    let inChargesTable = false;
+    let tableHeaders = [];
 
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i].trim();
@@ -126,38 +143,188 @@ const extractVerizonBillData = async (buffer) => {
       // Skip empty lines
       if (!line) continue;
 
-      // Look for section headers
-      if (line.match(/Monthly\s+charges/i)) {
-        currentSection = 'monthly';
-        continue;
-      } else if (line.match(/One[-\s]time\s+charges/i)) {
-        currentSection = 'onetime';
-        continue;
+      // Detect section headers
+      for (const [section, pattern] of Object.entries(sectionPatterns)) {
+        if (line.match(pattern)) {
+          currentSection = section;
+          continue;
+        }
       }
 
-      // Extract charge items
-      const chargeMatch = line.match(/([^$]+)\$\s*(\d+\.\d{2})/);
-      if (chargeMatch) {
-        const [_, description, amount] = chargeMatch;
-        const charge = {
-          description: description.trim(),
-          amount: parseFloat(amount),
-          type: currentSection || 'other'
-        };
-
-        // Identify line-specific charges
-        if (description.match(/line\s+\d+/i) || description.match(/phone\s+number/i)) {
-          billData.lineItems.push(charge);
-        } else {
-          billData.charges.push(charge);
+      // Detect table start
+      if (line.includes('|')) {
+        if (!inChargesTable) {
+          // This might be a header row
+          tableHeaders = line.split('|')
+            .map(header => header.trim().toLowerCase())
+            .filter(Boolean);
+          inChargesTable = true;
+          continue;
         }
+
+        // Skip separator row
+        if (line.includes('---')) continue;
+
+        // Process table row
+        const cells = line.split('|')
+          .map(cell => cell.trim())
+          .filter(Boolean);
+
+        if (cells.length > 1) {
+          // Try to find price and details in any cell
+          let description = '';
+          let amount = null;
+          let lineNumber = null;
+          let chargeType = currentSection || 'other';
+
+          // Common Verizon charge patterns
+          const chargePatterns = {
+            lineAccess: /(Line Access( Charge)?|Access Fee)/i,
+            devicePayment: /(Device Payment|Equipment Charge|Phone Payment)/i,
+            surcharge: /(Federal|State|County|City|Municipal|Regulatory|Universal Service|E911|Emergency)/i,
+            promotion: /(Promotion|Discount|Credit|Adjustment)/i,
+            plan: /(Plan( Charge)?|Data( Plan)?|Unlimited( Plan)?)/i
+          };
+
+          for (let cell of cells) {
+            const priceMatch = cell.match(/\$\s*(\d+\.\d{2})/);
+            const lineMatch = cell.match(/(?:Line|Phone|Device)\s*(?:#|Number)?\s*(\d+)/i);
+
+            if (priceMatch) {
+              amount = parseFloat(priceMatch[1]);
+            } else if (lineMatch) {
+              lineNumber = lineMatch[1];
+              description = cell;
+            } else if (!description && cell.length > 0) {
+              description = cell;
+              
+              // Determine charge type from description
+              for (const [type, pattern] of Object.entries(chargePatterns)) {
+                if (cell.match(pattern)) {
+                  chargeType = type;
+                  break;
+                }
+              }
+            }
+          }
+
+          // Handle multi-line descriptions (look ahead for continuation)
+          let nextIndex = i + 1;
+          while (nextIndex < lines.length) {
+            const nextLine = lines[nextIndex].trim();
+            if (nextLine && !nextLine.includes('|') && !nextLine.match(/^#+/) && !nextLine.includes('$')) {
+              description += ' ' + nextLine;
+              i = nextIndex;
+            } else {
+              break;
+            }
+            nextIndex++;
+          }
+
+          if (amount !== null) {
+            const charge = {
+              description: description,
+              amount: amount,
+              type: chargeType,
+              lineNumber: lineNumber,
+              category: currentSection
+            };
+
+            const isLineItem = lineNumber || 
+                             description.toLowerCase().includes('line') || 
+                             description.toLowerCase().includes('phone') ||
+                             chargeType === 'lineAccess' ||
+                             chargeType === 'devicePayment';
+
+            if (isLineItem) {
+              billData.lineItems.push(charge);
+            } else {
+              billData.charges.push(charge);
+            }
+          }
+        }
+      } else {
+        // Check for non-table price listings
+        const priceMatch = line.match(/(.+?)\$\s*(-?\d+\.\d{2})/);
+        if (priceMatch) {
+          const [_, desc, amt] = priceMatch;
+          let chargeType = currentSection || 'other';
+          let description = desc.trim();
+
+          // Look for percentage calculations in description
+          const percentageMatch = description.match(/(\d+(?:\.\d+)?)\s*%/);
+          let percentage = percentageMatch ? parseFloat(percentageMatch[1]) : null;
+
+          // Determine charge type using same patterns as table processing
+          for (const [type, pattern] of Object.entries(chargePatterns)) {
+            if (description.match(pattern)) {
+              chargeType = type;
+              break;
+            }
+          }
+
+          // Handle multi-line descriptions
+          let nextIndex = i + 1;
+          while (nextIndex < lines.length) {
+            const nextLine = lines[nextIndex].trim();
+            if (nextLine && !nextLine.includes('|') && !nextLine.match(/^#+/) && !nextLine.includes('$')) {
+              description += ' ' + nextLine;
+              i = nextIndex;
+            } else {
+              break;
+            }
+            nextIndex++;
+          }
+
+          // Extract line number if present
+          const lineMatch = description.match(/(?:Line|Phone|Device)\s*(?:#|Number)?\s*(\d+)/i);
+          const lineNumber = lineMatch ? lineMatch[1] : null;
+
+          const charge = {
+            description: description,
+            amount: parseFloat(amt),
+            type: chargeType,
+            lineNumber: lineNumber,
+            category: currentSection,
+            percentage: percentage
+          };
+
+          const isLineItem = lineNumber || 
+                           description.toLowerCase().includes('line') || 
+                           description.toLowerCase().includes('phone') ||
+                           chargeType === 'lineAccess' ||
+                           chargeType === 'devicePayment';
+
+          if (isLineItem) {
+            billData.lineItems.push(charge);
+          } else {
+            billData.charges.push(charge);
+          }
+        }
+        inChargesTable = false;
       }
     }
 
-    // Calculate subtotals
-    const calculateSubtotal = (items) => {
-      return items.reduce((sum, item) => sum + item.amount, 0);
-    };
+    // Validate total amount
+    const calculatedTotal = calculateSubtotal(billData.lineItems) + calculateSubtotal(billData.charges);
+    if (billData.totalAmount && Math.abs(calculatedTotal - billData.totalAmount) > 0.01) {
+      console.warn(`Warning: Calculated total (${calculatedTotal}) doesn't match bill total (${billData.totalAmount})`);
+      // Use sequential thinking to analyze discrepancy
+      const validationAnalysis = await use_mcp_tool({
+        serverName: "github.com/modelcontextprotocol/servers/tree/main/src/sequentialthinking",
+        toolName: "sequentialthinking",
+        arguments: {
+          thought: "Analyzing discrepancy between calculated and actual bill total",
+          thoughtNumber: 1,
+          totalThoughts: 1,
+          nextThoughtNeeded: false
+        }
+      });
+      if (!validationAnalysis.error) {
+        billData.validation = validationAnalysis.result;
+      }
+    }
+
 
     // Get insights from sequential analysis
     const insights = sequentialAnalysis[3]?.result || {}; // Last step contains insights
