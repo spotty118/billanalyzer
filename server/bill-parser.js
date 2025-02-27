@@ -252,18 +252,27 @@ const extractVerizonBillData = async (buffer) => {
     // Use sequential thinking to analyze the bill over multiple steps
     let sequentialAnalysis = [];
     
-    // Step 1: Initial markdown analysis
-    let analysisStep = await use_mcp_tool({
-      serverName: "github.com/modelcontextprotocol/servers/tree/main/src/sequentialthinking",
-      toolName: "sequentialthinking",
-      arguments: {
-        thought: "Analyzing structure and format of the Verizon bill markdown",
-        thoughtNumber: 1,
-        totalThoughts: 4,
-        nextThoughtNeeded: true
-      }
-    });
-    sequentialAnalysis.push(analysisStep.result);
+    // Try to use MCP tool, but continue if it fails
+    try {
+      // Step 1: Initial markdown analysis
+      let analysisStep = await use_mcp_tool({
+        serverName: "github.com/modelcontextprotocol/servers/tree/main/src/sequentialthinking",
+        toolName: "sequentialthinking",
+        arguments: {
+          thought: "Analyzing structure and format of the Verizon bill markdown",
+          thoughtNumber: 1,
+          totalThoughts: 4,
+          nextThoughtNeeded: true
+        }
+      });
+      sequentialAnalysis.push(analysisStep.result);
+    } catch (error) {
+      console.log("MCP tool call failed, continuing without sequential analysis:", error.message);
+      // Add placeholder analysis
+      sequentialAnalysis.push({
+        result: { analysis: "Sequential analysis not available" }
+      });
+    }
 
     // Initialize bill data structure
     const billData = {

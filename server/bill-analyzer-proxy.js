@@ -3,6 +3,8 @@ import multer from 'multer';
 import fs from 'fs';
 import path from 'path';
 import { extractVerizonBillData } from './bill-parser.js';
+import { adaptBillDataForEnhancedAnalysis } from './bill-data-adapter.js';
+import { enhancedAnalysis } from './enhanced-bill-analysis.js';
 
 const router = express.Router();
 const upload = multer({ 
@@ -11,7 +13,7 @@ const upload = multer({
 });
 
 /**
- * Endpoint to analyze a Verizon bill PDF
+ * Endpoint to analyze a Verizon bill (PDF or text)
  * POST /api/analyze-bill
  */
 router.post('/analyze-bill', upload.single('file'), async (req, res) => {
@@ -20,11 +22,13 @@ router.post('/analyze-bill', upload.single('file'), async (req, res) => {
       return res.status(400).json({ error: 'No file uploaded' });
     }
 
-    if (req.file.mimetype !== 'application/pdf') {
-      return res.status(400).json({ error: 'File must be a PDF' });
+    // Accept PDF or text files
+    if (req.file.mimetype !== 'application/pdf' && 
+        !req.file.mimetype.startsWith('text/')) {
+      return res.status(400).json({ error: 'File must be a PDF or text file' });
     }
 
-    console.log(`Processing bill file: ${req.file.originalname} (${req.file.size} bytes)`);
+    console.log(`Processing bill file: ${req.file.originalname} (${req.file.size} bytes, ${req.file.mimetype})`);
     
     // Use the enhanced bill parser
     const result = await extractVerizonBillData(req.file.buffer);
@@ -99,55 +103,90 @@ router.post('/analyze-bill/enhanced', async (req, res) => {
     const billData = JSON.parse(billText);
 
     // Analyze charges and line items
-    const totalCharges = [...billData.charges, ...billData.lineItems];
-    const monthlyCharges = totalCharges.filter(charge => 
-      !charge.description.toLowerCase().includes('one-time') &&
-      !charge.description.toLowerCase().includes('late fee')
-    );
+    // Adapt the bill data to the format expected by enhanced analysis
+    const adaptedData = adaptBillDataForEnhancedAnalysis(billData);
+    console.log(`Adapted bill data for account ${billData.accountNumber}`);
 
-    // Calculate monthly trends
-    const monthlyTotal = monthlyCharges.reduce((sum, charge) => sum + charge.amount, 0);
-    const averagePerLine = monthlyTotal / billData.lineItems.length;
+    // Perform enhanced analysis
+    const analysisResult = enhancedAnalysis(adaptedData);
+    console.log('Enhanced analysis completed');
 
-    // Enhanced analysis with detailed data
+    // Create a more comprehensive response with extracted data
+    const phoneNumbers = Object.keys(adaptedData.usage_details);
+    const deviceModels = billData.lineItems
+      .filter(item => item.isDeviceCharge)
+      .map(item => item.description.trim())
+      .filter((value, index, self) => self.indexOf(value) === index);
+
+    // Extract plans from billing data
+    const plans = billData.lineItems
+      .filter(item => item.type === 'plan' || item.description.toLowerCase().includes('plan'))
+      .map(item => ({
+        name: item.description,
+        amount: item.amount,
+        lineNumber: item.lineNumber
+      }));
+
+    // Find promotional credits
+    const promotions = billData.lineItems
+      .filter(item => item.amount < 0 || 
+              item.description.toLowerCase().includes('credit') ||
+              item.description.toLowerCase().includes('promo') ||
+              item.type === 'promotion')
+      .map(item => ({
+        description: item.description,
+        amount: item.amount,
+        lineNumber: item.lineNumber
+      }));
+
+    // Identify potential savings
+    const potentialSavings = [];
+    
+    // Check for unused perks
+    const unusedPerks = [];
+    const perks = billData.lineItems
+      .filter(item => 
+        item.description.toLowerCase().includes('perk') ||
+        item.description.toLowerCase().includes('premium') ||
+        item.description.toLowerCase().includes('youtube') ||
+        item.description.toLowerCase().includes('walmart+') ||
+        item.description.toLowerCase().includes('apple music') ||
+        item.description.toLowerCase().includes('disney+'))
+      .map(item => ({
+        name: item.description,
+        amount: item.amount
+      }));
+      
+    // Calculate common plan recommendations
+    const planRecommendations = [];
+    if (plans.length > 0) {
+      planRecommendations.push({
+        name: analysisResult.planRecommendation.recommendedPlan,
+        description: analysisResult.planRecommendation.reasons.join(', '),
+        estimatedSavings: analysisResult.planRecommendation.estimatedMonthlySavings,
+        confidence: analysisResult.planRecommendation.confidenceScore
+      });
+      
+      // Add alternative plans
+      analysisResult.planRecommendation.alternativePlans.forEach(plan => {
+        planRecommendations.push({
+          name: plan.planName,
+          description: `Pros: ${plan.pros.join(', ')}. Cons: ${plan.cons.join(', ')}`,
+          estimatedSavings: plan.estimatedSavings,
+          confidence: 0.7
+        });
+      });
+    }
+
+    // Enhanced response
     const response = {
-      usageAnalysis: {
-        trend: "stable",
-        percentageChange: 0,
-        seasonalFactors: {
-          winter: "High usage",
-          spring: "Average usage",
-          summer: "Low usage",
-          fall: "Average usage"
-        },
-        avg_data_usage_gb: 0,
-        avg_talk_minutes: 0
-      },
-      costAnalysis: {
-        averageMonthlyBill: billData.totalAmount,
-        projectedNextBill: billData.totalAmount * 1.05, // 5% projected increase
-        unusualCharges: [],
-        potentialSavings: []
-      },
-      planRecommendation: {
-        recommendedPlan: "Unlimited Plus",
-        reasons: [
-          "Based on current usage",
-          "Better value for your needs"
-        ],
-        estimatedMonthlySavings: 96.945,
-        confidenceScore: 0.8,
-        alternativePlans: [{
-          name: "Unlimited Welcome",
-          potentialSavings: 65.45,
-          pros: ["Lower monthly cost"],
-          cons: ["Fewer features"]
-        }]
-      },
       accountDetails: {
         accountNumber: billData.accountNumber,
         billingPeriod: billData.billingPeriod,
         totalAmountDue: billData.totalAmount,
+        phoneNumbers: phoneNumbers,
+        deviceModels: deviceModels,
+        plans: plans,
         lineItems: billData.lineItems.map(item => ({
           description: item.description,
           amount: item.amount,
@@ -162,21 +201,30 @@ router.post('/analyze-bill/enhanced', async (req, res) => {
           lineItems: billData.lineItems.reduce((sum, item) => sum + item.amount, 0),
           otherCharges: billData.charges.reduce((sum, charge) => sum + charge.amount, 0)
         }
-      }
+      },
+      usageAnalysis: analysisResult.usageAnalysis,
+      costAnalysis: analysisResult.costAnalysis,
+      planRecommendation: analysisResult.planRecommendation,
+      planRecommendations: planRecommendations,
+      potentialSavings: potentialSavings,
+      unusedPerks: unusedPerks,
+      promotions: promotions
     };
 
     return res.json({
       data: {
         accountNumber: billData.accountNumber,
         billingPeriod: billData.billingPeriod,
-        charges: billData.charges || [],
-        lineItems: billData.lineItems || [],
-        subtotals: response.accountDetails.subtotals,
-        summary: `Bill analysis for account ${billData.accountNumber}`,
+        summary: `Bill analysis for account ${billData.accountNumber || 'Unknown'}`,
         totalAmount: billData.totalAmount,
+        accountDetails: response.accountDetails,
         usageAnalysis: response.usageAnalysis,
         costAnalysis: response.costAnalysis,
-        planRecommendation: response.planRecommendation
+        planRecommendation: response.planRecommendation,
+        planRecommendations: response.planRecommendations || [],
+        potentialSavings: response.potentialSavings || [],
+        unusedPerks: response.unusedPerks || [],
+        promotions: response.promotions || []
       }
     });
   } catch (error) {
