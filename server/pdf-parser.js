@@ -5,7 +5,7 @@ const extractPdfText = async (buffer) => {
     // Use pdf-to-markdown tool from markdownify-mcp server
     const result = await use_mcp_tool({
       serverName: "github.com/zcaceres/markdownify-mcp",
-      toolName: "pdf-to-markdown",
+      toolName: "pdf_to_markdown",
       arguments: { filepath: buffer.toString('base64') }
     });
 

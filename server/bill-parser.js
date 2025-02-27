@@ -236,7 +236,18 @@ function processTableRow(cells, currentSection, tableHeaders) {
 const extractVerizonBillData = async (buffer) => {
   try {
     console.log('Starting bill analysis...');
-    const { text, markdown } = await extractPdfText(buffer);
+    let text, markdown;
+    // Check if it's a text file by trying to convert to utf8
+    try {
+      text = buffer.toString('utf8');
+      markdown = text; // For text files, use the content directly
+      console.log('Detected text file, using content directly');
+    } catch (e) {
+      // If not a valid text file, try PDF extraction
+      const result = await extractPdfText(buffer);
+      text = result.text;
+      markdown = result.markdown;
+    }
 
     // Use sequential thinking to analyze the bill over multiple steps
     let sequentialAnalysis = [];

@@ -5,7 +5,7 @@ import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import billAnalyzerProxy from './bill-analyzer-proxy.js';
-import proxyHandler from './proxy.js';
+import { app as proxyHandler } from './proxy.js';
 
 dotenv.config();
 
@@ -13,7 +13,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
-const PORT = process.env.PORT || 3001;
+const PORT = process.env.PORT || 3002;
 
 // Parse JSON bodies
 app.use(express.json());

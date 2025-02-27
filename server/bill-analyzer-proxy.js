@@ -61,4 +61,57 @@ router.post('/analyze-bill', upload.single('file'), async (req, res) => {
   }
 });
 
+/**
+ * Enhanced bill analysis endpoint that accepts pre-parsed bill data
+ * POST /api/analyze-bill/enhanced
+ */
+router.post('/analyze-bill/enhanced', async (req, res) => {
+  try {
+    const { billText } = req.body;
+    if (!billText) {
+      return res.status(400).json({ error: 'No bill data provided' });
+    }
+
+    const billData = JSON.parse(billText);
+
+    // Analyze charges and line items
+    const totalCharges = [...billData.charges, ...billData.lineItems];
+    const monthlyCharges = totalCharges.filter(charge => 
+      !charge.description.toLowerCase().includes('one-time') &&
+      !charge.description.toLowerCase().includes('late fee')
+    );
+
+    // Calculate monthly trends
+    const monthlyTotal = monthlyCharges.reduce((sum, charge) => sum + charge.amount, 0);
+    const averagePerLine = monthlyTotal / billData.lineItems.length;
+
+    // Build enhanced analysis response
+    const response = {
+      usageAnalysis: {
+        trend: monthlyTotal > 600 ? "increasing" : "stable",
+        percentageChange: ((monthlyTotal - billData.totalAmount) / billData.totalAmount) * 100
+      },
+      costAnalysis: {
+        averageMonthlyBill: monthlyTotal,
+        projectedNextBill: monthlyTotal + (averagePerLine * 0.02) // Project 2% increase
+      },
+      planRecommendation: {
+        recommendedPlan: monthlyTotal > 600 ? "5G Get More" : "Current plan is optimal",
+        reasons: [
+          `Average cost per line: $${averagePerLine.toFixed(2)}`,
+          monthlyTotal > 600 ? "High monthly charges suggest premium plan might offer better value" : 
+                              "Current usage patterns align with plan features"
+        ]
+      }
+    };
+
+    return res.json(response);
+  } catch (error) {
+    console.error('Error in enhanced bill analysis:', error);
+    return res.status(500).json({ 
+      error: error.message || 'Failed to analyze bill' 
+    });
+  }
+});
+
 export default router;

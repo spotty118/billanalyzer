@@ -22,7 +22,7 @@ const testEnhancedAnalysis = async () => {
     console.log('Bill data extracted');
 
     // Call the enhanced analysis endpoint
-    const response = await fetch('http://localhost:4000/analyze-bill/enhanced', {
+    const response = await fetch('http://localhost:3002/api/analyze-bill/enhanced', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
