@@ -1,3 +1,4 @@
+
 /**
  * Improved Verizon Bill Analyzer
  * 
@@ -660,7 +661,7 @@ export function enhanceVerizonBillData(billData) {
   });
   
   // Store existing charges that couldn't be associated with phone lines
-  const allCharges = [...billData.lineItems, ...billData.charges];
+  const allCharges = [...billData.lineItems || [], ...billData.charges || []];
   const assignedChargeIds = new Set();
   
   // Mark charges that were assigned to phone lines
@@ -771,8 +772,8 @@ export function analyzeBill(billData) {
     trend: 'stable',  // Default value
     percentageChange: 0,
     seasonalFactors: {
-      holiday: billData.billingPeriod && billData.billingPeriod.includes('Dec'),
-      summer: billData.billingPeriod && billData.billingPeriod.includes('Jun') || billData.billingPeriod && billData.billingPeriod.includes('Jul')
+      holiday: formattedBillingPeriod.includes('December') || formattedBillingPeriod.includes('January'),
+      summer: formattedBillingPeriod.includes('June') || formattedBillingPeriod.includes('July')
     },
     avg_data_usage_gb: 0,  // Would be calculated from actual data if available
     avg_talk_minutes: 0,   // Would be calculated from actual data if available
