@@ -1,470 +1,227 @@
 
-import { AxiosError } from 'axios';
-import { ApiResponse, ApiError } from '@/types';
-import { VerizonBillAnalyzer } from '@/utils/bill-analyzer/analyzer';
-import { extractVerizonBill } from '@/utils/bill-analyzer/extractor';
-import type { BillData, VerizonBill, UsageAnalysisResult } from '@/utils/bill-analyzer/types';
+import { toast } from '@/components/ui/use-toast';
 
-interface ErrorResponse {
-  message?: string;
-}
-
-interface UsagePatternResponse {
-  trend: 'increasing' | 'decreasing' | 'stable';
-  percentageChange: number;
-  seasonalFactors?: {
-    highUsageMonths: string[];
-    lowUsageMonths: string[];
-  };
-}
-
-interface CostAnalysisResponse {
-  averageMonthlyBill: number;
-  projectedNextBill: number;
-  unusualCharges: Array<{
-    description: string;
-    amount: number;
-    reason: string;
-  }>;
-  potentialSavings: Array<{
-    description: string;
-    estimatedSaving: number;
-    confidence: number;
-  }>;
-}
-
-interface PlanRecommendationResponse {
-  recommendedPlan: string;
-  reasons: string[];
-  estimatedMonthlySavings: number;
-  confidenceScore: number;
-  alternativePlans: Array<{
-    planName: string;
-    pros: string[];
-    cons: string[];
-    estimatedSavings: number;
-  }>;
-}
-
-interface BillAnalysis {
-  totalAmount: number;
-  accountNumber: string;
-  billingPeriod: string;
-  charges: Array<{
-    description: string;
-    amount: number;
-    type: string;
-  }>;
-  lineItems: Array<{
-    description: string;
-    amount: number;
-    type: string;
-  }>;
-  subtotals: {
-    lineItems: number;
-    otherCharges: number;
-  };
-  summary: string;
-  usageAnalysis?: {
-    trend: 'increasing' | 'decreasing' | 'stable';
-    percentageChange: number;
-    seasonalFactors?: {
-      highUsageMonths: string[];
-      lowUsageMonths: string[];
-    };
-    avg_data_usage_gb: number;
-    avg_talk_minutes: number;
-    avg_text_count: number;
-    high_data_users: string[];
-    high_talk_users: string[];
-    high_text_users: string[];
-  };
-  costAnalysis?: {
-    averageMonthlyBill: number;
-    projectedNextBill: number;
-    unusualCharges: Array<{
-      description: string;
-      amount: number;
-      reason: string;
-    }>;
-    potentialSavings: Array<{
-      description: string;
-      estimatedSaving: number;
-      confidence: number;
-    }>;
-  };
-  planRecommendation?: {
-    recommendedPlan: string;
-    reasons: string[];
-    estimatedMonthlySavings: number;
-    confidenceScore: number;
-    alternativePlans: Array<{
-      planName: string;
-      pros: string[];
-      cons: string[];
-      estimatedSavings: number;
-    }>;
-  };
-}
-
+// ApiService class to handle all API requests
 class ApiService {
-  private static instance: ApiService;
-  private apiBaseUrl: string;
+  private baseUrl: string;
+  private defaultError = { message: 'An error occurred', code: 'UNKNOWN_ERROR' };
 
-  private constructor() {
-    // Get the API base URL from environment or use fallback
-    this.apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001';
+  constructor() {
+    // Use environment variable or default to localhost for development
+    this.baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
   }
 
-  public static getInstance(): ApiService {
-    if (!ApiService.instance) {
-      ApiService.instance = new ApiService();
-    }
-    return ApiService.instance;
-  }
-
-  private async extractTextFromPDF(pdfBuffer: ArrayBuffer): Promise<string> {
-    // Create a copy of the ArrayBuffer to prevent detachment
-    const buffer = new Uint8Array(pdfBuffer.slice(0));
-    const textContent = await extractVerizonBill(buffer);
-    if (!textContent) {
-      throw new Error('Failed to extract text from PDF');
-    }
-    return JSON.stringify(textContent);
-  }
-
-  private async analyzeWithServer(pdfText: string): Promise<{
-    usageAnalysis?: UsagePatternResponse;
-    costAnalysis?: CostAnalysisResponse;
-    planRecommendation?: PlanRecommendationResponse;
-  }> {
+  /**
+   * Analyze bill data using the server-side analyzer with enhanced capabilities
+   */
+  private async analyzeWithServer(file: File): Promise<any> {
+    console.log('Analyzing bill with server...');
+    
     try {
-      const response = await fetch(`${this.apiBaseUrl}/api/analyze-bill/enhanced`, {
+      // Create FormData and append the file
+      const formData = new FormData();
+      formData.append('file', file);
+      
+      // Make the API request to the bill analysis endpoint
+      const response = await fetch(`${this.baseUrl}/api/analyze-bill`, {
+        method: 'POST',
+        body: formData,
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error?.message || `Server returned ${response.status}`);
+      }
+      
+      const data = await response.json();
+      console.log('Server analysis response:', data);
+      return data;
+    } catch (error) {
+      console.warn('Server analysis failed, falling back to client-side analysis:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Perform enhanced analysis of bill data
+   */
+  private async enhanceBillAnalysis(billText: string): Promise<any> {
+    console.log('Enhancing bill analysis...');
+    
+    try {
+      // Make request to the enhanced analysis endpoint
+      const response = await fetch(`${this.baseUrl}/api/analyze-bill/enhanced`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ billText: pdfText }),
+        body: JSON.stringify({ billText }),
       });
-
+      
       if (!response.ok) {
-        throw new Error('Failed to get enhanced analysis');
+        const errorData = await response.json();
+        throw new Error(errorData.error?.message || `Server returned ${response.status}`);
       }
-
-      return await response.json();
+      
+      const enhancedData = await response.json();
+      console.log('Enhanced analysis response:', enhancedData);
+      return enhancedData;
     } catch (error) {
       console.error('Enhanced analysis failed:', error);
       throw error;
     }
   }
 
-  private handleError(error: AxiosError<ErrorResponse> | Error): ApiError {
-    console.error('API Error:', error);
+  /**
+   * Client-side bill analysis as a fallback
+   */
+  private async analyzeWithClient(file: File): Promise<any> {
+    console.log('Analyzing bill with client-side fallback...');
     
-    if ('response' in error && error.response?.data) {
-      return {
-        message: error.response.data.message || error.message || 'An error occurred',
-        code: 'API_ERROR',
-      };
-    }
-    
-    return {
-      message: error.message || 'An error occurred',
-      code: 'UNKNOWN_ERROR',
-    };
-  }
-
-  private convertVerizonBillToBillData(verizonBill: VerizonBill): BillData {
-    return {
-      account_info: {
-        account_number: verizonBill.accountInfo.accountNumber,
-        customer_name: verizonBill.accountInfo.customerName,
-        billing_period_start: verizonBill.accountInfo.billingPeriod.start,
-        billing_period_end: verizonBill.accountInfo.billingPeriod.end
-      },
-      bill_summary: {
-        previous_balance: verizonBill.billSummary.previousBalance,
-        payments: verizonBill.billSummary.payments,
-        current_charges: verizonBill.billSummary.currentCharges,
-        total_due: verizonBill.billSummary.totalDue
-      },
-      plan_charges: verizonBill.lineItems.flatMap(item => 
-        item.planCharges.map(charge => ({
-          description: charge.description,
-          amount: charge.amount
-        }))
-      ),
-      equipment_charges: verizonBill.lineItems.flatMap(item => 
-        item.deviceCharges.map(charge => ({
-          description: charge.description,
-          amount: charge.amount
-        }))
-      ),
-      one_time_charges: [],
-      taxes_and_fees: verizonBill.lineItems.flatMap(item => [
-        ...item.surcharges.map(charge => ({
-          description: charge.description,
-          amount: charge.amount
-        })),
-        ...item.taxes.map(tax => ({
-          description: tax.description,
-          amount: tax.amount
-        }))
-      ]),
-      usage_details: Object.fromEntries(
-        verizonBill.lineItems.map(item => [
-          item.phoneNumber,
-          [{
-            data_usage: '0 GB',
-            talk_minutes: (
-              verizonBill.callActivity
-                .find(a => a.phoneNumber === item.phoneNumber)
-                ?.calls?.reduce((sum: number, call) => sum + call.minutes, 0) || 0
-            ).toString(),
-            text_count: '0'
-          }]
-        ])
-      )
-    };
-  }
-
-  public async analyzeBill(file: File): Promise<ApiResponse<BillAnalysis>> {
     try {
-      if (!file.type.includes('pdf')) {
-        throw new Error('Invalid file type');
+      // Read the file as ArrayBuffer
+      const arrayBuffer = await this.readFileAsArrayBuffer(file);
+      
+      // Dynamically import the necessary modules
+      const { extractVerizonBill } = await import('@/utils/bill-analyzer/extractor');
+      
+      // Extract and parse the bill
+      const bill = await extractVerizonBill(arrayBuffer);
+      
+      if (!bill) {
+        throw new Error('Failed to extract bill data');
       }
       
-      console.log('Starting bill analysis...');
+      console.log('Client-side analysis successful:', bill);
       
-      // Create form data to send the file
-      const formData = new FormData();
-      formData.append('file', file);
+      // Create a default analysis response
+      return {
+        totalAmount: bill.billSummary.totalDue,
+        accountNumber: bill.accountInfo.accountNumber,
+        billingPeriod: `${bill.accountInfo.billingPeriod.start} to ${bill.accountInfo.billingPeriod.end}`,
+        charges: [],
+        lineItems: [],
+        subtotals: {
+          lineItems: 0,
+          otherCharges: 0
+        },
+        summary: `Bill analysis for account ${bill.accountInfo.accountNumber}`
+      };
+    } catch (error) {
+      console.error('Client-side analysis failed:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Helper method to read file as ArrayBuffer
+   */
+  private async readFileAsArrayBuffer(file: File): Promise<ArrayBuffer> {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as ArrayBuffer);
+      reader.onerror = reject;
+      reader.readAsArrayBuffer(file);
+    });
+  }
+
+  /**
+   * Main method to analyze a bill file
+   * Uses server-side analysis first, then falls back to client-side
+   */
+  public async analyzeBill(file: File): Promise<{ data?: any; error?: any }> {
+    console.log('Starting bill analysis...');
+    
+    try {
+      let billData;
       
-      // First attempt to use the server API
+      // Try server-side analysis first
       try {
-        const response = await fetch(`${this.apiBaseUrl}/api/analyze-bill`, {
-          method: 'POST',
-          body: formData,
-        });
+        billData = await this.analyzeWithServer(file);
+      } catch (error) {
+        // If server analysis fails, fall back to client-side
+        billData = await this.analyzeWithClient(file);
+      }
+      
+      // Apply enhanced analysis if possible
+      try {
+        const billJson = JSON.stringify(billData);
+        const enhancedData = await this.enhanceBillAnalysis(billJson);
         
-        if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.error || 'Failed to analyze bill');
-        }
-        
-        const result = await response.json();
-        console.log('Analysis successful:', result);
-        
-        // Convert the server response to the expected format
-        const analysis: BillAnalysis = {
-          totalAmount: result.totalAmount || 0,
-          accountNumber: result.accountNumber || 'Unknown',
-          billingPeriod: result.billingPeriod || 'Unknown',
-          charges: result.charges || [],
-          lineItems: result.lineItems || [],
-          subtotals: {
-            lineItems: result.subtotals?.lineItems || 0,
-            otherCharges: result.subtotals?.otherCharges || 0
-          },
-          summary: result.summary || 'Bill analysis completed'
+        // Merge the enhanced data with the basic bill data
+        const fullAnalysis = {
+          ...billData,
+          usageAnalysis: enhancedData.usageAnalysis,
+          costAnalysis: enhancedData.costAnalysis,
+          planRecommendation: enhancedData.planRecommendation
         };
         
-        return { data: analysis };
-      } catch (serverError) {
-        console.warn('Server analysis failed, falling back to client-side analysis:', serverError);
+        console.log('Analysis successful:', fullAnalysis);
+        return { data: fullAnalysis };
+      } catch (error) {
+        console.warn('Enhanced analysis failed, using defaults:', error);
         
-        // Fallback to client-side analysis
-        try {
-          // Get the text content from the PDF file - clone the ArrayBuffer to prevent detachment
-          const fileContent = await file.arrayBuffer();
-          const fileContentCopy = new Uint8Array(fileContent.slice(0));
-          const verizonBill = await extractVerizonBill(fileContentCopy);
-          
-          if (!verizonBill) {
-            throw new Error('Failed to extract bill data');
-          }
-          
-          // Convert PDF to text - use a fresh copy of the ArrayBuffer
-          const pdfText = await this.extractTextFromPDF(fileContent.slice(0));
-          
-          // Define the types for our default analysis
-          type DefaultUsageAnalysis = {
-            trend: 'increasing' | 'decreasing' | 'stable';
-            percentageChange: number;
+        // If enhanced analysis fails, return basic bill data with default enhanced fields
+        const defaultAnalysis = {
+          ...billData,
+          usageAnalysis: {
+            trend: 'stable',
+            percentageChange: 0,
             seasonalFactors: {
-              highUsageMonths: string[];
-              lowUsageMonths: string[];
-            };
-          };
-
-          type DefaultCostAnalysis = {
-            averageMonthlyBill: number;
-            projectedNextBill: number;
-            unusualCharges: Array<{
-              description: string;
-              amount: number;
-              reason: string;
-            }>;
-            potentialSavings: Array<{
-              description: string;
-              estimatedSaving: number;
-              confidence: number;
-            }>;
-          };
-
-          type DefaultPlanRecommendation = {
-            recommendedPlan: string;
-            reasons: string[];
-            estimatedMonthlySavings: number;
-            confidenceScore: number;
-            alternativePlans: Array<{
-              planName: string;
-              pros: string[];
-              cons: string[];
-              estimatedSavings: number;
-            }>;
-          };
-
-          // Get enhanced analysis from server
-          const defaultAnalysis = {
-            usageAnalysis: {
-              trend: 'stable' as 'increasing' | 'decreasing' | 'stable',
-              percentageChange: 0,
-              seasonalFactors: {
-                highUsageMonths: ['December', 'January'],
-                lowUsageMonths: ['June', 'July']
-              }
-            } as DefaultUsageAnalysis,
-            costAnalysis: {
-              averageMonthlyBill: verizonBill.billSummary.totalDue,
-              projectedNextBill: verizonBill.billSummary.totalDue * 1.05,
-              unusualCharges: [] as Array<{
-                description: string;
-                amount: number;
-                reason: string;
-              }>,
-              potentialSavings: [] as Array<{
-                description: string;
-                estimatedSaving: number;
-                confidence: number;
-              }>
-            } as DefaultCostAnalysis,
-            planRecommendation: {
-              recommendedPlan: 'Unlimited Plus',
-              reasons: ['Based on current usage', 'Better value for your needs'],
-              estimatedMonthlySavings: verizonBill.billSummary.totalDue * 0.15,
-              confidenceScore: 0.8,
-              alternativePlans: [{
+              highUsageMonths: ['December', 'January'],
+              lowUsageMonths: ['June', 'July']
+            },
+            avg_data_usage_gb: 0,
+            avg_talk_minutes: 0,
+            avg_text_count: 0,
+            high_data_users: [],
+            high_talk_users: [],
+            high_text_users: []
+          },
+          costAnalysis: {
+            averageMonthlyBill: billData.totalAmount,
+            projectedNextBill: billData.totalAmount * 1.05, // Estimate 5% increase
+            unusualCharges: [],
+            potentialSavings: []
+          },
+          planRecommendation: {
+            recommendedPlan: 'Unlimited Plus',
+            reasons: [
+              'Based on current usage',
+              'Better value for your needs'
+            ],
+            estimatedMonthlySavings: billData.totalAmount * 0.15, // Estimate 15% savings
+            confidenceScore: 0.8,
+            alternativePlans: [
+              {
                 planName: 'Unlimited Welcome',
                 pros: ['Lower monthly cost'],
                 cons: ['Fewer features'],
-                estimatedSavings: verizonBill.billSummary.totalDue * 0.2
-              }]
-            } as DefaultPlanRecommendation
-          };
-          
-          // Create a variable to hold our enhanced analysis results
-          let enhancedAnalysis = {
-            usageAnalysis: { ...defaultAnalysis.usageAnalysis },
-            costAnalysis: { ...defaultAnalysis.costAnalysis },
-            planRecommendation: { ...defaultAnalysis.planRecommendation }
-          };
-          
-          try {
-            const serverEnhanced = await this.analyzeWithServer(pdfText);
-            if (serverEnhanced.usageAnalysis) {
-              enhancedAnalysis.usageAnalysis = {
-                ...defaultAnalysis.usageAnalysis,
-                ...serverEnhanced.usageAnalysis
-              };
-            }
-            if (serverEnhanced.costAnalysis) {
-              enhancedAnalysis.costAnalysis = {
-                ...defaultAnalysis.costAnalysis,
-                ...serverEnhanced.costAnalysis
-              };
-            }
-            if (serverEnhanced.planRecommendation) {
-              enhancedAnalysis.planRecommendation = {
-                ...defaultAnalysis.planRecommendation,
-                ...serverEnhanced.planRecommendation
-              };
-            }
-          } catch (err) {
-            console.warn('Enhanced analysis failed, using defaults:', err);
+                estimatedSavings: billData.totalAmount * 0.2
+              }
+            ]
           }
-          
-          // Create a bill analyzer and analyze the bill
-          const billData = this.convertVerizonBillToBillData(verizonBill);
-          const analyzer = new VerizonBillAnalyzer(billData);
-          const baseAnalysis = analyzer.getUsageAnalysis();
-          
-          // Format the analysis result
-          const analysis: BillAnalysis = {
-            totalAmount: verizonBill.billSummary.totalDue,
-            accountNumber: verizonBill.accountInfo.accountNumber,
-            billingPeriod: `${verizonBill.accountInfo.billingPeriod.start} to ${verizonBill.accountInfo.billingPeriod.end}`,
-            charges: [], // Verizon bill structure doesn't have standalone charges
-            lineItems: verizonBill.lineItems.flatMap(line => [
-              ...line.planCharges.map(charge => ({
-                description: `${line.phoneNumber} - ${charge.description}`,
-                amount: charge.amount,
-                type: 'plan'
-              })),
-              ...line.deviceCharges.map(charge => ({
-                description: `${line.phoneNumber} - ${charge.description}`,
-                amount: charge.amount,
-                type: 'device'
-              }))
-            ]),
-            subtotals: {
-              lineItems: verizonBill.lineItems.reduce((sum: number, line) => 
-                sum + line.planCharges.reduce((s: number, c) => s + c.amount, 0) + 
-                      line.deviceCharges.reduce((s: number, c) => s + c.amount, 0), 0),
-              otherCharges: 0 // No other charges in our structure
-            },
-            summary: `Bill analysis for account ${verizonBill.accountInfo.accountNumber}`,
-            usageAnalysis: {
-              trend: enhancedAnalysis.usageAnalysis.trend,
-              percentageChange: enhancedAnalysis.usageAnalysis.percentageChange,
-              seasonalFactors: enhancedAnalysis.usageAnalysis.seasonalFactors,
-              avg_data_usage_gb: (baseAnalysis as UsageAnalysisResult).avg_data_usage_gb,
-              avg_talk_minutes: (baseAnalysis as UsageAnalysisResult).avg_talk_minutes,
-              avg_text_count: (baseAnalysis as UsageAnalysisResult).avg_text_count,
-              high_data_users: (baseAnalysis as UsageAnalysisResult).high_data_users,
-              high_talk_users: (baseAnalysis as UsageAnalysisResult).high_talk_users,
-              high_text_users: (baseAnalysis as UsageAnalysisResult).high_text_users
-            },
-            costAnalysis: enhancedAnalysis.costAnalysis,
-            planRecommendation: enhancedAnalysis.planRecommendation
-          };
-          
-          console.log('Client-side analysis successful:', analysis);
-          return { data: analysis };
-        } catch (clientError) {
-          console.error('Client-side analysis failed:', clientError);
-          throw clientError;
-        }
+        };
+        
+        console.log('Analysis successful:', defaultAnalysis);
+        return { data: defaultAnalysis };
       }
     } catch (error) {
       console.error('Error analyzing bill:', error);
-      
-      if (error instanceof AxiosError) {
-        return { error: this.handleError(error) };
-      }
-      
-      return {
+      return { 
         error: {
-          message: error instanceof Error ? error.message : 'An unexpected error occurred',
-          code: 'UNKNOWN_ERROR',
-        },
+          message: error instanceof Error ? error.message : 'Failed to analyze bill',
+          code: 'UNKNOWN_ERROR'
+        }
       };
     }
   }
+
+  // Add additional API methods as needed
 }
 
-export const apiService = ApiService.getInstance();
+// Create and export a singleton instance
+const apiService = new ApiService();
 
-export const analyzeBill = (file: File): Promise<ApiResponse<BillAnalysis>> => {
-  return apiService.analyzeBill(file);
-};
+// Export the analyzeBill method for direct use
+export const analyzeBill = (file: File) => apiService.analyzeBill(file);
