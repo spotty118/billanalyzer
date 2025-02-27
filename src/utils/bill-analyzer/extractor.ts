@@ -1,7 +1,6 @@
 
 import { parseVerizonBill } from './parser';
-import { BillData, VerizonBill } from './types';
-import * as pdfjs from 'pdfjs-dist';
+import type { VerizonBill } from './types';
 
 /**
  * Extract text from a PDF file and parse the Verizon bill
@@ -28,10 +27,10 @@ export async function extractVerizonBill(pdfData: ArrayBuffer): Promise<VerizonB
       const page = await pdf.getPage(i);
       const content = await page.getTextContent();
       const pageText = content.items
-        .filter((item: any): item is { str: string } => 
-          !('type' in item) && 'str' in item
+        .filter((item: any) => 
+          typeof item.str === 'string'
         )
-        .map(item => item.str)
+        .map((item: any) => item.str)
         .join(' ');
       pages.push(pageText);
     }
