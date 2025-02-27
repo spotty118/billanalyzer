@@ -9,8 +9,16 @@ export async function extractVerizonBill(pdfData: ArrayBuffer): Promise<VerizonB
   try {
     const pdfjsLib = await import('pdfjs-dist');
     
-    // Set up pdf.js worker with the matching version
-    pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.10.38/pdf.worker.min.js`;
+    // Use dynamic import to load the worker directly
+    await import('pdfjs-dist/build/pdf.worker.mjs');
+    
+    // Set worker inline - this avoids having to load from a CDN
+    if (typeof window !== 'undefined' && 'pdfjsLib' in window) {
+      pdfjsLib.GlobalWorkerOptions.workerPort = new Worker(
+        new URL('pdfjs-dist/build/pdf.worker.mjs', import.meta.url),
+        { type: 'module' }
+      );
+    }
 
     // Load the PDF document
     const loadingTask = pdfjsLib.getDocument({
