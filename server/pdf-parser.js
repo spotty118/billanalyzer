@@ -1,10 +1,12 @@
 const extractPdfText = async (buffer) => {
   try {
+    console.log('Starting PDF text extraction...');
+    
     // Use pdf-to-markdown tool from markdownify-mcp server
     const result = await use_mcp_tool({
       serverName: "github.com/zcaceres/markdownify-mcp",
       toolName: "pdf-to-markdown",
-      arguments: { filepath: buffer.toString('base64') },
+      arguments: { filepath: buffer.toString('base64') }
     });
 
     if (result.error) {
@@ -21,8 +23,14 @@ const extractPdfText = async (buffer) => {
       .replace(/\n{3,}/g, '\n\n')        // Normalize line breaks
       .trim();
 
+    console.log('Extracted text from PDF:');
+    console.log(text.slice(0, 500) + '...'); // Log first 500 chars
+    console.log('\nExtracted markdown from PDF:');
+    console.log(result.markdown.slice(0, 500) + '...'); // Log first 500 chars
+
     return { text, markdown: result.markdown };
   } catch (error) {
+    console.error('Error in PDF extraction:', error);
     throw new Error(`Failed to parse PDF: ${error.message}`);
   }
 };
