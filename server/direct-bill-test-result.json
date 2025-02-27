@@ -1,0 +1,124 @@
+{
+  "accountNumber": "Unknown",
+  "billingPeriod": "Dec 12 - Jan 11, 2025",
+  "totalAmount": 646.3,
+  "lineItems": [
+    {
+      "description": "Christopher Adams - Apple Ipad (8TH Generation) (251-215-3255):",
+      "amount": 15.34,
+      "type": "other",
+      "lineNumber": null,
+      "category": "account-wide charges & credits: $335.68",
+      "percentage": null,
+      "isDeviceCharge": true,
+      "raw": "Christopher Adams - Apple Ipad (8TH Generation) (251-215-3255): $15.34"
+    },
+    {
+      "description": "Christopher Adams - Apple iPhone 15 Pro Max (251-747-0017):",
+      "amount": 40.78,
+      "type": "other",
+      "lineNumber": "15",
+      "category": "account-wide charges & credits: $335.68",
+      "percentage": null,
+      "isDeviceCharge": true,
+      "raw": "Christopher Adams - Apple iPhone 15 Pro Max (251-747-0017): $40.78"
+    },
+    {
+      "description": "Christopher Adams - Apple Watch Ultra 2(251-747-0017 - Number Share):",
+      "amount": 10.37,
+      "type": "other",
+      "lineNumber": null,
+      "category": "account-wide charges & credits: $335.68",
+      "percentage": null,
+      "isDeviceCharge": true,
+      "raw": "Christopher Adams - Apple Watch Ultra 2(251-747-0017 - Number Share): $10.37"
+    },
+    {
+      "description": "Apple iPhone 13 (251-747-2221):",
+      "amount": 55,
+      "type": "other",
+      "lineNumber": "13",
+      "category": "apple iphone 15 (251-747-0238) - service removed: $20.01",
+      "percentage": null,
+      "isDeviceCharge": true,
+      "raw": "Apple iPhone 13 (251-747-2221): $55.00"
+    },
+    {
+      "description": "Christopher Adams - Apple iPhone 14 Plus (251-747-2223):",
+      "amount": 42.85,
+      "type": "other",
+      "lineNumber": "14",
+      "category": "apple iphone 15 (251-747-0238) - service removed: $20.01",
+      "percentage": null,
+      "isDeviceCharge": true,
+      "raw": "Christopher Adams - Apple iPhone 14 Plus (251-747-2223): $42.85"
+    },
+    {
+      "description": "Christopher Adams - Apple iPhone 14 (251-747-9281):",
+      "amount": 35.05,
+      "type": "other",
+      "lineNumber": "14",
+      "category": "apple iphone 15 (251-747-0238) - service removed: $20.01",
+      "percentage": null,
+      "isDeviceCharge": true,
+      "raw": "Christopher Adams - Apple iPhone 14 (251-747-9281): $35.05"
+    },
+    {
+      "description": "50% access fee discount from 251-747-2223 - Jan 12 - Feb 11: -",
+      "amount": 7.5,
+      "type": "lineAccess",
+      "lineNumber": null,
+      "category": "plan - more unlimited - jan 12 - feb 11: $30.00",
+      "percentage": 50,
+      "isDeviceCharge": false,
+      "raw": "50% access fee discount from 251-747-2223 - Jan 12 - Feb 11: -$7.50"
+    },
+    {
+      "description": "Device Promo - Get - Credit 11 of 36: -",
+      "amount": 12.77,
+      "type": "promotion",
+      "lineNumber": null,
+      "category": "devices - ipad 9gen 64 silver - payment 11 of 36 ($319.25 remaining) - agreement 1628562967: $12.77",
+      "percentage": null,
+      "isDeviceCharge": true,
+      "raw": "Device Promo - Get - Credit 11 of 36: -$12.77"
+    },
+    {
+      "description": "Bring Your Own Device - Credit 7 of 36 (-",
+      "amount": 290,
+      "type": "promotion",
+      "lineNumber": null,
+      "category": "plan - unlimited plus - jan 12 - feb 11: $52.00",
+      "percentage": null,
+      "isDeviceCharge": true,
+      "raw": "Bring Your Own Device - Credit 7 of 36 (-$290.00 remaining): -$10.00"
+    }
+  ],
+  "otherCharges": [
+    {
+      "description": "Late fee:",
+      "amount": 8.43,
+      "type": "surcharge",
+      "lineNumber": null,
+      "category": "balance from last bill: $327.25",
+      "percentage": null,
+      "isDeviceCharge": false,
+      "raw": "Late fee: $8.43"
+    },
+    {
+      "description": "50% access discount - Jan 12 - Feb 11: -",
+      "amount": 15,
+      "type": "promotion",
+      "lineNumber": null,
+      "category": "plan - more unlimited - jan 12 - feb 11: $30.00",
+      "percentage": 50,
+      "isDeviceCharge": false,
+      "raw": "50% access discount - Jan 12 - Feb 11: -$15.00"
+    }
+  ],
+  "subtotals": {
+    "lineItems": 509.65999999999997,
+    "otherCharges": 23.43,
+    "total": 533.0899999999999
+  }
+}

@@ -95,6 +95,33 @@ function findChargesInText(text) {
         const description = match[descGroup].trim();
         const amount = parseFloat(match[amountGroup]);
 
+        // Skip summary totals and duplicates
+        if (description.toLowerCase().includes('total') || 
+            description.toLowerCase().includes('account-wide') ||
+            description.toLowerCase().includes('one-time charges') ||
+            description.toLowerCase().includes('this month') ||
+            description.toLowerCase().includes('remaining') ||
+            description.toLowerCase().includes('total due') ||
+            description.toLowerCase().includes('unpaid balance') ||
+            description.toLowerCase().includes('the total amount due')) {
+          console.log('Skipping summary charge:', description, amount);
+          continue;
+        }
+
+        // Fix incorrect device payment amounts
+        let correctedAmount = amount;
+        if (description.includes('Payment') && 
+            description.includes('remaining') && 
+            amount > 100) {
+          console.log('Fixing device payment amount:', description, amount);
+          // Extract the correct amount from the description if possible
+          const paymentMatch = line.match(/Payment\s+\d+\s+of\s+\d+\s+\(\$[\d\.]+\s+remaining\)\s*-\s*Agreement\s+\d+:\s+\$(\d+\.\d{2})/);
+          if (paymentMatch) {
+            correctedAmount = parseFloat(paymentMatch[1]);
+            console.log('Corrected amount:', correctedAmount);
+          }
+        }
+
         // Determine charge type
         let chargeType = 'other';
         for (const [type, typePattern] of Object.entries(chargePatterns)) {
@@ -112,19 +139,28 @@ function findChargesInText(text) {
         const percentageMatch = description.match(/(\d+(?:\.\d+)?)\s*%/);
         const percentage = percentageMatch ? parseFloat(percentageMatch[1]) : null;
 
+        // Determine if this is a device-related charge
+        const isDeviceCharge = 
+          description.toLowerCase().includes('iphone') ||
+          description.toLowerCase().includes('ipad') ||
+          description.toLowerCase().includes('watch') ||
+          description.toLowerCase().includes('device') ||
+          description.toLowerCase().includes('phone');
+
         charges.push({
           description,
-          amount,
+          amount: correctedAmount,
           type: chargeType,
           lineNumber,
           category: currentSection || 'other',
           percentage,
+          isDeviceCharge,
           raw: line // Store original line for debugging
         });
 
         console.log('Added charge:', {
           description,
-          amount,
+          amount: correctedAmount,
           type: chargeType,
           lineNumber,
           category: currentSection
@@ -278,9 +314,25 @@ const extractVerizonBillData = async (buffer) => {
 
     // Combine all charges and remove duplicates
     const allCharges = [...rawCharges, ...markdownCharges, ...tableCharges];
+    
+    // Filter out summary charges and duplicates
+    const filteredCharges = allCharges.filter(charge => {
+      // Skip summary totals and duplicates
+      return !(charge.description.toLowerCase().includes('total') || 
+          charge.description.toLowerCase().includes('account-wide') ||
+          charge.description.toLowerCase().includes('one-time charges') ||
+          charge.description.toLowerCase().includes('this month') ||
+          charge.description.toLowerCase().includes('remaining') ||
+          charge.description.toLowerCase().includes('total due') ||
+          charge.description.toLowerCase().includes('unpaid balance') ||
+          charge.description.toLowerCase().includes('the total amount due'));
+    });
+    
+    // Remove duplicates
     const uniqueCharges = new Map();
-    allCharges.forEach(charge => {
-      const key = `${charge.description}-${charge.amount}`;
+    filteredCharges.forEach(charge => {
+      // Use description as a unique key (ignore amount for deduplication)
+      const key = charge.description;
       if (!uniqueCharges.has(key)) {
         uniqueCharges.set(key, charge);
       }
@@ -292,7 +344,8 @@ const extractVerizonBillData = async (buffer) => {
           charge.type === 'lineAccess' || 
           charge.type === 'devicePayment' ||
           charge.description.toLowerCase().includes('line') ||
-          charge.description.toLowerCase().includes('phone')) {
+          charge.description.toLowerCase().includes('phone') ||
+          charge.isDeviceCharge) {
         billData.lineItems.push(charge);
       } else {
         billData.charges.push(charge);
@@ -388,4 +441,4 @@ const extractVerizonBillData = async (buffer) => {
   }
 };
 
-export { extractVerizonBillData };
+export { extractVerizonBillData, findChargesInText };

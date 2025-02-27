@@ -1,0 +1,203 @@
+{
+  "accountNumber": "Unknown",
+  "billingPeriod": "Dec 12 - Jan 11, 2025",
+  "totalAmount": 646.3,
+  "lineItems": [
+    {
+      "description": "Christopher Adams - Apple Ipad (8TH Generation) (251-215-3255):",
+      "amount": 15.34,
+      "type": "other",
+      "lineNumber": null,
+      "category": "other"
+    },
+    {
+      "description": "Christopher Adams - Apple iPhone 15 Pro Max (251-747-0017):",
+      "amount": 40.78,
+      "type": "other",
+      "lineNumber": "15",
+      "category": "other"
+    },
+    {
+      "description": "Christopher Adams - Apple Watch Ultra 2(251-747-0017 - Number Share):",
+      "amount": 10.37,
+      "type": "other",
+      "lineNumber": null,
+      "category": "other"
+    },
+    {
+      "description": "Apple iPhone 15 (251-747-0238) - Service removed:",
+      "amount": 20.01,
+      "type": "other",
+      "lineNumber": "15",
+      "category": "other"
+    },
+    {
+      "description": "Apple iPhone 13 (251-747-2221):",
+      "amount": 55,
+      "type": "other",
+      "lineNumber": "13",
+      "category": "other"
+    },
+    {
+      "description": "Christopher Adams - Apple iPhone 14 Plus (251-747-2223):",
+      "amount": 42.85,
+      "type": "other",
+      "lineNumber": "14",
+      "category": "other"
+    },
+    {
+      "description": "Christopher Adams - Apple iPhone 14 (251-747-9281):",
+      "amount": 35.05,
+      "type": "other",
+      "lineNumber": "14",
+      "category": "other"
+    },
+    {
+      "description": "50% access fee discount from 251-747-2223 - Jan 12 - Feb 11: -",
+      "amount": 7.5,
+      "type": "lineAccess",
+      "lineNumber": null,
+      "category": "other"
+    },
+    {
+      "description": "Devices - IPAD 9GEN 64 SILVER - Payment 11 of 36 (",
+      "amount": 319.25,
+      "type": "other",
+      "lineNumber": null,
+      "category": "other"
+    },
+    {
+      "description": "Services & perks - Wireless Phone Protection - Jan 12 - Feb 11:",
+      "amount": 4.95,
+      "type": "other",
+      "lineNumber": null,
+      "category": "other"
+    }
+  ],
+  "otherCharges": [
+    {
+      "description": "Balance from last bill:",
+      "amount": 327.25,
+      "type": "other",
+      "lineNumber": null,
+      "category": "other"
+    },
+    {
+      "description": "Late fee:",
+      "amount": 8.43,
+      "type": "surcharge",
+      "lineNumber": null,
+      "category": "other"
+    },
+    {
+      "description": "Plan - More Unlimited - Jan 12 - Feb 11:",
+      "amount": 30,
+      "type": "plan",
+      "lineNumber": null,
+      "category": "other"
+    },
+    {
+      "description": "50% access discount - Jan 12 - Feb 11: -",
+      "amount": 15,
+      "type": "promotion",
+      "lineNumber": null,
+      "category": "other"
+    },
+    {
+      "description": "Device Promo - Get - Credit 11 of 36: -",
+      "amount": 12.77,
+      "type": "promotion",
+      "lineNumber": null,
+      "category": "other"
+    },
+    {
+      "description": "Surcharges - Regulatory Charge:",
+      "amount": 0.02,
+      "type": "surcharge",
+      "lineNumber": null,
+      "category": "other"
+    },
+    {
+      "description": "Surcharges - Admin & Telco Recovery Charge:",
+      "amount": 1.6,
+      "type": "surcharge",
+      "lineNumber": null,
+      "category": "other"
+    },
+    {
+      "description": "Taxes & gov fees - AL State Sales Tax:",
+      "amount": 0.51,
+      "type": "surcharge",
+      "lineNumber": null,
+      "category": "other"
+    },
+    {
+      "description": "Taxes & gov fees - Baldwin Cnty Sales Tax:",
+      "amount": 0.38,
+      "type": "surcharge",
+      "lineNumber": null,
+      "category": "other"
+    },
+    {
+      "description": "Taxes & gov fees - Foley City Sales Tax:",
+      "amount": 0.38,
+      "type": "surcharge",
+      "lineNumber": null,
+      "category": "other"
+    },
+    {
+      "description": "Plan - Unlimited Plus - Jan 12 - Feb 11:",
+      "amount": 52,
+      "type": "plan",
+      "lineNumber": null,
+      "category": "other"
+    },
+    {
+      "description": "Bring Your Own Device - Credit 7 of 36 (-",
+      "amount": 290,
+      "type": "promotion",
+      "lineNumber": null,
+      "category": "other"
+    },
+    {
+      "description": "Services & perks - Youtube Premium - Plan perk - Jan 3 - Feb 2:",
+      "amount": 0,
+      "type": "plan",
+      "lineNumber": null,
+      "category": "other"
+    },
+    {
+      "description": "Services & perks - Walmart+ Membership - Plan perk - Dec 17 - Jan 16:",
+      "amount": 0,
+      "type": "plan",
+      "lineNumber": null,
+      "category": "other"
+    },
+    {
+      "description": "Surcharges - Fed Universal Service Charge:",
+      "amount": 0.56,
+      "type": "surcharge",
+      "lineNumber": null,
+      "category": "other"
+    },
+    {
+      "description": "Taxes & gov fees - AL State 911 Fee:",
+      "amount": 2.23,
+      "type": "surcharge",
+      "lineNumber": null,
+      "category": "other"
+    },
+    {
+      "description": "Taxes & gov fees - AL State Cellular Srvc Tax:",
+      "amount": 0.35,
+      "type": "surcharge",
+      "lineNumber": null,
+      "category": "other"
+    }
+  ],
+  "subtotals": {
+    "lineItems": 551.1,
+    "otherCharges": 741.4799999999999,
+    "total": 1292.58
+  }
+}
