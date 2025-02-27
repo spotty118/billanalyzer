@@ -6,13 +6,10 @@ import * as pdfjs from 'pdfjs-dist';
 // Set the worker source for PDF.js
 async function setupPdfWorker() {
   try {
-    const pdfjsWorker = await import('pdfjs-dist/build/pdf.worker.mjs');
-    pdfjs.GlobalWorkerOptions.workerSrc = pdfjsWorker;
+    // Using a string path instead of dynamic import for the worker
+    pdfjs.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
   } catch (error) {
     console.error('Error loading PDF.js worker:', error);
-    // Fallback to CDN if local worker fails
-    pdfjs.GlobalWorkerOptions.workerSrc = 
-      'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
   }
 }
 

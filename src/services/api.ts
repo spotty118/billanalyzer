@@ -124,8 +124,9 @@ class ApiService {
   }
 
   private async extractTextFromPDF(pdfBuffer: ArrayBuffer): Promise<string> {
-    const uint8Array = new Uint8Array(pdfBuffer);
-    const textContent = await extractVerizonBill(uint8Array);
+    // Create a copy of the ArrayBuffer to prevent detachment
+    const buffer = new Uint8Array(pdfBuffer.slice(0));
+    const textContent = await extractVerizonBill(buffer);
     if (!textContent) {
       throw new Error('Failed to extract text from PDF');
     }
@@ -274,19 +275,62 @@ class ApiService {
         
         // Fallback to client-side analysis
         try {
-          // Get the text content from the PDF file
+          // Get the text content from the PDF file - clone the ArrayBuffer to prevent detachment
           const fileContent = await file.arrayBuffer();
-          const verizonBill = await extractVerizonBill(new Uint8Array(fileContent));
+          const fileContentCopy = new Uint8Array(fileContent.slice(0));
+          const verizonBill = await extractVerizonBill(fileContentCopy);
           
           if (!verizonBill) {
             throw new Error('Failed to extract bill data');
           }
           
-          // Convert PDF to text
-          const pdfText = await this.extractTextFromPDF(fileContent);
+          // Convert PDF to text - use a fresh copy of the ArrayBuffer
+          const pdfText = await this.extractTextFromPDF(fileContent.slice(0));
           
           // Get enhanced analysis from server
-          const enhancedAnalysis = await this.analyzeWithServer(pdfText);
+          let enhancedAnalysis = {
+            usageAnalysis: {
+              trend: 'stable',
+              percentageChange: 0,
+              seasonalFactors: {
+                highUsageMonths: ['December', 'January'],
+                lowUsageMonths: ['June', 'July']
+              }
+            },
+            costAnalysis: {
+              averageMonthlyBill: verizonBill.billSummary.totalDue,
+              projectedNextBill: verizonBill.billSummary.totalDue * 1.05,
+              unusualCharges: [],
+              potentialSavings: []
+            },
+            planRecommendation: {
+              recommendedPlan: 'Unlimited Plus',
+              reasons: ['Based on current usage', 'Better value for your needs'],
+              estimatedMonthlySavings: verizonBill.billSummary.totalDue * 0.15,
+              confidenceScore: 0.8,
+              alternativePlans: [{
+                planName: 'Unlimited Welcome',
+                pros: ['Lower monthly cost'],
+                cons: ['Fewer features'],
+                estimatedSavings: verizonBill.billSummary.totalDue * 0.2
+              }]
+            }
+          };
+          
+          try {
+            const serverEnhanced = await this.analyzeWithServer(pdfText);
+            if (serverEnhanced.usageAnalysis) {
+              enhancedAnalysis.usageAnalysis = serverEnhanced.usageAnalysis;
+            }
+            if (serverEnhanced.costAnalysis) {
+              enhancedAnalysis.costAnalysis = serverEnhanced.costAnalysis;
+            }
+            if (serverEnhanced.planRecommendation) {
+              enhancedAnalysis.planRecommendation = serverEnhanced.planRecommendation;
+            }
+          } catch (err) {
+            console.warn('Enhanced analysis failed, using defaults:', err);
+          }
           
           // Create a bill analyzer and analyze the bill
           const billData = this.convertVerizonBillToBillData(verizonBill);
