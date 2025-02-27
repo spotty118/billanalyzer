@@ -25,8 +25,84 @@ async function use_mcp_tool({ serverName, toolName, arguments: args }) {
   }
 }
 
+// Common Verizon charge patterns with more variations
+const chargePatterns = {
+  lineAccess: /(Line Access( Charge)?|Access Fee|Monthly Line|Line Monthly|Line Charge)/i,
+  devicePayment: /(Device Payment|Equipment Charge|Phone Payment|Device Installment|Equipment Installment|Phone Installment)/i,
+  surcharge: /(Federal|State|County|City|Municipal|Regulatory|Universal Service|E911|Emergency|Admin|Recovery|Fee)/i,
+  promotion: /(Promotion|Discount|Credit|Adjustment|Loyalty|Bundle|Auto Pay|Paperless|Promo)/i,
+  plan: /(Plan( Charge)?|Data( Plan)?|Unlimited( Plan)?|5G|LTE|Premium|Play More|Do More|Get More)/i,
+  usage: /(Overage|Extra Data|Pay Per Use|International|Roaming|Additional Data|Usage)/i
+};
+
+// Function to find charges in raw text
+function findChargesInText(text) {
+  const charges = [];
+  const lines = text.split('\n');
+  
+  // Various price patterns
+  const pricePatterns = [
+    /(.+?)\$\s*(-?\d+\.\d{2})/,                    // Standard price format
+    /(.+?)(\d+\.\d{2})\s*dollars/i,                // "dollars" format
+    /(.+?)[^\d](\d+\.\d{2})\s*(?:per|each|\/)/i   // per/each format
+  ];
+
+  let currentSection = null;
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i].trim();
+    if (!line) continue;
+
+    // Check for section headers
+    const sectionMatch = line.match(/^(?:Monthly|Equipment|One[-\s]time|Taxes?|Fees|Surcharges|Credits?|Usage)/i);
+    if (sectionMatch) {
+      currentSection = sectionMatch[0].toLowerCase();
+      continue;
+    }
+
+    // Try each price pattern
+    for (const pattern of pricePatterns) {
+      const match = line.match(pattern);
+      if (match) {
+        const [_, desc, amt] = match;
+        const description = desc.trim();
+        const amount = parseFloat(amt);
+
+        // Determine charge type
+        let chargeType = 'other';
+        for (const [type, pattern] of Object.entries(chargePatterns)) {
+          if (description.match(pattern)) {
+            chargeType = type;
+            break;
+          }
+        }
+
+        // Look for line numbers
+        const lineMatch = description.match(/(?:Line|Phone|Device)\s*(?:#|Number)?\s*(\d+)/i);
+        const lineNumber = lineMatch ? lineMatch[1] : null;
+
+        // Look for percentages
+        const percentageMatch = description.match(/(\d+(?:\.\d+)?)\s*%/);
+        const percentage = percentageMatch ? parseFloat(percentageMatch[1]) : null;
+
+        charges.push({
+          description,
+          amount,
+          type: chargeType,
+          lineNumber,
+          category: currentSection || 'other',
+          percentage
+        });
+        break;
+      }
+    }
+  }
+
+  return charges;
+}
+
 const extractVerizonBillData = async (buffer) => {
   try {
+    console.log('Starting bill analysis...');
     const { text, markdown } = await extractPdfText(buffer);
 
     // Use sequential thinking to analyze the bill over multiple steps
@@ -121,17 +197,26 @@ const extractVerizonBillData = async (buffer) => {
       return items.reduce((sum, item) => sum + item.amount, 0);
     };
 
-    // Common Verizon bill sections
-    const sectionPatterns = {
-      monthly: /^#+\s*(Monthly\s+(Charges|Service)|Account\s+Charges)/i,
-      equipment: /^#+\s*(Equipment\s+Charges|Devices\s*&\s*Equipment)/i,
-      lines: /^#+\s*(Breakdown\s+by\s+Line|Line\s+Details|Phone\s+Lines)/i,
-      onetime: /^#+\s*One[-\s]time\s+Charges/i,
-      taxes: /^#+\s*(Taxes|Fees|Surcharges)/i,
-      credits: /^#+\s*(Credits|Adjustments|Discounts)/i
-    };
+    // First try to find charges in the raw text
+    console.log('Analyzing raw text for charges...');
+    const rawCharges = findChargesInText(text);
+    console.log(`Found ${rawCharges.length} charges in raw text`);
 
-    // Extract line items and charges from markdown structure
+    // Categorize raw charges
+    for (const charge of rawCharges) {
+      if (charge.lineNumber || 
+          charge.type === 'lineAccess' || 
+          charge.type === 'devicePayment' ||
+          charge.description.toLowerCase().includes('line') ||
+          charge.description.toLowerCase().includes('phone')) {
+        billData.lineItems.push(charge);
+      } else {
+        billData.charges.push(charge);
+      }
+    }
+
+    // Then parse the markdown for additional structured content
+    console.log('Parsing markdown for structured content...');
     const lines = markdown.split('\n');
     let currentSection = null;
     let inChargesTable = false;
@@ -139,22 +224,11 @@ const extractVerizonBillData = async (buffer) => {
 
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i].trim();
-
-      // Skip empty lines
       if (!line) continue;
 
-      // Detect section headers
-      for (const [section, pattern] of Object.entries(sectionPatterns)) {
-        if (line.match(pattern)) {
-          currentSection = section;
-          continue;
-        }
-      }
-
-      // Detect table start
+      // Process tables and structured content
       if (line.includes('|')) {
         if (!inChargesTable) {
-          // This might be a header row
           tableHeaders = line.split('|')
             .map(header => header.trim().toLowerCase())
             .filter(Boolean);
@@ -162,81 +236,18 @@ const extractVerizonBillData = async (buffer) => {
           continue;
         }
 
-        // Skip separator row
         if (line.includes('---')) continue;
 
-        // Process table row
         const cells = line.split('|')
           .map(cell => cell.trim())
           .filter(Boolean);
 
         if (cells.length > 1) {
-          // Try to find price and details in any cell
-          let description = '';
-          let amount = null;
-          let lineNumber = null;
-          let chargeType = currentSection || 'other';
-
-          // Common Verizon charge patterns
-          const chargePatterns = {
-            lineAccess: /(Line Access( Charge)?|Access Fee)/i,
-            devicePayment: /(Device Payment|Equipment Charge|Phone Payment)/i,
-            surcharge: /(Federal|State|County|City|Municipal|Regulatory|Universal Service|E911|Emergency)/i,
-            promotion: /(Promotion|Discount|Credit|Adjustment)/i,
-            plan: /(Plan( Charge)?|Data( Plan)?|Unlimited( Plan)?)/i
-          };
-
-          for (let cell of cells) {
-            const priceMatch = cell.match(/\$\s*(\d+\.\d{2})/);
-            const lineMatch = cell.match(/(?:Line|Phone|Device)\s*(?:#|Number)?\s*(\d+)/i);
-
-            if (priceMatch) {
-              amount = parseFloat(priceMatch[1]);
-            } else if (lineMatch) {
-              lineNumber = lineMatch[1];
-              description = cell;
-            } else if (!description && cell.length > 0) {
-              description = cell;
-              
-              // Determine charge type from description
-              for (const [type, pattern] of Object.entries(chargePatterns)) {
-                if (cell.match(pattern)) {
-                  chargeType = type;
-                  break;
-                }
-              }
-            }
-          }
-
-          // Handle multi-line descriptions (look ahead for continuation)
-          let nextIndex = i + 1;
-          while (nextIndex < lines.length) {
-            const nextLine = lines[nextIndex].trim();
-            if (nextLine && !nextLine.includes('|') && !nextLine.match(/^#+/) && !nextLine.includes('$')) {
-              description += ' ' + nextLine;
-              i = nextIndex;
-            } else {
-              break;
-            }
-            nextIndex++;
-          }
-
-          if (amount !== null) {
-            const charge = {
-              description: description,
-              amount: amount,
-              type: chargeType,
-              lineNumber: lineNumber,
-              category: currentSection
-            };
-
-            const isLineItem = lineNumber || 
-                             description.toLowerCase().includes('line') || 
-                             description.toLowerCase().includes('phone') ||
-                             chargeType === 'lineAccess' ||
-                             chargeType === 'devicePayment';
-
-            if (isLineItem) {
+          const charge = processTableRow(cells, currentSection, tableHeaders);
+          if (charge) {
+            if (charge.lineNumber || 
+                charge.type === 'lineAccess' || 
+                charge.type === 'devicePayment') {
               billData.lineItems.push(charge);
             } else {
               billData.charges.push(charge);
@@ -244,72 +255,57 @@ const extractVerizonBillData = async (buffer) => {
           }
         }
       } else {
-        // Check for non-table price listings
+        // Check for section headers
+        for (const [type, pattern] of Object.entries(chargePatterns)) {
+          if (line.match(pattern)) {
+            currentSection = type;
+            break;
+          }
+        }
+
+        // Process non-table lines for charges
         const priceMatch = line.match(/(.+?)\$\s*(-?\d+\.\d{2})/);
         if (priceMatch) {
-          const [_, desc, amt] = priceMatch;
-          let chargeType = currentSection || 'other';
-          let description = desc.trim();
-
-          // Look for percentage calculations in description
-          const percentageMatch = description.match(/(\d+(?:\.\d+)?)\s*%/);
-          let percentage = percentageMatch ? parseFloat(percentageMatch[1]) : null;
-
-          // Determine charge type using same patterns as table processing
-          for (const [type, pattern] of Object.entries(chargePatterns)) {
-            if (description.match(pattern)) {
-              chargeType = type;
-              break;
-            }
-          }
-
-          // Handle multi-line descriptions
-          let nextIndex = i + 1;
-          while (nextIndex < lines.length) {
-            const nextLine = lines[nextIndex].trim();
-            if (nextLine && !nextLine.includes('|') && !nextLine.match(/^#+/) && !nextLine.includes('$')) {
-              description += ' ' + nextLine;
-              i = nextIndex;
+          const charge = processChargeLine(priceMatch, line, currentSection);
+          if (charge) {
+            if (charge.lineNumber || 
+                charge.type === 'lineAccess' || 
+                charge.type === 'devicePayment') {
+              billData.lineItems.push(charge);
             } else {
-              break;
+              billData.charges.push(charge);
             }
-            nextIndex++;
-          }
-
-          // Extract line number if present
-          const lineMatch = description.match(/(?:Line|Phone|Device)\s*(?:#|Number)?\s*(\d+)/i);
-          const lineNumber = lineMatch ? lineMatch[1] : null;
-
-          const charge = {
-            description: description,
-            amount: parseFloat(amt),
-            type: chargeType,
-            lineNumber: lineNumber,
-            category: currentSection,
-            percentage: percentage
-          };
-
-          const isLineItem = lineNumber || 
-                           description.toLowerCase().includes('line') || 
-                           description.toLowerCase().includes('phone') ||
-                           chargeType === 'lineAccess' ||
-                           chargeType === 'devicePayment';
-
-          if (isLineItem) {
-            billData.lineItems.push(charge);
-          } else {
-            billData.charges.push(charge);
           }
         }
         inChargesTable = false;
       }
     }
 
+    // Remove duplicates based on description and amount
+    const uniqueCharges = new Map();
+    [...billData.lineItems, ...billData.charges].forEach(charge => {
+      const key = `${charge.description}-${charge.amount}`;
+      if (!uniqueCharges.has(key)) {
+        uniqueCharges.set(key, charge);
+      }
+    });
+
+    billData.lineItems = Array.from(uniqueCharges.values())
+      .filter(charge => charge.lineNumber || 
+                       charge.type === 'lineAccess' || 
+                       charge.type === 'devicePayment');
+    
+    billData.charges = Array.from(uniqueCharges.values())
+      .filter(charge => !(charge.lineNumber || 
+                         charge.type === 'lineAccess' || 
+                         charge.type === 'devicePayment'));
+
     // Validate total amount
     const calculatedTotal = calculateSubtotal(billData.lineItems) + calculateSubtotal(billData.charges);
+    console.log(`Calculated total: ${calculatedTotal}, Bill total: ${billData.totalAmount}`);
+    
     if (billData.totalAmount && Math.abs(calculatedTotal - billData.totalAmount) > 0.01) {
       console.warn(`Warning: Calculated total (${calculatedTotal}) doesn't match bill total (${billData.totalAmount})`);
-      // Use sequential thinking to analyze discrepancy
       const validationAnalysis = await use_mcp_tool({
         serverName: "github.com/modelcontextprotocol/servers/tree/main/src/sequentialthinking",
         toolName: "sequentialthinking",
@@ -325,9 +321,8 @@ const extractVerizonBillData = async (buffer) => {
       }
     }
 
-
     // Get insights from sequential analysis
-    const insights = sequentialAnalysis[3]?.result || {}; // Last step contains insights
+    const insights = sequentialAnalysis[3]?.result || {};
 
     const result = {
       ...billData,
@@ -341,17 +336,86 @@ const extractVerizonBillData = async (buffer) => {
                `Number of Line Items: ${billData.lineItems.length}\n` +
                `Number of Other Charges: ${billData.charges.length}`,
       insights: {
-        tables: sequentialAnalysis[1]?.result || {}, // Table parsing results
-        charges: sequentialAnalysis[2]?.result || {}, // Charge analysis results
-        summary: insights // Final insights and recommendations
+        tables: sequentialAnalysis[1]?.result || {},
+        charges: sequentialAnalysis[2]?.result || {},
+        summary: insights
       }
     };
 
     return result;
 
   } catch (error) {
+    console.error('Error in bill analysis:', error);
     throw new Error(`Failed to parse PDF: ${error.message}`);
   }
 };
+
+function processTableRow(cells, currentSection, tableHeaders) {
+  let description = '';
+  let amount = null;
+  let lineNumber = null;
+  
+  for (let cell of cells) {
+    const priceMatch = cell.match(/\$\s*(-?\d+\.\d{2})/);
+    const lineMatch = cell.match(/(?:Line|Phone|Device)\s*(?:#|Number)?\s*(\d+)/i);
+    
+    if (priceMatch) {
+      amount = parseFloat(priceMatch[1]);
+    } else if (lineMatch) {
+      lineNumber = lineMatch[1];
+      description = cell;
+    } else if (!description && cell.length > 0) {
+      description = cell;
+    }
+  }
+
+  if (amount !== null) {
+    let chargeType = currentSection || 'other';
+    for (const [type, pattern] of Object.entries(chargePatterns)) {
+      if (description.match(pattern)) {
+        chargeType = type;
+        break;
+      }
+    }
+
+    return {
+      description: description.trim(),
+      amount,
+      type: chargeType,
+      lineNumber,
+      category: currentSection || 'other'
+    };
+  }
+
+  return null;
+}
+
+function processChargeLine(priceMatch, line, currentSection) {
+  const [_, desc, amt] = priceMatch;
+  let description = desc.trim();
+  
+  const lineMatch = description.match(/(?:Line|Phone|Device)\s*(?:#|Number)?\s*(\d+)/i);
+  const lineNumber = lineMatch ? lineMatch[1] : null;
+  
+  const percentageMatch = description.match(/(\d+(?:\.\d+)?)\s*%/);
+  const percentage = percentageMatch ? parseFloat(percentageMatch[1]) : null;
+
+  let chargeType = currentSection || 'other';
+  for (const [type, pattern] of Object.entries(chargePatterns)) {
+    if (description.match(pattern)) {
+      chargeType = type;
+      break;
+    }
+  }
+
+  return {
+    description,
+    amount: parseFloat(amt),
+    type: chargeType,
+    lineNumber,
+    category: currentSection,
+    percentage
+  };
+}
 
 export { extractVerizonBillData };
