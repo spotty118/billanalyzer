@@ -379,6 +379,84 @@ export function enhanceVerizonBillData(billData) {
     }
   });
   
+  // Convert the lineDetails into the lineItems format expected by the application
+  enhancedBillData.lineDetails.forEach(line => {
+    // Add plan charge
+    if (line.details.planCost > 0) {
+      enhancedBillData.lineItems.push({
+        id: `plan-${line.phoneNumber}`,
+        description: `${line.details.plan} (${line.phoneNumber})`,
+        amount: line.details.planCost,
+        type: 'plan',
+        category: 'recurring',
+        phoneNumber: line.phoneNumber
+      });
+    }
+    
+    // Add plan discount if applicable
+    if (line.details.planDiscount > 0) {
+      enhancedBillData.lineItems.push({
+        id: `discount-${line.phoneNumber}`,
+        description: `50% access discount (${line.phoneNumber})`,
+        amount: -line.details.planDiscount, // Negative for a discount
+        type: 'discount',
+        category: 'recurring',
+        phoneNumber: line.phoneNumber
+      });
+    }
+    
+    // Add device payment
+    if (line.details.devicePaymentAmount > 0) {
+      enhancedBillData.lineItems.push({
+        id: `device-${line.phoneNumber}`,
+        description: `Device payment: ${line.deviceName} (${line.phoneNumber})`,
+        amount: line.details.devicePaymentAmount,
+        type: 'device_payment',
+        category: 'recurring',
+        phoneNumber: line.phoneNumber,
+        metadata: {
+          remaining: line.details.devicePayment
+        }
+      });
+    }
+    
+    // Add protection plan if applicable
+    if (line.details.protection > 0) {
+      enhancedBillData.lineItems.push({
+        id: `protection-${line.phoneNumber}`,
+        description: `Wireless Phone Protection (${line.phoneNumber})`,
+        amount: line.details.protection,
+        type: 'protection',
+        category: 'recurring',
+        phoneNumber: line.phoneNumber
+      });
+    }
+    
+    // Add service perks if applicable
+    if (line.details.perks > 0) {
+      enhancedBillData.lineItems.push({
+        id: `perks-${line.phoneNumber}`,
+        description: `Premium Services (${line.phoneNumber})`,
+        amount: line.details.perks,
+        type: 'service',
+        category: 'recurring',
+        phoneNumber: line.phoneNumber
+      });
+    }
+    
+    // Add taxes and surcharges
+    if (line.details.taxes > 0) {
+      enhancedBillData.lineItems.push({
+        id: `taxes-${line.phoneNumber}`,
+        description: `Taxes & Fees (${line.phoneNumber})`,
+        amount: line.details.taxes,
+        type: 'tax',
+        category: 'regulatory',
+        phoneNumber: line.phoneNumber
+      });
+    }
+  });
+  
   // Store existing charges that couldn't be associated with phone lines
   const allCharges = [...billData.lineItems, ...billData.charges];
   const assignedChargeIds = new Set();
