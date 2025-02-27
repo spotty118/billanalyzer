@@ -288,9 +288,9 @@ class ApiService {
           const pdfText = await this.extractTextFromPDF(fileContent.slice(0));
           
           // Get enhanced analysis from server
-          let enhancedAnalysis = {
+          const defaultAnalysis = {
             usageAnalysis: {
-              trend: 'stable',
+              trend: 'stable' as const,
               percentageChange: 0,
               seasonalFactors: {
                 highUsageMonths: ['December', 'January'],
@@ -300,8 +300,16 @@ class ApiService {
             costAnalysis: {
               averageMonthlyBill: verizonBill.billSummary.totalDue,
               projectedNextBill: verizonBill.billSummary.totalDue * 1.05,
-              unusualCharges: [],
-              potentialSavings: []
+              unusualCharges: [] as Array<{
+                description: string;
+                amount: number;
+                reason: string;
+              }>,
+              potentialSavings: [] as Array<{
+                description: string;
+                estimatedSaving: number;
+                confidence: number;
+              }>
             },
             planRecommendation: {
               recommendedPlan: 'Unlimited Plus',
@@ -317,16 +325,27 @@ class ApiService {
             }
           };
           
+          let enhancedAnalysis = { ...defaultAnalysis };
+          
           try {
             const serverEnhanced = await this.analyzeWithServer(pdfText);
             if (serverEnhanced.usageAnalysis) {
-              enhancedAnalysis.usageAnalysis = serverEnhanced.usageAnalysis;
+              enhancedAnalysis.usageAnalysis = {
+                ...defaultAnalysis.usageAnalysis,
+                ...serverEnhanced.usageAnalysis
+              };
             }
             if (serverEnhanced.costAnalysis) {
-              enhancedAnalysis.costAnalysis = serverEnhanced.costAnalysis;
+              enhancedAnalysis.costAnalysis = {
+                ...defaultAnalysis.costAnalysis,
+                ...serverEnhanced.costAnalysis
+              };
             }
             if (serverEnhanced.planRecommendation) {
-              enhancedAnalysis.planRecommendation = serverEnhanced.planRecommendation;
+              enhancedAnalysis.planRecommendation = {
+                ...defaultAnalysis.planRecommendation,
+                ...serverEnhanced.planRecommendation
+              };
             }
           } catch (err) {
             console.warn('Enhanced analysis failed, using defaults:', err);
@@ -363,9 +382,9 @@ class ApiService {
             },
             summary: `Bill analysis for account ${verizonBill.accountInfo.accountNumber}`,
             usageAnalysis: {
-              trend: enhancedAnalysis.usageAnalysis?.trend || 'stable',
-              percentageChange: enhancedAnalysis.usageAnalysis?.percentageChange || 0,
-              seasonalFactors: enhancedAnalysis.usageAnalysis?.seasonalFactors,
+              trend: enhancedAnalysis.usageAnalysis.trend,
+              percentageChange: enhancedAnalysis.usageAnalysis.percentageChange,
+              seasonalFactors: enhancedAnalysis.usageAnalysis.seasonalFactors,
               avg_data_usage_gb: (baseAnalysis as UsageAnalysisResult).avg_data_usage_gb,
               avg_talk_minutes: (baseAnalysis as UsageAnalysisResult).avg_talk_minutes,
               avg_text_count: (baseAnalysis as UsageAnalysisResult).avg_text_count,
