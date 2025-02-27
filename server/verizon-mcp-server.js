@@ -1,6 +1,7 @@
 import express from 'express';
 import multer from 'multer';
 import { extractVerizonBillData } from './bill-parser.js';
+import { enhancedAnalysis } from './enhanced-bill-analysis.js';
 
 const app = express();
 const port = process.env.PORT || 4000; // Default port for Verizon MCP Server
@@ -277,7 +278,7 @@ async function parsePlansFromMarkdown(markdown) {
   return plans;
 }
 
-// Endpoint for bill analysis
+// Basic bill analysis endpoint
 app.post('/analyze-bill', upload.single('file'), async (req, res) => {
   try {
     if (!req.file) {
@@ -293,6 +294,27 @@ app.post('/analyze-bill', upload.single('file'), async (req, res) => {
   } catch (error) {
     console.error('Error analyzing bill:', error);
     res.status(500).json({ error: 'Failed to analyze bill' });
+  }
+});
+
+// Enhanced bill analysis endpoint
+app.post('/analyze-bill/enhanced', express.json(), async (req, res) => {
+  try {
+    const { billText } = req.body;
+    
+    if (!billText) {
+      return res.status(400).json({ error: 'No bill text provided' });
+    }
+
+    // Parse the bill text back into structured data
+    const billData = JSON.parse(billText);
+
+    // Perform enhanced analysis
+    const analysis = enhancedAnalysis(billData);
+    res.json(analysis);
+  } catch (error) {
+    console.error('Error in enhanced analysis:', error);
+    res.status(500).json({ error: 'Failed to perform enhanced analysis' });
   }
 });
 

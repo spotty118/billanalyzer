@@ -3,7 +3,7 @@ import { AxiosError } from 'axios';
 import { ApiResponse, ApiError } from '@/types';
 import { VerizonBillAnalyzer } from '@/utils/bill-analyzer/analyzer';
 import { extractVerizonBill } from '@/utils/bill-analyzer/extractor';
-import type { BillData, VerizonBill } from '@/utils/bill-analyzer/types';
+import type { BillData, VerizonBill, UsageAnalysisResult } from '@/utils/bill-analyzer/types';
 import { spawn } from 'child_process';
 
 interface McpResponse<T> {
@@ -139,47 +139,29 @@ class ApiService {
     return JSON.stringify(textContent);
   }
 
-  private async callMcpTool<T>(toolName: string, args: { billText: string }): Promise<McpResponse<T>> {
-    const mcpProcess = spawn('node', [
-      '/Users/justincornelius/Documents/Cline/MCP/bill-analysis-server/dist/index.js'
-    ], {
-      stdio: ['pipe', 'pipe', 'pipe']
-    });
+  private async analyzeWithServer(pdfText: string): Promise<{
+    usageAnalysis?: UsagePatternResponse;
+    costAnalysis?: CostAnalysisResponse;
+    planRecommendation?: PlanRecommendationResponse;
+  }> {
+    try {
+      const response = await fetch(`${this.apiBaseUrl}/api/analyze-bill/enhanced`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ billText: pdfText }),
+      });
 
-    const request = {
-      jsonrpc: '2.0',
-      id: 1,
-      method: 'call_tool',
-      params: {
-        name: toolName,
-        arguments: args
+      if (!response.ok) {
+        throw new Error('Failed to get enhanced analysis');
       }
-    };
 
-    mcpProcess.stdin.write(JSON.stringify(request));
-    mcpProcess.stdin.end();
-
-    return new Promise<McpResponse<T>>((resolve, reject) => {
-      let data = '';
-      mcpProcess.stdout.on('data', (chunk: Buffer) => {
-        data += chunk;
-      });
-
-      mcpProcess.stdout.on('end', () => {
-        try {
-          const response = JSON.parse(data);
-          if (response.error) {
-            reject(new Error(response.error.message));
-          } else {
-            resolve(response);
-          }
-        } catch (error) {
-          reject(error);
-        }
-      });
-
-      mcpProcess.on('error', reject);
-    });
+      return await response.json();
+    } catch (error) {
+      console.error('Enhanced analysis failed:', error);
+      throw error;
+    }
   }
 
   private handleError(error: AxiosError<ErrorResponse> | Error): ApiError {
@@ -310,10 +292,8 @@ class ApiService {
           // Convert PDF to text
           const pdfText = await this.extractTextFromPDF(fileContent);
           
-          // Call MCP bill analysis tools
-          const usagePatterns = await this.callMcpTool<UsagePatternResponse>('analyze_usage_patterns', { billText: pdfText });
-          const costAnalysis = await this.callMcpTool<CostAnalysisResponse>('analyze_costs', { billText: pdfText });
-          const planRecommendation = await this.callMcpTool<PlanRecommendationResponse>('recommend_plan', { billText: pdfText });
+          // Get enhanced analysis from server
+          const enhancedAnalysis = await this.analyzeWithServer(pdfText);
           
           // Create a bill analyzer and analyze the bill
           const billData = this.convertVerizonBillToBillData(verizonBill);
@@ -346,11 +326,18 @@ class ApiService {
             },
             summary: `Bill analysis for account ${verizonBill.accountInfo.accountNumber}`,
             usageAnalysis: {
-              ...baseAnalysis,
-              ...usagePatterns.result
+              trend: enhancedAnalysis.usageAnalysis?.trend || 'stable',
+              percentageChange: enhancedAnalysis.usageAnalysis?.percentageChange || 0,
+              seasonalFactors: enhancedAnalysis.usageAnalysis?.seasonalFactors,
+              avg_data_usage_gb: (baseAnalysis as UsageAnalysisResult).avg_data_usage_gb,
+              avg_talk_minutes: (baseAnalysis as UsageAnalysisResult).avg_talk_minutes,
+              avg_text_count: (baseAnalysis as UsageAnalysisResult).avg_text_count,
+              high_data_users: (baseAnalysis as UsageAnalysisResult).high_data_users,
+              high_talk_users: (baseAnalysis as UsageAnalysisResult).high_talk_users,
+              high_text_users: (baseAnalysis as UsageAnalysisResult).high_text_users
             },
-            costAnalysis: costAnalysis.result,
-            planRecommendation: planRecommendation.result
+            costAnalysis: enhancedAnalysis.costAnalysis,
+            planRecommendation: enhancedAnalysis.planRecommendation
           };
           
           console.log('Client-side analysis successful:', analysis);
