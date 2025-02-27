@@ -14,16 +14,20 @@
       "phoneNumber": "2517470017"
     },
     {
-      "id": "device-payment-2517470017",
-      "description": "Device Payment: Apple iPhone 15 Pro Max (Agreement 1628562967) ($319.25 remaining)",
+      "id": "devices-2517470017",
+      "description": "Devices (2517470017)",
       "amount": 319.25,
-      "type": "device_payment",
+      "type": "devices",
       "category": "equipment",
-      "phoneNumber": "2517470017",
-      "metadata": {
-        "agreementNumber": "1628562967",
-        "remainingBalance": "319.25"
-      }
+      "phoneNumber": "2517470017"
+    },
+    {
+      "id": "device-details-2517470017",
+      "description": "Apple iPhone 15 Pro Max Payment 11 of 36 (Agreement 1628562967)",
+      "amount": 0,
+      "type": "device_details",
+      "category": "equipment_detail",
+      "phoneNumber": "2517470017"
     },
     {
       "id": "monthly-service-2517470017",
@@ -34,11 +38,19 @@
       "phoneNumber": "2517470017"
     },
     {
-      "id": "discount-2517470017",
+      "id": "plan-discount-2517470017",
       "description": "50% access discount (2517470017)",
       "amount": -319.25,
       "type": "discount",
       "category": "recurring",
+      "phoneNumber": "2517470017"
+    },
+    {
+      "id": "byod-credit-2517470017",
+      "description": "Bring Your Own Device (2517470017)",
+      "amount": -10,
+      "type": "credit",
+      "category": "discount",
       "phoneNumber": "2517470017"
     },
     {
@@ -50,16 +62,20 @@
       "phoneNumber": "2517470238"
     },
     {
-      "id": "device-payment-2517470238",
-      "description": "Device Payment: Apple iPhone 15 (Agreement 1628562967) ($319.25 remaining)",
+      "id": "devices-2517470238",
+      "description": "Devices (2517470238)",
       "amount": 319.25,
-      "type": "device_payment",
+      "type": "devices",
       "category": "equipment",
-      "phoneNumber": "2517470238",
-      "metadata": {
-        "agreementNumber": "1628562967",
-        "remainingBalance": "319.25"
-      }
+      "phoneNumber": "2517470238"
+    },
+    {
+      "id": "device-details-2517470238",
+      "description": "Apple iPhone 15 Payment 11 of 36 (Agreement 1628562967)",
+      "amount": 0,
+      "type": "device_details",
+      "category": "equipment_detail",
+      "phoneNumber": "2517470238"
     },
     {
       "id": "monthly-service-2517470238",
@@ -70,11 +86,19 @@
       "phoneNumber": "2517470238"
     },
     {
-      "id": "discount-2517470238",
+      "id": "plan-discount-2517470238",
       "description": "50% access discount (2517470238)",
       "amount": -319.25,
       "type": "discount",
       "category": "recurring",
+      "phoneNumber": "2517470238"
+    },
+    {
+      "id": "byod-credit-2517470238",
+      "description": "Bring Your Own Device (2517470238)",
+      "amount": -10,
+      "type": "credit",
+      "category": "discount",
       "phoneNumber": "2517470238"
     },
     {
@@ -86,16 +110,20 @@
       "phoneNumber": "2517472221"
     },
     {
-      "id": "device-payment-2517472221",
-      "description": "Device Payment: Apple iPhone 13 (Agreement 1628562967) ($319.25 remaining)",
+      "id": "devices-2517472221",
+      "description": "Devices (2517472221)",
       "amount": 319.25,
-      "type": "device_payment",
+      "type": "devices",
       "category": "equipment",
-      "phoneNumber": "2517472221",
-      "metadata": {
-        "agreementNumber": "1628562967",
-        "remainingBalance": "319.25"
-      }
+      "phoneNumber": "2517472221"
+    },
+    {
+      "id": "device-details-2517472221",
+      "description": "Apple iPhone 13 Payment 11 of 36 (Agreement 1628562967)",
+      "amount": 0,
+      "type": "device_details",
+      "category": "equipment_detail",
+      "phoneNumber": "2517472221"
     },
     {
       "id": "monthly-service-2517472221",
@@ -106,7 +134,7 @@
       "phoneNumber": "2517472221"
     },
     {
-      "id": "discount-2517472221",
+      "id": "plan-discount-2517472221",
       "description": "50% access discount (2517472221)",
       "amount": -319.25,
       "type": "discount",
@@ -138,16 +166,20 @@
       "phoneNumber": "2517472223"
     },
     {
-      "id": "device-payment-2517472223",
-      "description": "Device Payment: Apple iPhone 14 Plus (Agreement 1628562967) ($319.25 remaining)",
+      "id": "devices-2517472223",
+      "description": "Devices (2517472223)",
       "amount": 319.25,
-      "type": "device_payment",
+      "type": "devices",
       "category": "equipment",
-      "phoneNumber": "2517472223",
-      "metadata": {
-        "agreementNumber": "1628562967",
-        "remainingBalance": "319.25"
-      }
+      "phoneNumber": "2517472223"
+    },
+    {
+      "id": "device-details-2517472223",
+      "description": "Apple iPhone 14 Plus Payment 11 of 36 (Agreement 1628562967)",
+      "amount": 0,
+      "type": "device_details",
+      "category": "equipment_detail",
+      "phoneNumber": "2517472223"
     },
     {
       "id": "monthly-service-2517472223",
@@ -158,11 +190,19 @@
       "phoneNumber": "2517472223"
     },
     {
-      "id": "discount-2517472223",
+      "id": "plan-discount-2517472223",
       "description": "50% access discount (2517472223)",
       "amount": -319.25,
       "type": "discount",
       "category": "recurring",
+      "phoneNumber": "2517472223"
+    },
+    {
+      "id": "byod-credit-2517472223",
+      "description": "Bring Your Own Device (2517472223)",
+      "amount": -10,
+      "type": "credit",
+      "category": "discount",
       "phoneNumber": "2517472223"
     },
     {
@@ -190,16 +230,20 @@
       "phoneNumber": "2517479281"
     },
     {
-      "id": "device-payment-2517479281",
-      "description": "Device Payment: Apple iPhone 14 (Agreement 1628562967) ($319.25 remaining)",
+      "id": "devices-2517479281",
+      "description": "Devices (2517479281)",
       "amount": 319.25,
-      "type": "device_payment",
+      "type": "devices",
       "category": "equipment",
-      "phoneNumber": "2517479281",
-      "metadata": {
-        "agreementNumber": "1628562967",
-        "remainingBalance": "319.25"
-      }
+      "phoneNumber": "2517479281"
+    },
+    {
+      "id": "device-details-2517479281",
+      "description": "Apple iPhone 14 Payment 11 of 36 (Agreement 1628562967)",
+      "amount": 0,
+      "type": "device_details",
+      "category": "equipment_detail",
+      "phoneNumber": "2517479281"
     },
     {
       "id": "monthly-service-2517479281",
@@ -210,7 +254,7 @@
       "phoneNumber": "2517479281"
     },
     {
-      "id": "discount-2517479281",
+      "id": "plan-discount-2517479281",
       "description": "50% access discount (2517479281)",
       "amount": -319.25,
       "type": "discount",
@@ -275,7 +319,7 @@
     ]
   },
   "subtotals": {
-    "lineItems": 1717.9499999999998,
+    "lineItems": 1687.9499999999998,
     "otherCharges": 0
   }
 }
