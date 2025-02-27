@@ -1,77 +1,67 @@
 
 import express from 'express';
-import multer from 'multer';
 import cors from 'cors';
+import dotenv from 'dotenv';
+import path from 'path';
 import { fileURLToPath } from 'url';
-import { dirname, join } from 'path';
-import { extractVerizonBillData } from './bill-parser.js';
+import billAnalyzerProxy from './bill-analyzer-proxy.js';
+import proxyHandler from './proxy.js';
+
+dotenv.config();
 
 const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
+const __dirname = path.dirname(__filename);
 
 const app = express();
-const upload = multer({ 
-  storage: multer.memoryStorage(),
-  limits: { fileSize: 10 * 1024 * 1024 } // 10MB limit
-});
+const PORT = process.env.PORT || 3001;
 
-app.use(cors());
+// Parse JSON bodies
 app.use(express.json());
 
-// Analyze bill endpoint
-app.post('/api/analyze-bill', upload.single('file'), async (req, res) => {
-  try {
-    if (!req.file) {
-      return res.status(400).json({ error: 'No file uploaded' });
-    }
+// Configure CORS
+const allowedOrigins = process.env.ALLOWED_ORIGINS 
+  ? process.env.ALLOWED_ORIGINS.split(',') 
+  : ['http://localhost:8080', 'http://localhost:5173', 'http://localhost:3000'];
 
-    if (req.file.mimetype !== 'application/pdf') {
-      return res.status(400).json({ error: 'File must be a PDF' });
-    }
-
-    console.log(`Processing bill file: ${req.file.originalname} (${req.file.size} bytes)`);
+app.use(cors({
+  origin: function(origin, callback) {
+    // Allow requests with no origin (like mobile apps, curl, etc.)
+    if (!origin) return callback(null, true);
     
-    // Use the enhanced bill parser
-    const result = await extractVerizonBillData(req.file.buffer);
-    
-    // Format the response to match the frontend's expected structure
-    const response = {
-      totalAmount: result.totalAmount || 0,
-      accountNumber: result.accountNumber || 'Unknown',
-      billingPeriod: result.billingPeriod || 'Unknown',
-      charges: result.charges.map(charge => ({
-        description: charge.description,
-        amount: charge.amount,
-        type: charge.type
-      })),
-      lineItems: result.lineItems.map(item => ({
-        description: item.description,
-        amount: item.amount,
-        type: item.type
-      })),
-      subtotals: {
-        lineItems: result.subtotals?.lineItems || 0,
-        otherCharges: result.subtotals?.otherCharges || 0
-      },
-      summary: result.summary || 'Bill analysis completed'
-    };
+    if (allowedOrigins.indexOf(origin) === -1) {
+      const msg = `The CORS policy for this site does not allow access from the specified origin: ${origin}`;
+      return callback(new Error(msg), false);
+    }
+    return callback(null, true);
+  },
+  credentials: true
+}));
 
-    console.log('Bill analysis completed successfully');
-    return res.json(response);
-  } catch (error) {
-    console.error('Error analyzing bill:', error);
-    return res.status(500).json({ 
-      error: error.message || 'Failed to analyze bill' 
-    });
-  }
+// Logging middleware
+app.use((req, res, next) => {
+  console.log(`${new Date().toISOString()} - ${req.method} ${req.url}`);
+  next();
 });
+
+// API endpoints
+app.use('/api', billAnalyzerProxy);
+app.use('/api/proxy', proxyHandler);
 
 // Health check endpoint
-app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok' });
+app.get('/health', (req, res) => {
+  res.status(200).json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
-const PORT = process.env.PORT || 3001;
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+// Handle errors
+app.use((err, req, res, next) => {
+  console.error(`Error processing request: ${err.message}`);
+  res.status(500).json({ error: err.message || 'Internal Server Error' });
 });
+
+// Start the server
+app.listen(PORT, () => {
+  console.log(`Veriplan server running on port ${PORT}`);
+  console.log(`Allowed origins: ${allowedOrigins.join(', ')}`);
+});
+
+export default app;

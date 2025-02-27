@@ -1,3 +1,4 @@
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Upload } from "lucide-react";
@@ -7,6 +8,7 @@ import { ErrorBoundary } from "@/components/ui/error-boundary";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useState } from "react";
 import { formatCurrency } from "@/data/verizonPlans";
+import { useToast } from "@/components/ui/use-toast";
 
 interface BillAnalysis {
   totalAmount: number | null;
@@ -134,6 +136,7 @@ const AnalysisResults = ({ analysis }: { analysis: BillAnalysis }) => (
 export function BillAnalyzer() {
   const [analysisResult, setAnalysisResult] = useState<BillAnalysis | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const { toast } = useToast();
   const {
     file,
     isLoading,
@@ -157,29 +160,46 @@ export function BillAnalyzer() {
       
       if (result.error) {
         console.error('API returned error:', result.error);
+        toast({
+          variant: "destructive",
+          title: "Error analyzing bill",
+          description: result.error.message || "An unexpected error occurred"
+        });
         throw new Error(result.error.message);
       }
 
       if (!result.data) {
         console.error('No data in analysis result');
+        toast({
+          variant: "destructive",
+          title: "Error analyzing bill",
+          description: "No analysis data received"
+        });
         throw new Error('No analysis data received');
       }
 
       // Validate the response data structure
       if (!result.data.totalAmount && result.data.totalAmount !== 0) {
         console.error('Invalid analysis data - missing totalAmount');
+        toast({
+          variant: "destructive",
+          title: "Error analyzing bill",
+          description: "Failed to properly parse bill data"
+        });
         throw new Error('Invalid analysis data structure');
       }
 
       setAnalysisResult(result.data);
       console.log('Analysis successful:', result.data);
+      
+      toast({
+        title: "Analysis Complete",
+        description: "Your bill has been successfully analyzed."
+      });
     } catch (error) {
       console.error('Bill analysis error:', error);
       reset();
-      if (error instanceof Error) {
-        throw error;
-      }
-      throw new Error('Failed to analyze bill');
+      // Toast notification for error already shown above
     } finally {
       setIsAnalyzing(false);
     }

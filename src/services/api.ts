@@ -45,8 +45,12 @@ interface BillAnalysis {
 
 class ApiService {
   private static instance: ApiService;
+  private apiBaseUrl: string;
 
-  private constructor() {}
+  private constructor() {
+    // Get the API base URL from environment or use fallback
+    this.apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001';
+  }
 
   public static getInstance(): ApiService {
     if (!ApiService.instance) {
@@ -55,11 +59,19 @@ class ApiService {
     return ApiService.instance;
   }
 
-  private handleError(error: AxiosError<ErrorResponse>): ApiError {
-    console.error('API Error:', error.response?.data || error.message);
+  private handleError(error: AxiosError<ErrorResponse> | Error): ApiError {
+    console.error('API Error:', error);
+    
+    if ('response' in error && error.response?.data) {
+      return {
+        message: error.response.data.message || error.message || 'An error occurred',
+        code: 'API_ERROR',
+      };
+    }
+    
     return {
-      message: error.response?.data?.message || error.message || 'An error occurred',
-      code: 'API_ERROR',
+      message: error.message || 'An error occurred',
+      code: 'UNKNOWN_ERROR',
     };
   }
 
@@ -129,35 +141,94 @@ class ApiService {
       const formData = new FormData();
       formData.append('file', file);
       
-      // Send the file to the server for analysis
-      const response = await fetch('http://localhost:3001/api/analyze-bill', {
-        method: 'POST',
-        body: formData,
-      });
-      
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to analyze bill');
+      // First attempt to use the server API
+      try {
+        const response = await fetch(`${this.apiBaseUrl}/api/analyze-bill`, {
+          method: 'POST',
+          body: formData,
+        });
+        
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || 'Failed to analyze bill');
+        }
+        
+        const result = await response.json();
+        console.log('Analysis successful:', result);
+        
+        // Convert the server response to the expected format
+        const analysis: BillAnalysis = {
+          totalAmount: result.totalAmount || 0,
+          accountNumber: result.accountNumber || 'Unknown',
+          billingPeriod: result.billingPeriod || 'Unknown',
+          charges: result.charges || [],
+          lineItems: result.lineItems || [],
+          subtotals: {
+            lineItems: result.subtotals?.lineItems || 0,
+            otherCharges: result.subtotals?.otherCharges || 0
+          },
+          summary: result.summary || 'Bill analysis completed'
+        };
+        
+        return { data: analysis };
+      } catch (serverError) {
+        console.warn('Server analysis failed, falling back to client-side analysis:', serverError);
+        
+        // Fallback to client-side analysis
+        try {
+          // Get the text content from the PDF file
+          const fileContent = await file.arrayBuffer();
+          const verizonBill = await extractVerizonBill(new Uint8Array(fileContent));
+          
+          if (!verizonBill) {
+            throw new Error('Failed to extract bill data');
+          }
+          
+          // Create a bill analyzer and analyze the bill
+          const billData = this.convertVerizonBillToBillData(verizonBill);
+          const analyzer = new VerizonBillAnalyzer(billData);
+          const analysisResult = analyzer.analyze();
+          
+          // Format the analysis result
+          const analysis: BillAnalysis = {
+            totalAmount: verizonBill.billSummary.totalDue,
+            accountNumber: verizonBill.accountInfo.accountNumber,
+            billingPeriod: `${verizonBill.accountInfo.billingPeriod.start} to ${verizonBill.accountInfo.billingPeriod.end}`,
+            charges: verizonBill.otherCharges.map(charge => ({
+              description: charge.description,
+              amount: charge.amount,
+              type: 'other'
+            })),
+            lineItems: verizonBill.lineItems.flatMap(line => [
+              ...line.planCharges.map(charge => ({
+                description: `${line.phoneNumber} - ${charge.description}`,
+                amount: charge.amount,
+                type: 'plan'
+              })),
+              ...line.deviceCharges.map(charge => ({
+                description: `${line.phoneNumber} - ${charge.description}`,
+                amount: charge.amount,
+                type: 'device'
+              }))
+            ]),
+            subtotals: {
+              lineItems: verizonBill.lineItems.reduce((sum, line) => 
+                sum + line.planCharges.reduce((s, c) => s + c.amount, 0) + 
+                      line.deviceCharges.reduce((s, c) => s + c.amount, 0), 0),
+              otherCharges: verizonBill.otherCharges.reduce((sum, charge) => sum + charge.amount, 0)
+            },
+            summary: `Bill analysis for account ${verizonBill.accountInfo.accountNumber}`,
+            usageAnalysis: analysisResult.usageAnalysis,
+            recommendations: analysisResult.recommendations
+          };
+          
+          console.log('Client-side analysis successful:', analysis);
+          return { data: analysis };
+        } catch (clientError) {
+          console.error('Client-side analysis failed:', clientError);
+          throw clientError;
+        }
       }
-      
-      const result = await response.json();
-      console.log('Analysis successful:', result);
-      
-      // Convert the server response to the expected format
-      const analysis: BillAnalysis = {
-        totalAmount: result.totalAmount || 0,
-        accountNumber: result.accountNumber || 'Unknown',
-        billingPeriod: result.billingPeriod || 'Unknown',
-        charges: result.charges || [],
-        lineItems: result.lineItems || [],
-        subtotals: {
-          lineItems: result.subtotals?.lineItems || 0,
-          otherCharges: result.subtotals?.otherCharges || 0
-        },
-        summary: result.summary || 'Bill analysis completed'
-      };
-      
-      return { data: analysis };
     } catch (error) {
       console.error('Error analyzing bill:', error);
       
