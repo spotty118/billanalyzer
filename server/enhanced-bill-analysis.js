@@ -1,3 +1,4 @@
+
 // Enhanced bill analysis module
 const analyzeUsagePatterns = (billData) => {
   const { usage_details } = billData;
@@ -23,9 +24,23 @@ const analyzeUsagePatterns = (billData) => {
   if (lines.length > 0) {
     const monthlyUsage = lines.map(([phoneNumber, details]) => {
       const usage = details[0];
+      
+      // Extract data usage value (assuming it's in format like "15 GB")
+      let dataUsage = 0;
+      if (usage.data_usage) {
+        const dataMatch = /(\d+(?:\.\d+)?)\s*(?:GB|MB)/i.exec(usage.data_usage);
+        if (dataMatch) {
+          dataUsage = parseFloat(dataMatch[1]);
+          // Convert MB to GB if needed
+          if (usage.data_usage.toUpperCase().includes('MB')) {
+            dataUsage /= 1024;
+          }
+        }
+      }
+      
       return {
         phoneNumber,
-        data: parseFloat(usage.data_usage) || 0,
+        data: dataUsage,
         minutes: parseInt(usage.talk_minutes) || 0,
         texts: parseInt(usage.text_count) || 0
       };
@@ -114,7 +129,19 @@ const analyzeCosts = (billData) => {
 const recommendPlan = (billData) => {
   const currentTotal = billData.bill_summary.total_due;
   const usage = Object.values(billData.usage_details)[0]?.[0] || { data_usage: '0 GB' };
-  const dataUsage = parseFloat(usage.data_usage) || 0;
+  
+  // Extract data usage value (assuming it's in format like "15 GB")
+  let dataUsage = 0;
+  if (usage.data_usage) {
+    const dataMatch = /(\d+(?:\.\d+)?)\s*(?:GB|MB)/i.exec(usage.data_usage);
+    if (dataMatch) {
+      dataUsage = parseFloat(dataMatch[1]);
+      // Convert MB to GB if needed
+      if (usage.data_usage.toUpperCase().includes('MB')) {
+        dataUsage /= 1024;
+      }
+    }
+  }
 
   const recommendation = {
     recommendedPlan: '',
@@ -139,6 +166,22 @@ const recommendPlan = (billData) => {
         pros: ['Lower monthly cost', 'Gaming perks included'],
         cons: ['Less premium data', 'No mobile hotspot'],
         estimatedSavings: currentTotal * 0.10
+      }
+    ];
+  } else if (dataUsage > 25) {
+    recommendation.recommendedPlan = '5G Play More Unlimited';
+    recommendation.reasons = [
+      'Moderate to high data usage',
+      'Entertainment benefits included',
+      'Good balance of features and cost'
+    ];
+    recommendation.estimatedMonthlySavings = currentTotal * 0.20;
+    recommendation.alternativePlans = [
+      {
+        planName: '5G Start Unlimited',
+        pros: ['Lower monthly cost', 'Still includes unlimited data'],
+        cons: ['Data may be slowed during congestion', 'Fewer premium features'],
+        estimatedSavings: currentTotal * 0.25
       }
     ];
   } else {

@@ -154,7 +154,7 @@ const AnalysisResults = ({ analysis }: { analysis: BillAnalysis }) => (
             {analysis.costAnalysis.unusualCharges.length > 0 && (
               <div className="mt-3">
                 <h5 className="text-sm font-medium mb-2">Unusual Charges</h5>
-                {analysis.costAnalysis.unusualCharges.map((charge: { description: string; amount: number; reason: string }, i: number) => (
+                {analysis.costAnalysis.unusualCharges.map((charge, i) => (
                   <div key={i} className="flex justify-between text-sm text-gray-600">
                     <span>{charge.description}</span>
                     <span>{formatCurrency(charge.amount)}</span>
@@ -165,7 +165,7 @@ const AnalysisResults = ({ analysis }: { analysis: BillAnalysis }) => (
             {analysis.costAnalysis.potentialSavings.length > 0 && (
               <div className="mt-3">
                 <h5 className="text-sm font-medium mb-2">Potential Savings</h5>
-                {analysis.costAnalysis.potentialSavings.map((saving: { description: string; estimatedSaving: number; confidence: number }, i: number) => (
+                {analysis.costAnalysis.potentialSavings.map((saving, i) => (
                   <div key={i} className="flex justify-between text-sm">
                     <span>{saving.description}</span>
                     <span className="text-green-600">{formatCurrency(saving.estimatedSaving)}</span>
@@ -190,7 +190,7 @@ const AnalysisResults = ({ analysis }: { analysis: BillAnalysis }) => (
                 </span>
               </div>
               <div className="text-sm text-blue-800 mb-2">
-                {analysis.planRecommendation.reasons.map((reason: string, i: number) => (
+                {analysis.planRecommendation.reasons.map((reason, i) => (
                   <div key={i}>• {reason}</div>
                 ))}
               </div>
@@ -202,7 +202,7 @@ const AnalysisResults = ({ analysis }: { analysis: BillAnalysis }) => (
             {analysis.planRecommendation.alternativePlans.length > 0 && (
               <div className="mt-4">
                 <h5 className="text-sm font-medium mb-2">Alternative Plans</h5>
-                {analysis.planRecommendation.alternativePlans.map((plan: { planName: string; pros: string[]; cons: string[]; estimatedSavings: number }, i: number) => (
+                {analysis.planRecommendation.alternativePlans.map((plan, i) => (
                   <div key={i} className="bg-gray-100 p-3 rounded-md mb-2">
                     <div className="flex justify-between items-center mb-1">
                       <span className="font-medium">{plan.planName}</span>
@@ -213,13 +213,13 @@ const AnalysisResults = ({ analysis }: { analysis: BillAnalysis }) => (
                     <div className="grid grid-cols-2 gap-4 text-sm">
                       <div>
                         <span className="text-green-600 font-medium">Pros:</span>
-                        {plan.pros.map((pro: string, j: number) => (
+                        {plan.pros.map((pro, j) => (
                           <div key={j} className="text-gray-600">• {pro}</div>
                         ))}
                       </div>
                       <div>
                         <span className="text-red-600 font-medium">Cons:</span>
-                        {plan.cons.map((con: string, j: number) => (
+                        {plan.cons.map((con, j) => (
                           <div key={j} className="text-gray-600">• {con}</div>
                         ))}
                       </div>
