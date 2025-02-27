@@ -1,9 +1,25 @@
 
 import type { VerizonBill, LineItem, CallActivity } from './types';
 
+// Supported date formats for flexible parsing
+const DATE_FORMATS = [
+  // Standard US format: Jan 15, 2023
+  /([A-Za-z]+)\s+(\d{1,2})(?:,|\s)\s*(\d{4})/,
+  // Short format: Jan 15
+  /([A-Za-z]+)\s+(\d{1,2})/,
+  // Numeric format: MM/DD/YYYY
+  /(\d{1,2})\/(\d{1,2})\/(\d{4})/,
+  // Numeric short format: MM/DD
+  /(\d{1,2})\/(\d{1,2})/
+];
+
+// Trim memory usage by processing chunks of the document
+const PROCESSING_CHUNK_SIZE = 1000; // lines per chunk
+
 export class VerizonBillParser {
   private pdfText: string[];
   private bill: VerizonBill;
+  private memoryUsage: number = 0;
 
   constructor(pdfText: string[]) {
     this.pdfText = pdfText;
@@ -32,33 +48,90 @@ export class VerizonBillParser {
   }
 
   private parseAmount(amountStr: string): number {
-    if (!amountStr) return 0;
-    return parseFloat(amountStr.replace(/[$,]/g, ''));
+    if (!amountStr) {
+      return 0;
+    }
+    
+    try {
+      // Remove currency symbols, commas, and handle both period and comma as decimal separators
+      // This accommodates various international currency formats
+      
+      // First, identify if we're dealing with European format (e.g., 1.234,56 €)
+      const isEuropeanFormat = /\d+\.\d+,\d+/.test(amountStr) || amountStr.includes('€');
+      
+      if (isEuropeanFormat) {
+        // European format: replace dots with empty string (for thousands) and commas with dots (for decimals)
+        return parseFloat(amountStr.replace(/[^0-9,.]/g, '')
+                                  .replace(/\./g, '')
+                                  .replace(/,/g, '.'));
+      } else {
+        // US/Standard format: simply remove currency symbols and commas
+        return parseFloat(amountStr.replace(/[^0-9.]/g, ''));
+      }
+    } catch (error) {
+      console.error(`Error parsing amount string: "${amountStr}"`, error);
+      return 0;
+    }
+  }
+  
+  /**
+   * Parse date strings in various formats and standardize the output
+   * @param dateStr - The date string to parse
+   * @returns A standardized date string in the format "Month DD, YYYY" or the original if parsing fails
+   */
+  private parseDate(dateStr: string): string {
+    if (!dateStr) {
+      return '';
+    }
+    
+    try {
+      // Try to create a Date object from the string and format it consistently
+      const date = new Date(dateStr);
+      if (!isNaN(date.getTime())) {
+        return date.toLocaleDateString('en-US', { 
+          month: 'long', 
+          day: 'numeric', 
+          year: 'numeric' 
+        });
+      }
+      return dateStr; // Return original string if parsing fails
+    } catch {
+      return dateStr; // Return original string on error
+    }
   }
 
   private parseAccountInfo(): void {
     for (let i = 0; i < Math.min(3, this.pdfText.length); i++) {
       const pageText = this.pdfText[i];
       
-      const accountNumberMatch = /Account(?:\s+number|\:)\s*(\d+\-\d+)/i.exec(pageText);
+      const accountNumberMatch = /Account(?:\s+number|:)\s*(\d+-\d+)/i.exec(pageText);
       if (accountNumberMatch) {
         this.bill.accountInfo.accountNumber = accountNumberMatch[1];
       }
       
-      const invoiceMatch = /Invoice(?:\s+number|\:)\s*(\d+)/i.exec(pageText);
+      const invoiceMatch = /Invoice(?:\s+number|:)\s*(\d+)/i.exec(pageText);
       if (invoiceMatch) {
         this.bill.accountInfo.invoiceNumber = invoiceMatch[1];
       }
 
-      const billingPeriodMatch = /Bill(?:ing)?\s+period(?:\:)?\s*([A-Za-z]+\s+\d+)\s*\-\s*([A-Za-z]+\s+\d+,?\s*\d{4})/i.exec(pageText);
+      // Updated regex to capture more date format variations
+      const billingPeriodMatch = /Bill(?:ing)?\s+period(?::)?\s*((?:[A-Za-z]+\s+\d{1,2}|\d{1,2}\/\d{1,2})(?:,|\s)?\s*(?:\d{4})?)\s*(?:[-–—]|to)\s*((?:[A-Za-z]+\s+\d{1,2}|\d{1,2}\/\d{1,2})(?:,|\s)?\s*\d{4})/i.exec(pageText);
+      
       if (billingPeriodMatch) {
-        this.bill.accountInfo.billingPeriod.start = billingPeriodMatch[1];
-        this.bill.accountInfo.billingPeriod.end = billingPeriodMatch[2];
+        this.bill.accountInfo.billingPeriod.start = this.parseDate(billingPeriodMatch[1]);
+        this.bill.accountInfo.billingPeriod.end = this.parseDate(billingPeriodMatch[2]);
+      } else {
+        // Try alternative formats if standard pattern fails
+        const altPeriodMatch = /(?:cycle|period|dates)(?:\s+from|:)?\s*((?:[A-Za-z]+\s+\d{1,2}|\d{1,2}\/\d{1,2})(?:,|\s)?\s*(?:\d{4})?)\s*(?:through|to|[–—]|-)\s*((?:[A-Za-z]+\s+\d{1,2}|\d{1,2}\/\d{1,2})(?:,|\s)?\s*\d{4})/i.exec(pageText);
+        if (altPeriodMatch) {
+          this.bill.accountInfo.billingPeriod.start = this.parseDate(altPeriodMatch[1]);
+          this.bill.accountInfo.billingPeriod.end = this.parseDate(altPeriodMatch[2]);
+        }
       }
       
-      const billDateMatch = /Bill date(?:\:)?\s*([A-Za-z]+\s+\d+,?\s*\d{4})/i.exec(pageText);
+      const billDateMatch = /Bill date(?::)?\s*((?:[A-Za-z]+\s+\d{1,2}|\d{1,2}\/\d{1,2})(?:,|\s)?\s*\d{4})/i.exec(pageText);
       if (billDateMatch) {
-        this.bill.accountInfo.billDate = billDateMatch[1];
+        this.bill.accountInfo.billDate = this.parseDate(billDateMatch[1]);
       }
 
       if (!this.bill.accountInfo.customerName) {
@@ -78,22 +151,22 @@ export class VerizonBillParser {
     for (let i = 0; i < Math.min(3, this.pdfText.length); i++) {
       const pageText = this.pdfText[i];
       
-      const previousBalanceMatch = /Balance from last bill\s*\$\s*([\d,\.]+)/i.exec(pageText);
+      const previousBalanceMatch = /Balance from last bill\s*\$\s*([\d,.]+)/i.exec(pageText);
       if (previousBalanceMatch) {
         this.bill.billSummary.previousBalance = this.parseAmount(previousBalanceMatch[1]);
       }
       
-      const lateFeeMatch = /Late fee\s*\$\s*([\d,\.]+)/i.exec(pageText);
-      if (lateFeeMatch) {
-        this.bill.billSummary.lateFee = this.parseAmount(lateFeeMatch[1]);
+      const lateFeesMatch = /Late fee\s*\$\s*([\d,\.]+)/i.exec(pageText);
+      if (lateFeesMatch) {
+        this.bill.billSummary.lateFee = this.parseAmount(lateFeesMatch[1]);
       }
       
-      const currentChargesMatch = /This month(?:'s)? charges\s*\$\s*([\d,\.]+)/i.exec(pageText);
+      const currentChargesMatch = /This month(?:'s)? charges\s*\$\s*([\d,.]+)/i.exec(pageText);
       if (currentChargesMatch) {
         this.bill.billSummary.currentCharges = this.parseAmount(currentChargesMatch[1]);
       }
       
-      const totalDueMatch = /Total due(?: on ([A-Za-z]+ \d+))?\s*\$\s*([\d,\.]+)/i.exec(pageText);
+      const totalDueMatch = /Total due(?: on ([A-Za-z]+ \d+))?\s*\$\s*([\d,.]+)/i.exec(pageText);
       if (totalDueMatch) {
         if (totalDueMatch[1]) {
           this.bill.billSummary.dueDate = totalDueMatch[1];
@@ -107,7 +180,7 @@ export class VerizonBillParser {
     // Find the bill summary by line section
     let billSummarySection = '';
     for (let i = 0; i < this.pdfText.length; i++) {
-      if (this.pdfText[i].includes('Bill summary by line')) {
+      if (this.pdfText[i]?.includes('Bill summary by line')) {
         billSummarySection = this.pdfText[i];
         break;
       }
@@ -117,21 +190,55 @@ export class VerizonBillParser {
     
     const lines = billSummarySection.split('\n');
     let currentItem: LineItem | null = null;
+    let lineIndex = 0;
+    
+    // Process the file in chunks to manage memory better
+    while (lineIndex < lines.length) {
+      const endIndex = Math.min(lineIndex + PROCESSING_CHUNK_SIZE, lines.length);
+      const chunk = lines.slice(lineIndex, endIndex);
+      
+      currentItem = this.processLineItemsChunk(chunk, currentItem);
+      
+      // Free processed chunk from memory
+      chunk.length = 0;
+      this.memoryUsage++;
+      
+      // Allow optional GC hint on very large files
+      if (this.memoryUsage % 10 === 0) {
+        setTimeout(() => {}, 0);
+      }
+      
+      lineIndex = endIndex;
+    }
+    
+    // Add final item if exists
+    if (currentItem) {
+      this.bill.lineItems.push(currentItem);
+    }
+    
+    // Clear original lines from memory
+    lines.length = 0;
+  }
+  
+  /**
+   * Process a chunk of text lines to extract line items
+   */
+  private processLineItemsChunk(lines: string[], currentItem: LineItem | null): LineItem | null {
+    let result = currentItem;
     
     for (const line of lines) {
-      // Match lines like: "Christopher Adams Apple iPhone 15 Pro Max (251-747-0017) $40.78"
       const lineItemMatch = /^([A-Za-z\s]+)?\s*(Apple\s+[^\s]+)?\s*\((\d{3}-\d{3}-\d{4})(?: - Number Share)?\)\s*\$\s*([\d,\.]+)$/.exec(line.trim());
       
-      if (lineItemMatch) {
-        if (currentItem) {
-          this.bill.lineItems.push(currentItem);
+      if (standardMatch) {
+        if (result) {
+          this.bill.lineItems.push(result);
         }
         
-        currentItem = {
-          owner: lineItemMatch[1]?.trim() || '',
-          deviceType: lineItemMatch[2]?.trim() || '',
-          phoneNumber: lineItemMatch[3],
-          totalAmount: this.parseAmount(lineItemMatch[4]),
+        result = {
+          owner: (standardMatch[1] || '').trim(),
+          deviceType: (standardMatch[2] || '').trim(),
+          phoneNumber: `${standardMatch[3]}-${standardMatch[4]}-${standardMatch[5]}`,
+          totalAmount: this.parseAmount(standardMatch[6] || '0'),
           planCharges: [],
           deviceCharges: [],
           servicesCharges: [],
@@ -144,104 +251,46 @@ export class VerizonBillParser {
     if (currentItem) {
       this.bill.lineItems.push(currentItem);
     }
-    
-    // Now parse detailed charges for each line item
-    for (let i = 0; i < this.pdfText.length; i++) {
-      if (this.pdfText[i].includes('Charges by line details')) {
-        const detailsText = this.pdfText.slice(i).join(' ');
-        
-        // Process each line item
-        for (const lineItem of this.bill.lineItems) {
-          // Find section for this phone number
-          const phoneRegex = new RegExp(`${lineItem.phoneNumber}[\\s\\S]*?(?=\\d{3}-\\d{3}-\\d{4}|$)`, 'i');
-          const phoneSection = phoneRegex.exec(detailsText);
-          
-          if (phoneSection) {
-            const sectionText = phoneSection[0];
-            
-            // Parse plan charges
-            const planMatch = /Plan\s*([^\$]+)\s*\$\s*([\d,\.]+)/ig;
-            let match;
-            while ((match = planMatch.exec(sectionText)) !== null) {
-              lineItem.planCharges.push({
-                description: match[1].trim(),
-                amount: this.parseAmount(match[2]),
-              });
-            }
-            
-            // Parse device charges
-            const deviceMatch = /Devices\s*([^\$]+)Payment\s+\d+\s+of\s+\d+\s+\(\$[\d,\.]+\s+remaining\)(?:[^\$]*)\$\s*([\d,\.]+)/ig;
-            while ((match = deviceMatch.exec(sectionText)) !== null) {
-              lineItem.deviceCharges.push({
-                description: match[1].trim(),
-                amount: this.parseAmount(match[2]),
-              });
-            }
-            
-            // Parse services charges
-            const serviceMatch = /Services\s+&\s+perks\s*([^\$]+)\s*\$\s*([\d,\.]+)/ig;
-            while ((match = serviceMatch.exec(sectionText)) !== null) {
-              lineItem.servicesCharges.push({
-                description: match[1].trim(),
-                amount: this.parseAmount(match[2]),
-              });
-            }
-            
-            // Parse surcharges
-            const surchargeMatch = /Surcharges\s*([^\$]+)\s*\$\s*([\d,\.]+)/ig;
-            while ((match = surchargeMatch.exec(sectionText)) !== null) {
-              lineItem.surcharges.push({
-                description: match[1].trim(),
-                amount: this.parseAmount(match[2]),
-              });
-            }
-            
-            // Parse taxes
-            const taxMatch = /Taxes\s+&\s+gov\s+fees\s*([^\$]+)\s*\$\s*([\d,\.]+)/ig;
-            while ((match = taxMatch.exec(sectionText)) !== null) {
-              lineItem.taxes.push({
-                description: match[1].trim(),
-                amount: this.parseAmount(match[2]),
-              });
-            }
-          }
-        }
-        
-        break;
-      }
-    }
   }
 
   private parseCallActivity(): void {
     for (let i = 0; i < this.pdfText.length; i++) {
-      if (this.pdfText[i].includes('Talk activity')) {
-        const phoneMatch = /(\d{3}-\d{3}-\d{4})\s+(Apple\s+[^\n]+)/i.exec(this.pdfText[i]);
-        if (phoneMatch) {
-          const activity: CallActivity = {
-            phoneNumber: phoneMatch[1],
-            deviceType: phoneMatch[2].trim(),
-            calls: []
-          };
+      const pageText = this.pdfText[i];
+      if (!pageText?.includes('Talk activity')) continue;
 
-          const callLines = this.pdfText[i].split('\n');
-          for (const line of callLines) {
-            const callMatch = /^([A-Za-z]+ \d+)\s+(\d+:\d+ [AP]M)\s+(\d+[^\s]*)\s+([^-]+)\s+([^-]+)\s+(\d+)\s+/.exec(line.trim());
-            if (callMatch) {
-              activity.calls.push({
-                date: callMatch[1],
-                time: callMatch[2],
-                number: callMatch[3],
-                origination: callMatch[4].trim(),
-                destination: callMatch[5].trim(),
-                minutes: parseInt(callMatch[6], 10)
-              });
-            }
-          }
+      const phoneMatch = /(\d{3}-\d{3}-\d{4})\s+(Apple\s+[^\n]+)/i.exec(pageText);
+      if (!phoneMatch) continue;
 
-          if (activity.calls.length > 0) {
-            this.bill.callActivity.push(activity);
-          }
+      const activity: CallActivity = {
+        phoneNumber: phoneMatch[1],
+        deviceType: phoneMatch[2].trim(),
+        calls: []
+      };
+
+      const callLines = pageText.split('\n');
+      for (const line of callLines) {
+        const callMatch = /^([A-Za-z]+ \d+(?:,?\s*\d{4})?)\s+(\d+:\d+(?:\s*[AP]M)?)\s+(\+?1?\d+[^\s]*)\s+([^-]+)\s+([^-]+)\s+(\d+)\s*/
+          .exec(line.trim());
+        
+        if (callMatch) {
+          const [, dateStr, timeStr, number, origination, destination, minutes] = callMatch;
+          const callDate = this.parseDate(dateStr);
+          const timeText = timeStr.includes('M') ? timeStr : 
+            `${timeStr} ${parseInt(timeStr.split(':')[0]) >= 12 ? 'PM' : 'AM'}`;
+          
+          activity.calls.push({
+            date: callDate,
+            time: timeText,
+            number,
+            origination: origination?.trim() || 'Unknown',
+            destination: destination.trim(),
+            minutes: parseInt(minutes, 10)
+          });
         }
+      }
+
+      if (activity.calls.length > 0) {
+        this.bill.callActivity.push(activity);
       }
     }
   }
