@@ -4,6 +4,50 @@ import { ApiResponse, ApiError } from '@/types';
 import { VerizonBillAnalyzer } from '@/utils/bill-analyzer/analyzer';
 import { extractVerizonBill } from '@/utils/bill-analyzer/extractor';
 import type { BillData, VerizonBill } from '@/utils/bill-analyzer/types';
+import { spawn } from 'child_process';
+
+interface McpResponse<T> {
+  jsonrpc: string;
+  id: number;
+  result: T;
+}
+
+interface UsagePatternResponse {
+  trend: 'increasing' | 'decreasing' | 'stable';
+  percentageChange: number;
+  seasonalFactors?: {
+    highUsageMonths: string[];
+    lowUsageMonths: string[];
+  };
+}
+
+interface CostAnalysisResponse {
+  averageMonthlyBill: number;
+  projectedNextBill: number;
+  unusualCharges: Array<{
+    description: string;
+    amount: number;
+    reason: string;
+  }>;
+  potentialSavings: Array<{
+    description: string;
+    estimatedSaving: number;
+    confidence: number;
+  }>;
+}
+
+interface PlanRecommendationResponse {
+  recommendedPlan: string;
+  reasons: string[];
+  estimatedMonthlySavings: number;
+  confidenceScore: number;
+  alternativePlans: Array<{
+    planName: string;
+    pros: string[];
+    cons: string[];
+    estimatedSavings: number;
+  }>;
+}
 
 interface ErrorResponse {
   message?: string;
@@ -28,18 +72,45 @@ interface BillAnalysis {
     otherCharges: number;
   };
   summary: string;
-  recommendations?: Array<{
-    phone_number: string;
-    recommendation: string;
-    potential_savings: string;
-  }>;
   usageAnalysis?: {
+    trend: 'increasing' | 'decreasing' | 'stable';
+    percentageChange: number;
+    seasonalFactors?: {
+      highUsageMonths: string[];
+      lowUsageMonths: string[];
+    };
     avg_data_usage_gb: number;
     avg_talk_minutes: number;
     avg_text_count: number;
     high_data_users: string[];
     high_talk_users: string[];
     high_text_users: string[];
+  };
+  costAnalysis?: {
+    averageMonthlyBill: number;
+    projectedNextBill: number;
+    unusualCharges: Array<{
+      description: string;
+      amount: number;
+      reason: string;
+    }>;
+    potentialSavings: Array<{
+      description: string;
+      estimatedSaving: number;
+      confidence: number;
+    }>;
+  };
+  planRecommendation?: {
+    recommendedPlan: string;
+    reasons: string[];
+    estimatedMonthlySavings: number;
+    confidenceScore: number;
+    alternativePlans: Array<{
+      planName: string;
+      pros: string[];
+      cons: string[];
+      estimatedSavings: number;
+    }>;
   };
 }
 
@@ -57,6 +128,58 @@ class ApiService {
       ApiService.instance = new ApiService();
     }
     return ApiService.instance;
+  }
+
+  private async extractTextFromPDF(pdfBuffer: ArrayBuffer): Promise<string> {
+    const uint8Array = new Uint8Array(pdfBuffer);
+    const textContent = await extractVerizonBill(uint8Array);
+    if (!textContent) {
+      throw new Error('Failed to extract text from PDF');
+    }
+    return JSON.stringify(textContent);
+  }
+
+  private async callMcpTool<T>(toolName: string, args: { billText: string }): Promise<McpResponse<T>> {
+    const mcpProcess = spawn('node', [
+      '/Users/justincornelius/Documents/Cline/MCP/bill-analysis-server/dist/index.js'
+    ], {
+      stdio: ['pipe', 'pipe', 'pipe']
+    });
+
+    const request = {
+      jsonrpc: '2.0',
+      id: 1,
+      method: 'call_tool',
+      params: {
+        name: toolName,
+        arguments: args
+      }
+    };
+
+    mcpProcess.stdin.write(JSON.stringify(request));
+    mcpProcess.stdin.end();
+
+    return new Promise<McpResponse<T>>((resolve, reject) => {
+      let data = '';
+      mcpProcess.stdout.on('data', (chunk: Buffer) => {
+        data += chunk;
+      });
+
+      mcpProcess.stdout.on('end', () => {
+        try {
+          const response = JSON.parse(data);
+          if (response.error) {
+            reject(new Error(response.error.message));
+          } else {
+            resolve(response);
+          }
+        } catch (error) {
+          reject(error);
+        }
+      });
+
+      mcpProcess.on('error', reject);
+    });
   }
 
   private handleError(error: AxiosError<ErrorResponse> | Error): ApiError {
@@ -184,11 +307,18 @@ class ApiService {
             throw new Error('Failed to extract bill data');
           }
           
+          // Convert PDF to text
+          const pdfText = await this.extractTextFromPDF(fileContent);
+          
+          // Call MCP bill analysis tools
+          const usagePatterns = await this.callMcpTool<UsagePatternResponse>('analyze_usage_patterns', { billText: pdfText });
+          const costAnalysis = await this.callMcpTool<CostAnalysisResponse>('analyze_costs', { billText: pdfText });
+          const planRecommendation = await this.callMcpTool<PlanRecommendationResponse>('recommend_plan', { billText: pdfText });
+          
           // Create a bill analyzer and analyze the bill
           const billData = this.convertVerizonBillToBillData(verizonBill);
           const analyzer = new VerizonBillAnalyzer(billData);
-          const analysisResult = analyzer.getUsageAnalysis();
-          const optimizationResult = analyzer.optimizePlan();
+          const baseAnalysis = analyzer.getUsageAnalysis();
           
           // Format the analysis result
           const analysis: BillAnalysis = {
@@ -215,8 +345,12 @@ class ApiService {
               otherCharges: 0 // No other charges in our structure
             },
             summary: `Bill analysis for account ${verizonBill.accountInfo.accountNumber}`,
-            usageAnalysis: analysisResult,
-            recommendations: optimizationResult.line_recommendations
+            usageAnalysis: {
+              ...baseAnalysis,
+              ...usagePatterns.result
+            },
+            costAnalysis: costAnalysis.result,
+            planRecommendation: planRecommendation.result
           };
           
           console.log('Client-side analysis successful:', analysis);
