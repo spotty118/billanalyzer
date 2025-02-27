@@ -44,7 +44,7 @@ const testEnhancedAnalysis = async () => {
     const validationErrors = [];
 
     // Check usage analysis
-    if (!result.usageAnalysis?.trend || !result.usageAnalysis?.percentageChange) {
+    if (!result.usageAnalysis?.trend || typeof result.usageAnalysis?.percentageChange !== 'number') {
       validationErrors.push('Missing usage analysis data');
     }
 
