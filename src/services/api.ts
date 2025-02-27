@@ -4,12 +4,9 @@ import { ApiResponse, ApiError } from '@/types';
 import { VerizonBillAnalyzer } from '@/utils/bill-analyzer/analyzer';
 import { extractVerizonBill } from '@/utils/bill-analyzer/extractor';
 import type { BillData, VerizonBill, UsageAnalysisResult } from '@/utils/bill-analyzer/types';
-import { spawn } from 'child_process';
 
-interface McpResponse<T> {
-  jsonrpc: string;
-  id: number;
-  result: T;
+interface ErrorResponse {
+  message?: string;
 }
 
 interface UsagePatternResponse {
@@ -47,10 +44,6 @@ interface PlanRecommendationResponse {
     cons: string[];
     estimatedSavings: number;
   }>;
-}
-
-interface ErrorResponse {
-  message?: string;
 }
 
 interface BillAnalysis {

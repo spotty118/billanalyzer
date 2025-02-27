@@ -3,6 +3,9 @@ import { parseVerizonBill } from './parser';
 import { BillData, VerizonBill } from './types';
 import * as pdfjs from 'pdfjs-dist';
 
+// Create a type declaration for the PDF.js worker module
+declare module 'pdfjs-dist/build/pdf.worker.mjs';
+
 // Set the worker source for PDF.js
 const pdfjsWorker = await import('pdfjs-dist/build/pdf.worker.mjs');
 pdfjs.GlobalWorkerOptions.workerSrc = pdfjsWorker;
@@ -51,7 +54,6 @@ export async function extractVerizonBillData(billText: Buffer): Promise<BillData
     
     // Extract bill summary
     const previousBalanceMatch = /Balance(?:\s+from)?\s+last\s+bill:?\s+\$?([\d,]+\.\d{2})/i.exec(text);
-    const lateFeesMatch = /Late\s+fee:?\s+\$?([\d,]+\.\d{2})/i.exec(text);
     const currentChargesMatch = /(?:This month(?:'s)?\s+charges|Current\s+charges):?\s+\$?([\d,]+\.\d{2})/i.exec(text);
     const totalDueMatch = /(?:Total\s+due|Total\s+Amount\s+Due)(?:\s+on\s+[A-Za-z]+\s+\d+)?:?\s+\$?([\d,]+\.\d{2})/i.exec(text);
     
