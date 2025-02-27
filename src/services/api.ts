@@ -2,7 +2,7 @@
 import { AxiosError } from 'axios';
 import { ApiResponse, ApiError } from '@/types';
 import { VerizonBillAnalyzer } from '@/utils/bill-analyzer/analyzer';
-import { extractVerizonBill, analyzeBill as analyzeVerizonBill } from '@/utils/bill-analyzer/extractor';
+import { extractVerizonBill } from '@/utils/bill-analyzer/extractor';
 import type { BillData, VerizonBill } from '@/utils/bill-analyzer/types';
 
 interface ErrorResponse {
@@ -187,18 +187,15 @@ class ApiService {
           // Create a bill analyzer and analyze the bill
           const billData = this.convertVerizonBillToBillData(verizonBill);
           const analyzer = new VerizonBillAnalyzer(billData);
-          const analysisResult = analyzer.analyze();
+          const analysisResult = analyzer.getUsageAnalysis();
+          const optimizationResult = analyzer.optimizePlan();
           
           // Format the analysis result
           const analysis: BillAnalysis = {
             totalAmount: verizonBill.billSummary.totalDue,
             accountNumber: verizonBill.accountInfo.accountNumber,
             billingPeriod: `${verizonBill.accountInfo.billingPeriod.start} to ${verizonBill.accountInfo.billingPeriod.end}`,
-            charges: verizonBill.otherCharges.map(charge => ({
-              description: charge.description,
-              amount: charge.amount,
-              type: 'other'
-            })),
+            charges: [], // Verizon bill structure doesn't have standalone charges
             lineItems: verizonBill.lineItems.flatMap(line => [
               ...line.planCharges.map(charge => ({
                 description: `${line.phoneNumber} - ${charge.description}`,
@@ -212,14 +209,14 @@ class ApiService {
               }))
             ]),
             subtotals: {
-              lineItems: verizonBill.lineItems.reduce((sum, line) => 
-                sum + line.planCharges.reduce((s, c) => s + c.amount, 0) + 
-                      line.deviceCharges.reduce((s, c) => s + c.amount, 0), 0),
-              otherCharges: verizonBill.otherCharges.reduce((sum, charge) => sum + charge.amount, 0)
+              lineItems: verizonBill.lineItems.reduce((sum: number, line) => 
+                sum + line.planCharges.reduce((s: number, c) => s + c.amount, 0) + 
+                      line.deviceCharges.reduce((s: number, c) => s + c.amount, 0), 0),
+              otherCharges: 0 // No other charges in our structure
             },
             summary: `Bill analysis for account ${verizonBill.accountInfo.accountNumber}`,
-            usageAnalysis: analysisResult.usageAnalysis,
-            recommendations: analysisResult.recommendations
+            usageAnalysis: analysisResult,
+            recommendations: optimizationResult.line_recommendations
           };
           
           console.log('Client-side analysis successful:', analysis);
