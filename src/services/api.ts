@@ -1,10 +1,7 @@
 
-import { toast } from '@/components/ui/use-toast';
-
 // ApiService class to handle all API requests
 class ApiService {
   private baseUrl: string;
-  private defaultError = { message: 'An error occurred', code: 'UNKNOWN_ERROR' };
 
   constructor() {
     // Use environment variable or default to localhost for development
@@ -216,8 +213,6 @@ class ApiService {
       };
     }
   }
-
-  // Add additional API methods as needed
 }
 
 // Create and export a singleton instance
