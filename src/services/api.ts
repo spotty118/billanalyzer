@@ -122,40 +122,41 @@ class ApiService {
       if (!file.type.includes('pdf')) {
         throw new Error('Invalid file type');
       }
-
-      const buffer = await file.arrayBuffer();
       
       console.log('Starting bill analysis...');
-      const verizonBill = await extractVerizonBill(buffer);
-      const billAnalysis = analyzeVerizonBill(verizonBill);
       
-      const billData = this.convertVerizonBillToBillData(verizonBill);
-      const analyzer = new VerizonBillAnalyzer(billData);
+      // Create form data to send the file
+      const formData = new FormData();
+      formData.append('file', file);
       
-      const summary = analyzer.getBillSummary();
-      const optimization = analyzer.optimizePlan();
-      const usageAnalysis = analyzer.getUsageAnalysis();
-
+      // Send the file to the server for analysis
+      const response = await fetch('http://localhost:3001/api/analyze-bill', {
+        method: 'POST',
+        body: formData,
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to analyze bill');
+      }
+      
+      const result = await response.json();
+      console.log('Analysis successful:', result);
+      
+      // Convert the server response to the expected format
       const analysis: BillAnalysis = {
-        totalAmount: billAnalysis.totalAmount,
-        accountNumber: billAnalysis.accountNumber,
-        billingPeriod: `${verizonBill.accountInfo.billingPeriod.start} to ${verizonBill.accountInfo.billingPeriod.end}`,
-        charges: billAnalysis.linesBreakdown.map(item => ({
-          description: `${item.phoneNumber} - ${item.deviceType}`,
-          amount: item.totalCharges,
-          type: 'line'
-        })),
-        lineItems: [],
+        totalAmount: result.totalAmount || 0,
+        accountNumber: result.accountNumber || 'Unknown',
+        billingPeriod: result.billingPeriod || 'Unknown',
+        charges: result.charges || [],
+        lineItems: result.lineItems || [],
         subtotals: {
-          lineItems: summary.total_charges.current_charges || 0,
-          otherCharges: 0
+          lineItems: result.subtotals?.lineItems || 0,
+          otherCharges: result.subtotals?.otherCharges || 0
         },
-        summary: `Bill analysis for account ${billAnalysis.accountNumber}`,
-        recommendations: optimization.line_recommendations,
-        usageAnalysis
+        summary: result.summary || 'Bill analysis completed'
       };
-
-      console.log('Analysis successful:', analysis);
+      
       return { data: analysis };
     } catch (error) {
       console.error('Error analyzing bill:', error);
