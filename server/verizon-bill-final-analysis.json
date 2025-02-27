@@ -1,0 +1,281 @@
+{
+  "accountNumber": "526905159-00001",
+  "billingPeriod": "December 12, 2024 to January 11, 2025",
+  "summary": "Bill analysis for account 526905159-00001",
+  "totalAmount": 646.3,
+  "charges": [],
+  "lineItems": [
+    {
+      "id": "access-2517470017",
+      "description": "Line Access (2517470017)",
+      "amount": 319.25,
+      "type": "access_fee",
+      "category": "recurring",
+      "phoneNumber": "2517470017"
+    },
+    {
+      "id": "device-payment-2517470017",
+      "description": "Device Payment: Apple iPhone 15 Pro Max (Agreement 1628562967) ($319.25 remaining)",
+      "amount": 319.25,
+      "type": "device_payment",
+      "category": "equipment",
+      "phoneNumber": "2517470017",
+      "metadata": {
+        "agreementNumber": "1628562967",
+        "remainingBalance": "319.25"
+      }
+    },
+    {
+      "id": "monthly-service-2517470017",
+      "description": "Monthly Service: Apple iPhone 15 Pro Max (2517470017)",
+      "amount": 15.34,
+      "type": "service",
+      "category": "recurring",
+      "phoneNumber": "2517470017"
+    },
+    {
+      "id": "discount-2517470017",
+      "description": "50% access discount (2517470017)",
+      "amount": -319.25,
+      "type": "discount",
+      "category": "recurring",
+      "phoneNumber": "2517470017"
+    },
+    {
+      "id": "access-2517470238",
+      "description": "Line Access (2517470238)",
+      "amount": 319.25,
+      "type": "access_fee",
+      "category": "recurring",
+      "phoneNumber": "2517470238"
+    },
+    {
+      "id": "device-payment-2517470238",
+      "description": "Device Payment: Apple iPhone 15 (Agreement 1628562967) ($319.25 remaining)",
+      "amount": 319.25,
+      "type": "device_payment",
+      "category": "equipment",
+      "phoneNumber": "2517470238",
+      "metadata": {
+        "agreementNumber": "1628562967",
+        "remainingBalance": "319.25"
+      }
+    },
+    {
+      "id": "monthly-service-2517470238",
+      "description": "Monthly Service: Apple iPhone 15 (2517470238)",
+      "amount": 15.34,
+      "type": "service",
+      "category": "recurring",
+      "phoneNumber": "2517470238"
+    },
+    {
+      "id": "discount-2517470238",
+      "description": "50% access discount (2517470238)",
+      "amount": -319.25,
+      "type": "discount",
+      "category": "recurring",
+      "phoneNumber": "2517470238"
+    },
+    {
+      "id": "access-2517472221",
+      "description": "Line Access (2517472221)",
+      "amount": 319.25,
+      "type": "access_fee",
+      "category": "recurring",
+      "phoneNumber": "2517472221"
+    },
+    {
+      "id": "device-payment-2517472221",
+      "description": "Device Payment: Apple iPhone 13 (Agreement 1628562967) ($319.25 remaining)",
+      "amount": 319.25,
+      "type": "device_payment",
+      "category": "equipment",
+      "phoneNumber": "2517472221",
+      "metadata": {
+        "agreementNumber": "1628562967",
+        "remainingBalance": "319.25"
+      }
+    },
+    {
+      "id": "monthly-service-2517472221",
+      "description": "Monthly Service: Apple iPhone 13 (2517472221)",
+      "amount": 15.34,
+      "type": "service",
+      "category": "recurring",
+      "phoneNumber": "2517472221"
+    },
+    {
+      "id": "discount-2517472221",
+      "description": "50% access discount (2517472221)",
+      "amount": -319.25,
+      "type": "discount",
+      "category": "recurring",
+      "phoneNumber": "2517472221"
+    },
+    {
+      "id": "taxes-2517472221",
+      "description": "Taxes & Fees (2517472221)",
+      "amount": 7.5,
+      "type": "tax",
+      "category": "regulatory",
+      "phoneNumber": "2517472221"
+    },
+    {
+      "id": "county-tax-2517472221",
+      "description": "Baldwin County Tax (2517472221)",
+      "amount": 7.5,
+      "type": "tax",
+      "category": "regulatory",
+      "phoneNumber": "2517472221"
+    },
+    {
+      "id": "access-2517472223",
+      "description": "Line Access (2517472223)",
+      "amount": 319.25,
+      "type": "access_fee",
+      "category": "recurring",
+      "phoneNumber": "2517472223"
+    },
+    {
+      "id": "device-payment-2517472223",
+      "description": "Device Payment: Apple iPhone 14 Plus (Agreement 1628562967) ($319.25 remaining)",
+      "amount": 319.25,
+      "type": "device_payment",
+      "category": "equipment",
+      "phoneNumber": "2517472223",
+      "metadata": {
+        "agreementNumber": "1628562967",
+        "remainingBalance": "319.25"
+      }
+    },
+    {
+      "id": "monthly-service-2517472223",
+      "description": "Monthly Service: Apple iPhone 14 Plus (2517472223)",
+      "amount": 15.34,
+      "type": "service",
+      "category": "recurring",
+      "phoneNumber": "2517472223"
+    },
+    {
+      "id": "discount-2517472223",
+      "description": "50% access discount (2517472223)",
+      "amount": -319.25,
+      "type": "discount",
+      "category": "recurring",
+      "phoneNumber": "2517472223"
+    },
+    {
+      "id": "taxes-2517472223",
+      "description": "Taxes & Fees (2517472223)",
+      "amount": 7.5,
+      "type": "tax",
+      "category": "regulatory",
+      "phoneNumber": "2517472223"
+    },
+    {
+      "id": "county-tax-2517472223",
+      "description": "Baldwin County Tax (2517472223)",
+      "amount": 7.5,
+      "type": "tax",
+      "category": "regulatory",
+      "phoneNumber": "2517472223"
+    },
+    {
+      "id": "access-2517479281",
+      "description": "Line Access (2517479281)",
+      "amount": 319.25,
+      "type": "access_fee",
+      "category": "recurring",
+      "phoneNumber": "2517479281"
+    },
+    {
+      "id": "device-payment-2517479281",
+      "description": "Device Payment: Apple iPhone 14 (Agreement 1628562967) ($319.25 remaining)",
+      "amount": 319.25,
+      "type": "device_payment",
+      "category": "equipment",
+      "phoneNumber": "2517479281",
+      "metadata": {
+        "agreementNumber": "1628562967",
+        "remainingBalance": "319.25"
+      }
+    },
+    {
+      "id": "monthly-service-2517479281",
+      "description": "Monthly Service: Apple iPhone 14 (2517479281)",
+      "amount": 15.34,
+      "type": "service",
+      "category": "recurring",
+      "phoneNumber": "2517479281"
+    },
+    {
+      "id": "discount-2517479281",
+      "description": "50% access discount (2517479281)",
+      "amount": -319.25,
+      "type": "discount",
+      "category": "recurring",
+      "phoneNumber": "2517479281"
+    },
+    {
+      "id": "taxes-2517479281",
+      "description": "Taxes & Fees (2517479281)",
+      "amount": 7.5,
+      "type": "tax",
+      "category": "regulatory",
+      "phoneNumber": "2517479281"
+    },
+    {
+      "id": "county-tax-2517479281",
+      "description": "Baldwin County Tax (2517479281)",
+      "amount": 7.5,
+      "type": "tax",
+      "category": "regulatory",
+      "phoneNumber": "2517479281"
+    }
+  ],
+  "usageAnalysis": {
+    "trend": "stable",
+    "percentageChange": 0,
+    "seasonalFactors": {
+      "holiday": true,
+      "summer": false
+    },
+    "avg_data_usage_gb": 0,
+    "avg_talk_minutes": 0,
+    "avg_text_messages": 0
+  },
+  "costAnalysis": {
+    "averageMonthlyBill": 646.3,
+    "projectedNextBill": 678.615,
+    "unusualCharges": [],
+    "potentialSavings": []
+  },
+  "planRecommendation": {
+    "recommendedPlan": "Unlimited Plus",
+    "reasons": [
+      "Based on your multiple device lines",
+      "Includes premium features with better value"
+    ],
+    "estimatedMonthlySavings": 96.945,
+    "confidenceScore": 0.8,
+    "alternativePlans": [
+      {
+        "name": "Unlimited Welcome",
+        "monthlyCost": 581.67,
+        "pros": [
+          "Lower cost",
+          "Unlimited data"
+        ],
+        "cons": [
+          "Fewer premium features",
+          "Lower priority data"
+        ]
+      }
+    ]
+  },
+  "subtotals": {
+    "lineItems": 1717.9499999999998,
+    "otherCharges": 0
+  }
+}
