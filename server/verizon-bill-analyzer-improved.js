@@ -63,6 +63,12 @@ export function extractDeviceInfo(billText) {
   const deviceInfo = [];
   const processedPhones = new Set();
   
+  // Line item patterns to recognize specific charges
+  const planPattern = /(?:Unlimited Plus|Unlimited Welcome|More Unlimited|Number share)(?:\s+plan)?/gi;
+  const devicePaymentPattern = /Payment \d+ of \d+ \(\$[\d\.,]+\s+remaining\)/gi;
+  const discountPattern = /\d+% (?:access|feature) discount/gi;
+  const creditPattern = /Credit \d+ of \d+ \(\-\$[\d\.,]+\s+remaining\)/gi;
+  
   // Look for lines with specific device mentions and phone numbers  
   const phoneLinePattern = /(?:Apple|Samsung)?\s*(iPhone|iPad|Watch|Galaxy|Pixel|Arlo)(?:\s+\w+)*\s*\(\s*(\d{3})[.-]?(\d{3})[.-]?(\d{4})\s*\)/gi;
   let match;
@@ -253,8 +259,125 @@ export function enhanceVerizonBillData(billData) {
     totalAmount: accountInfo.totalAmount || billData.totalAmount || 0,
     lineItems: [], // Charges specifically tied to a phone line
     charges: [],   // General account charges
-    phoneLines: Array.from(phoneLines.values())  // Structured phone line information
+    phoneLines: Array.from(phoneLines.values()),  // Structured phone line information
+    lineDetails: [] // Detailed line breakdowns with all associated charges
   };
+  
+  // Extract detailed charges for each phone line
+  enhancedBillData.lineDetails = enhancedBillData.phoneLines.map(line => {
+    // Find section in bill text related to this phone
+    const phoneRegex = new RegExp(`(?:${line.deviceName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}|${line.phoneNumber.replace(/-/g, '[-]?')})(.{1,2000})(?=\\n\\n|\\n[A-Z][a-z]+ [A-Z][a-z]+\\n)`, 's');
+    const sectionMatch = rawBillText.match(phoneRegex);
+    let lineSection = sectionMatch ? sectionMatch[0] + sectionMatch[1] : '';
+    
+    // If we still can't find a section, try looking directly for the phone number pattern
+    if (!lineSection || lineSection.length < 100) {
+      // Format the phone as xxx-xxx-xxxx and xxx.xxx.xxxx to catch different formats
+      const formattedPhone = `${line.phoneNumber.slice(0, 3)}[.-]?${line.phoneNumber.slice(3, 6)}[.-]?${line.phoneNumber.slice(6)}`;
+      const altPhoneRegex = new RegExp(`(${formattedPhone})(.{1,2000})(?=\\n\\n|\\n[A-Z][a-z]+ [A-Z][a-z]+\\n)`, 's');
+      const altSectionMatch = rawBillText.match(altPhoneRegex);
+      if (altSectionMatch) {
+        lineSection = altSectionMatch[0] + altSectionMatch[2];
+      }
+    }
+    
+    // Extract plan details
+    // First try to match the PDF format with the Plan section header
+    const planMatch = lineSection.match(/Plan\s*(?:\n\s*)?([\w\s]+)\s*\$?([\d\.]+)/);
+    // Then try to find plan details in the section text
+    const unlimitedMatch = lineSection.match(/(Unlimited\s+\w+)\s+(?:\n\s*)?(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec).+?\$([\d\.]+)/);
+    
+    // Extract plan discount
+    const planDiscount = lineSection.match(/(?:50%|[0-9]+%) access discount.+?\$([\d\.]+)/);
+    
+    // Extract device payment
+    const devicePaymentMatch = lineSection.match(/Payment \d+ of \d+ \(\$([\d\.,]+) remaining\)/);
+    const devicePaymentAmountMatch = lineSection.match(/Payment \d+ of \d+.+?\s+\$([\d\.]+)/);
+    
+    // Extract protection plan
+    const protectionMatch = lineSection.match(/Wireless Phone Protection.+?\$([\d\.]+)/);
+    
+    // Extract credits
+    const creditMatch = lineSection.match(/Credit.+?\-\$([\d\.]+)/);
+    
+    // Extract surcharges
+    const surchargesSection = lineSection.match(/Surcharges\s+\$(\d+\.\d+)/);
+    let surcharges = 0;
+    if (surchargesSection) {
+      surcharges = parseFloat(surchargesSection[1]);
+    } else {
+      // Try an alternative pattern focusing on Fed Universal Service Charge, Regulatory Charge, etc.
+      const fedUniversalMatch = lineSection.match(/Fed Universal Service Charge\s+\$(\d+\.\d+)/);
+      const regulatoryMatch = lineSection.match(/Regulatory Charge\s+\$(\d+\.\d+)/);
+      const adminMatch = lineSection.match(/(?:Admin|Telco) (?:&|Recovery) (?:Telco|Charge)\s+\$(\d+\.\d+)/);
+      
+      if (fedUniversalMatch) surcharges += parseFloat(fedUniversalMatch[1]);
+      if (regulatoryMatch) surcharges += parseFloat(regulatoryMatch[1]);
+      if (adminMatch) surcharges += parseFloat(adminMatch[1]);
+    }
+    
+    // Extract taxes
+    const taxesSection = lineSection.match(/Taxes\s+&\s+gov\s+fees\s+\$(\d+\.\d+)/);
+    let taxes = 0;
+    if (taxesSection) {
+      taxes = parseFloat(taxesSection[1]);
+    } else {
+      // Try an alternative pattern looking for specific taxes
+      const stateTaxMatch = lineSection.match(/AL State [\w\s]+Tax\s+\$(\d+\.\d+)/);
+      const countyTaxMatch = lineSection.match(/[A-Za-z]+ Cnty (?:Sales )?Tax\s+\$(\d+\.\d+)/);
+      const cityTaxMatch = lineSection.match(/[A-Za-z]+ (?:City|Beach) (?:Sales )?Tax\s+\$(\d+\.\d+)/);
+      const e911Match = lineSection.match(/911 Fee\s+\$(\d+\.\d+)/);
+      
+      if (stateTaxMatch) taxes += parseFloat(stateTaxMatch[1]);
+      if (countyTaxMatch) taxes += parseFloat(countyTaxMatch[1]);
+      if (cityTaxMatch) taxes += parseFloat(cityTaxMatch[1]);
+      if (e911Match) taxes += parseFloat(e911Match[1]);
+    }
+    
+    // Extract perks like YouTube Premium
+    const perksMatch = lineSection.match(/(?:Youtube Premium|Walmart\+ Membership)[\s\S]*?\$([\d\.]+)/);
+    const perksDiscount = lineSection.match(/50% - feature discount[\s\S]*?\-\$([\d\.]+)/);
+    
+    // Calculate monthly cost based on extracted values
+    let monthlyCost = 0;
+    const finalPlanMatch = planMatch || unlimitedMatch;
+    if (finalPlanMatch && finalPlanMatch[2]) monthlyCost += parseFloat(finalPlanMatch[2]);
+    if (planDiscount && planDiscount[1]) monthlyCost -= parseFloat(planDiscount[1]);
+    if (devicePaymentAmountMatch && devicePaymentAmountMatch[1]) monthlyCost += parseFloat(devicePaymentAmountMatch[1]);
+    if (protectionMatch && protectionMatch[1]) monthlyCost += parseFloat(protectionMatch[1]);
+    if (perksMatch && perksMatch[1]) monthlyCost += parseFloat(perksMatch[1]);
+    if (perksDiscount && perksDiscount[1]) monthlyCost -= parseFloat(perksDiscount[1]);
+    if (creditMatch && creditMatch[1]) monthlyCost -= parseFloat(creditMatch[1]);
+    monthlyCost += surcharges;
+    monthlyCost += taxes;
+    
+    return {
+      phoneNumber: line.phoneNumber,
+      deviceName: line.deviceName,
+      planName: line.planName,
+      monthlyTotal: monthlyCost > 0 ? monthlyCost : 0,
+      details: {
+        plan: finalPlanMatch ? finalPlanMatch[1].trim() : line.planName,
+        planCost: finalPlanMatch && finalPlanMatch[2] ? parseFloat(finalPlanMatch[2]) : 0,
+        planDiscount: planDiscount && planDiscount[1] ? parseFloat(planDiscount[1]) : 0,
+        devicePayment: devicePaymentMatch && devicePaymentMatch[1] ? devicePaymentMatch[1] : '0',
+        devicePaymentAmount: devicePaymentAmountMatch && devicePaymentAmountMatch[1] ? parseFloat(devicePaymentAmountMatch[1]) : 0,
+        protection: protectionMatch && protectionMatch[1] ? parseFloat(protectionMatch[1]) : 0,
+        perks: perksMatch && perksMatch[1] ? parseFloat(perksMatch[1]) : 0,
+        perksDiscount: perksDiscount && perksDiscount[1] ? parseFloat(perksDiscount[1]) : 0,
+        credits: creditMatch && creditMatch[1] ? parseFloat(creditMatch[1]) : 0,
+        surcharges: surcharges,
+        taxes: taxes
+      }
+    };
+  });
+  
+  // Update the phone lines with the calculated monthly totals
+  enhancedBillData.phoneLines.forEach((line, index) => {
+    if (index < enhancedBillData.lineDetails.length) {
+      line.monthlyTotal = enhancedBillData.lineDetails[index].monthlyTotal;
+    }
+  });
   
   // Store existing charges that couldn't be associated with phone lines
   const allCharges = [...billData.lineItems, ...billData.charges];
@@ -290,15 +413,20 @@ export function createVerizonBillSummary(enhancedBillData) {
     accountNumber: enhancedBillData.accountNumber,
     billingPeriod: enhancedBillData.billingPeriod,
     totalAmount: enhancedBillData.totalAmount,
+    totalMonthlyLineCharges: 0,
     phoneLines: enhancedBillData.phoneLines.map(line => ({
       phoneNumber: line.phoneNumber,
       deviceName: line.deviceName,
       planName: line.planName,
-      monthlyTotal: line.monthlyTotal
+      monthlyTotal: line.monthlyTotal,
+      lineItems: enhancedBillData.lineDetails.find(detail => detail.phoneNumber === line.phoneNumber)?.details || {}
     })),
     generalCharges: enhancedBillData.charges.reduce((sum, charge) => sum + (charge.amount || 0), 0),
     deviceTypes: {}
   };
+  
+  // Calculate total monthly charges from all lines
+  summary.totalMonthlyLineCharges = summary.phoneLines.reduce((total, line) => total + line.monthlyTotal, 0);
   
   // Count device types
   enhancedBillData.phoneLines.forEach(line => {
