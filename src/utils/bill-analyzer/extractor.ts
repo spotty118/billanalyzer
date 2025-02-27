@@ -1,24 +1,21 @@
 
-import { VerizonBill } from './types';
 import { parseVerizonBill } from './parser';
-import type { TextItem, TextMarkedContent } from 'pdfjs-dist/types/src/display/api';
+import { BillData, VerizonBill } from './types';
+import * as pdfjs from 'pdfjs-dist';
 
 /**
  * Extract text from a PDF file and parse the Verizon bill
  */
-export async function extractVerizonBill(pdfData: ArrayBuffer): Promise<VerizonBill> {
+export async function extractVerizonBill(pdfData: ArrayBuffer): Promise<VerizonBill | null> {
   try {
     const pdfjsLib = await import('pdfjs-dist');
     
-    // Set up pdf.js worker
-    pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
-      'pdfjs-dist/build/pdf.worker.mjs',
-      import.meta.url
-    ).toString();
+    // Set up pdf.js worker with the matching version
+    pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.10.38/pdf.worker.min.js`;
 
     // Load the PDF document
     const loadingTask = pdfjsLib.getDocument({
-      data: pdfData,
+      data: new Uint8Array(pdfData.slice(0)),
       useWorkerFetch: false,
       isEvalSupported: false
     });
@@ -31,7 +28,7 @@ export async function extractVerizonBill(pdfData: ArrayBuffer): Promise<VerizonB
       const page = await pdf.getPage(i);
       const content = await page.getTextContent();
       const pageText = content.items
-        .filter((item: TextItem | TextMarkedContent): item is TextItem => 
+        .filter((item: any): item is { str: string } => 
           !('type' in item) && 'str' in item
         )
         .map(item => item.str)
@@ -47,7 +44,7 @@ export async function extractVerizonBill(pdfData: ArrayBuffer): Promise<VerizonB
     return parseVerizonBill(pages);
   } catch (error) {
     console.error('Error extracting Verizon bill:', error);
-    throw error;
+    return null;
   }
 }
 
