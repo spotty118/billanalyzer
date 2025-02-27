@@ -1,16 +1,101 @@
 import { extractPdfText } from './pdf-parser.js';
 
+async function use_mcp_tool({ serverName, toolName, arguments: args }) {
+  try {
+    const result = await fetch(`http://localhost:1337/tool/${toolName}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        serverName: serverName,
+        toolName: toolName,
+        arguments: args,
+      }),
+    });
+
+    const data = await result.json();
+    if (data.error) {
+      return { error: data.error };
+    }
+    return data;
+  } catch (error) {
+    console.error(`Error calling ${toolName} tool on ${serverName}:`, error);
+    return { error: error.message };
+  }
+}
+
 const extractVerizonBillData = async (buffer) => {
   try {
-    const { text } = await extractPdfText(buffer);
+    const { text, markdown } = await extractPdfText(buffer);
 
-    // Initialize bill data structure
+    // Use sequential thinking to analyze the bill over multiple steps
+    let sequentialAnalysis = [];
+    
+    // Step 1: Initial markdown analysis
+    let analysisStep = await use_mcp_tool({
+      serverName: "github.com/modelcontextprotocol/servers/tree/main/src/sequentialthinking",
+      toolName: "sequentialthinking",
+      arguments: {
+        thought: "Analyzing structure and format of the Verizon bill markdown",
+        thoughtNumber: 1,
+        totalThoughts: 4,
+        nextThoughtNeeded: true
+      }
+    });
+    sequentialAnalysis.push(analysisStep.result);
+
+    // Step 2: Extract tables from markdown
+    analysisStep = await use_mcp_tool({
+      serverName: "github.com/modelcontextprotocol/servers/tree/main/src/sequentialthinking",
+      toolName: "sequentialthinking",
+      arguments: {
+        thought: "Identifying and parsing tables in the bill for charges and line items",
+        thoughtNumber: 2,
+        totalThoughts: 4,
+        nextThoughtNeeded: true,
+        branchFromThought: 1
+      }
+    });
+    sequentialAnalysis.push(analysisStep.result);
+
+    // Step 3: Analyze charges and calculate totals
+    analysisStep = await use_mcp_tool({
+      serverName: "github.com/modelcontextprotocol/servers/tree/main/src/sequentialthinking",
+      toolName: "sequentialthinking",
+      arguments: {
+        thought: "Analyzing charges, categorizing them, and validating totals",
+        thoughtNumber: 3,
+        totalThoughts: 4,
+        nextThoughtNeeded: true,
+        branchFromThought: 2
+      }
+    });
+    sequentialAnalysis.push(analysisStep.result);
+
+    // Step 4: Generate insights and summary
+    analysisStep = await use_mcp_tool({
+      serverName: "github.com/modelcontextprotocol/servers/tree/main/src/sequentialthinking",
+      toolName: "sequentialthinking",
+      arguments: {
+        thought: "Generating insights and summary from the analyzed bill data",
+        thoughtNumber: 4,
+        totalThoughts: 4,
+        nextThoughtNeeded: false,
+        branchFromThought: 3
+      }
+    });
+    sequentialAnalysis.push(analysisStep.result);
+
+    // Initialize bill data structure with enhanced fields
     const billData = {
       totalAmount: null,
       accountNumber: null,
       billingPeriod: null,
       charges: [],
-      lineItems: []
+      lineItems: [],
+      markdown: markdown, // Store the original markdown for reference
+      analysis: sequentialAnalysis // Store all steps of sequential thinking analysis
     };
 
     // Extract account number (format: XXX-XXX-XXXX)
@@ -74,7 +159,10 @@ const extractVerizonBillData = async (buffer) => {
       return items.reduce((sum, item) => sum + item.amount, 0);
     };
 
-    const analysis = {
+    // Get insights from sequential analysis
+    const insights = sequentialAnalysis[3]?.result || {}; // Last step contains insights
+
+    const result = {
       ...billData,
       subtotals: {
         lineItems: calculateSubtotal(billData.lineItems),
@@ -84,10 +172,15 @@ const extractVerizonBillData = async (buffer) => {
                `Billing Period: ${billData.billingPeriod || 'Unknown'}\n` +
                `Total Amount Due: $${billData.totalAmount || '0.00'}\n` +
                `Number of Line Items: ${billData.lineItems.length}\n` +
-               `Number of Other Charges: ${billData.charges.length}`
+               `Number of Other Charges: ${billData.charges.length}`,
+      insights: {
+        tables: sequentialAnalysis[1]?.result || {}, // Table parsing results
+        charges: sequentialAnalysis[2]?.result || {}, // Charge analysis results
+        summary: insights // Final insights and recommendations
+      }
     };
 
-    return analysis;
+    return result;
 
   } catch (error) {
     throw new Error(`Failed to parse PDF: ${error.message}`);

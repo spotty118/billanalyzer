@@ -1,6 +1,4 @@
 import express from 'express';
-import * as cheerio from 'cheerio';
-import fetch from 'node-fetch';
 import multer from 'multer';
 import { extractVerizonBillData } from './bill-parser.js';
 
@@ -15,6 +13,63 @@ const upload = multer({
 });
 
 app.use(express.json());
+
+async function use_mcp_tool({ serverName, toolName, arguments: args }) {
+  try {
+    const result = await fetch(`http://localhost:1337/tool/${toolName}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        serverName: serverName,
+        toolName: toolName,
+        arguments: args,
+      }),
+    });
+
+    const data = await result.json();
+    if (data.error) {
+      return { error: data.error };
+    }
+    return data;
+  } catch (error) {
+    console.error(`Error calling ${toolName} tool on ${serverName}:`, error);
+    return { error: error.message };
+  }
+}
+
+// Rate limiting setup
+const rateLimit = {
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  maxRequests: 100, // limit each IP to 100 requests per windowMs
+  requests: new Map()
+};
+
+// Rate limiting middleware
+app.use((req, res, next) => {
+  const ip = req.ip;
+  const now = Date.now();
+  const windowStart = now - rateLimit.windowMs;
+
+  // Clean up old requests
+  if (rateLimit.requests.has(ip)) {
+    rateLimit.requests.get(ip).requests = rateLimit.requests.get(ip).requests.filter(time => time > windowStart);
+  }
+
+  // Check rate limit
+  if (rateLimit.requests.has(ip) && rateLimit.requests.get(ip).requests.length >= rateLimit.maxRequests) {
+    return res.status(429).json({ error: 'Too many requests, please try again later' });
+  }
+
+  // Update request count
+  if (!rateLimit.requests.has(ip)) {
+    rateLimit.requests.set(ip, { requests: [] });
+  }
+  rateLimit.requests.get(ip).requests.push(now);
+
+  next();
+});
 
 // Endpoint to simulate Verizon plans lookup
 app.get('/plans', (req, res) => {
@@ -44,234 +99,110 @@ app.get('/price', (req, res) => {
   }
 });
 
-// Start the Verizon catered MCP server
-// Endpoint to scrape HTML tags from Verizon's plan page
+// Enhanced endpoint to scrape and analyze Verizon plans
 app.get('/scrape-tags', async (req, res) => {
   console.log('Received request to /scrape-tags');
   const url = req.query.url || 'https://www.verizon.com/plans/unlimited/';
+  
   try {
     console.log('Fetching URL:', url);
-    const response = await fetch(url);
-    console.log('Response status:', response.status);
-    const html = await response.text();
-    console.log('Received HTML length:', html.length);
-    const $ = cheerio.load(html);
-    
-    // Initialize structured results
-    const plans = [];
-    
-    // Helper function to extract clean text content with better error handling
-    const extractText = ($el) => {
-      try {
-        if (!$el || !$el.length) return '';
-        const clone = $el.clone();
-        clone.find('script, style, [class*="hidden"], [aria-hidden="true"]').remove();
-        return clone.text()
-          .trim()
-          .replace(/\s+/g, ' ')
-          .replace(/Slide \d+ of \d+ /g, '')
-          .replace(/\*+$/, '')
-          .replace(/^\s*[•·-]\s*/, '') // Remove leading bullets
-          .replace(/\(see terms\)/i, '') // Remove common marketing text
-          .replace(/\s*\([^)]*\)\s*$/, ''); // Remove trailing parentheticals
-      } catch (error) {
-        console.error('Error in extractText:', error);
-        return '';
-      }
-    };
 
-    // Helper function to clean price text
-    const cleanPrice = (text) => {
-      const priceMatch = text.match(/\$\d+(?:\.\d{2})?/);
-      return priceMatch ? priceMatch[0] : null;
-    };
-
-    // Helper function to extract features
-    const extractFeatures = ($el) => {
-      const features = [];
-      $el.find('li.StyledLi-VDS__sc-1vrtxhi-0').each((_, el) => {
-        const text = $(el).text().trim();
-        if (text && !text.includes('$')) {
-          features.push(text);
-        }
-      });
-      return features;
-    };
-
-    // Helper function to extract perks
-    const extractPerks = ($el) => {
-      const perks = [];
-      $el.find('.PerkWrapper-VDS__sc-ui2utw-2').each((_, el) => {
-        const $perk = $(el);
-        const title = $perk.find('.TitleWrapper-VDS__sc-1w6xyf3-11').text().trim();
-        const price = cleanPrice($perk.find('.StyledNumber-VDS__sc-6vasdc-3').text().trim());
-        if (title) {
-          perks.push({ title, price });
-        }
-      });
-      return perks;
-    };
-
-    // Helper function to clean plan names
-    const cleanPlanName = (name) => {
-      return name
-        .replace(/The .* plan,? with/, '')
-        .replace(/\$\d+(\.\d{2})?\/?line\*? and.*$/, '')
-        .replace(/\s+/g, ' ')
-        .trim();
-    };
-
-    // Helper function to extract price with improved parsing
-    const extractPrice = (text) => {
-      try {
-        if (!text) return null;
-        
-        // Handle common price formats
-        const pricePatterns = [
-          /\$\d+(?:\.\d{2})?(?:\/(?:mo|line|month))?/i,  // Basic price with optional /mo or /line
-          /\d+(?:\.\d{2})?\s*(?:dollars|USD)/i,           // Price with 'dollars' or 'USD'
-          /(?:starting at|from)\s*\$\d+(?:\.\d{2})?/i    // 'Starting at' prices
-        ];
-
-        for (const pattern of pricePatterns) {
-          const match = text.match(pattern);
-          if (match) {
-            const price = parseFloat(match[0].replace(/[^\d.]/g, ''));
-            return isNaN(price) ? null : price;
-          }
-        }
-
-        // Fallback to basic price extraction
-        const priceMatches = text.match(/\$\d+(?:\.\d{2})?/g) || [];
-        const prices = priceMatches
-          .map(price => parseFloat(price.replace('$', '')))
-          .filter(price => !isNaN(price));
-        
-        return prices.length ? Math.min(...prices) : null;
-      } catch (error) {
-        console.error('Error in extractPrice:', error, 'Text:', text);
-        return null;
-      }
-    };
-
-    // Helper function to clean feature text
-    const cleanFeatureText = (text) => {
-      return text
-        .replace(/^[\s•·-]+/, '') // Remove leading bullets and spaces
-        .replace(/\s+/g, ' ') // Normalize spaces
-        .trim();
-    };
-
-    // Find all plan cards/sections
-    const planSelectors = [
-      '.plan-card',
-      '[class*="plan"]',
-      '[class*="Plan"]',
-      '.popular-plan-name-container',
-      '[class*="unlimited"]',
-      '[class*="Unlimited"]'
-    ];
-
-    // Log the number of elements found for each selector
-    planSelectors.forEach(selector => {
-      console.log(`Found ${$(selector).length} elements for selector: ${selector}`);
+    // Use fetch_html tool to get the HTML content
+    const fetchHtmlResult = await use_mcp_tool({
+      serverName: "github.com/zcaceres/fetch-mcp",
+      toolName: "fetch_html",
+      arguments: { url: url }
     });
 
-    // Process each plan section with improved logging
-    console.log('Starting plan extraction...');
-    let totalPlansFound = 0;
-    
-    planSelectors.forEach(selector => {
-      const elements = $(selector);
-      console.log(`Processing ${elements.length} elements for selector: ${selector}`);
-      
-      elements.each((_, planElement) => {
-        totalPlansFound++;
-        const $plan = $(planElement);
-        let planName = extractText($plan.find('[class*="plan-name"], [class*="planName"], [class*="popular-plan-name"], h3, h4, span').first());
-        planName = cleanPlanName(planName);
-        
-        if (!planName) return;
+    if (fetchHtmlResult.error) {
+      console.error('Error fetching HTML:', fetchHtmlResult.error);
+      return res.status(500).json({ error: 'Failed to fetch HTML' });
+    }
 
-        // Extract prices
-        const prices = {};
-        $plan.find('[class*="price"], [class*="cost"], [data-price], [class*="Price"], [class*="Cost"]').each((_, priceEl) => {
-          const $price = $(priceEl);
-          const priceText = extractText($price);
-          const price = extractPrice(priceText);
-          if (price) {
-            const priceKey = 
-              priceText.toLowerCase().includes('line') ? 'perLine' :
-              priceText.toLowerCase().includes('month') ? 'monthly' :
-              'base';
-            
-            // Only update if the new price is lower (better deal)
-            if (!prices[priceKey] || price < prices[priceKey]) {
-              prices[priceKey] = price;
-            }
-          }
-        });
-
-        // Extract features and perks
-        const features = [];
-        $plan.find('[class*="feature"], [class*="perk"], [class*="benefit"], [class*="Feature"], [class*="Perk"], [class*="Benefit"], li').each((_, featureEl) => {
-          const featureText = cleanFeatureText(extractText($(featureEl)));
-          if (featureText.length > 3 && 
-              !featureText.includes('$') && 
-              !featureText.toLowerCase().includes('slide') &&
-              !featureText.toLowerCase().includes('close')) {
-            features.push(featureText);
-          }
-        });
-
-        // Extract perks
-        const perks = extractPerks($plan);
-
-        // Create structured plan object with validation
-        const plan = {
-          name: planName,
-          prices: Object.keys(prices).length > 0 ? prices : null,
-          features: features.length > 0 ? [...new Set(features)] : null, // Remove duplicates
-          perks: perks.length > 0 ? perks : null,
-          savings: prices.withoutAutoPay && prices.monthly ? {
-            amount: prices.withoutAutoPay - prices.monthly,
-            description: 'with Auto Pay & paper-free billing'
-          } : null,
-          metadata: {
-            extractedAt: new Date().toISOString(),
-            source: url,
-            selector: selector
-          }
-        };
-
-        // Only add if we have meaningful data
-        if (plan.name && plan.prices && (Object.keys(plan.prices).length > 0 || (plan.features && plan.features.length > 0))) {
-          plans.push(plan);
-        }
-      });
+    // Use webpage-to-markdown tool to convert HTML to markdown
+    const markdownResult = await use_mcp_tool({
+      serverName: "github.com/zcaceres/markdownify-mcp",
+      toolName: "webpage-to-markdown",
+      arguments: { url: fetchHtmlResult.content }
     });
 
-    // Remove duplicate plans and invalid entries
-    const validPlans = plans.filter(plan => plan && plan.name && plan.prices);
-    const uniquePlans = validPlans.filter((plan, index, self) =>
-      index === self.findIndex((p) => p && p.name === plan.name)
-    );
+    if (markdownResult.error) {
+      console.error('Error converting to markdown:', markdownResult.error);
+      return res.status(500).json({ error: 'Failed to convert to markdown' });
+    }
+
+    // Use sequential thinking to analyze plans
+    let sequentialAnalysis = [];
     
-    // Format prices as strings with dollar signs
-    uniquePlans.forEach(plan => {
-      if (plan && plan.prices) {
-        const formattedPrices = {};
-        Object.entries(plan.prices).forEach(([key, value]) => {
-          if (value !== null && value !== undefined) {
-            formattedPrices[key] = `$${value.toFixed(2)}`;
-          }
-        });
-        plan.prices = formattedPrices;
+    // Step 1: Initial content analysis
+    let analysisStep = await use_mcp_tool({
+      serverName: "github.com/modelcontextprotocol/servers/tree/main/src/sequentialthinking",
+      toolName: "sequentialthinking",
+      arguments: {
+        thought: "Analyzing Verizon plans structure and format",
+        thoughtNumber: 1,
+        totalThoughts: 4,
+        nextThoughtNeeded: true
       }
     });
+    sequentialAnalysis.push(analysisStep.result);
+
+    // Step 2: Extract plan features and pricing
+    analysisStep = await use_mcp_tool({
+      serverName: "github.com/modelcontextprotocol/servers/tree/main/src/sequentialthinking",
+      toolName: "sequentialthinking",
+      arguments: {
+        thought: "Extracting and categorizing plan features and pricing",
+        thoughtNumber: 2,
+        totalThoughts: 4,
+        nextThoughtNeeded: true,
+        branchFromThought: 1
+      }
+    });
+    sequentialAnalysis.push(analysisStep.result);
+
+    // Step 3: Compare plans and identify benefits
+    analysisStep = await use_mcp_tool({
+      serverName: "github.com/modelcontextprotocol/servers/tree/main/src/sequentialthinking",
+      toolName: "sequentialthinking",
+      arguments: {
+        thought: "Comparing plans and identifying key benefits",
+        thoughtNumber: 3,
+        totalThoughts: 4,
+        nextThoughtNeeded: true,
+        branchFromThought: 2
+      }
+    });
+    sequentialAnalysis.push(analysisStep.result);
+
+    // Step 4: Generate recommendations
+    analysisStep = await use_mcp_tool({
+      serverName: "github.com/modelcontextprotocol/servers/tree/main/src/sequentialthinking",
+      toolName: "sequentialthinking",
+      arguments: {
+        thought: "Generating insights and recommendations for different user profiles",
+        thoughtNumber: 4,
+        totalThoughts: 4,
+        nextThoughtNeeded: false,
+        branchFromThought: 3
+      }
+    });
+    sequentialAnalysis.push(analysisStep.result);
+
+    // Extract insights from sequential analysis
+    const insights = {
+      structureAnalysis: sequentialAnalysis[0]?.result || {},
+      features: sequentialAnalysis[1]?.result || {},
+      comparison: sequentialAnalysis[2]?.result || {},
+      recommendations: sequentialAnalysis[3]?.result || {}
+    };
+
+    // Parse plan details from markdown
+    const plans = await parsePlansFromMarkdown(markdownResult.markdown);
 
     res.json({
-      plans: uniquePlans,
+      plans: plans,
+      insights: insights,
       timestamp: new Date().toISOString(),
       url: url
     });
@@ -281,9 +212,70 @@ app.get('/scrape-tags', async (req, res) => {
   }
 });
 
-app.listen(port, () => {
-  console.log(`Verizon MCP Server running on port ${port}`);
-});
+async function parsePlansFromMarkdown(markdown) {
+  // Helper function to extract clean text
+  const cleanText = (text) => {
+    return text
+      .replace(/^\s*[•·-]\s*/, '') // Remove leading bullets
+      .replace(/\s+/g, ' ')        // Normalize spaces
+      .trim();
+  };
+
+  // Helper function to extract price
+  const extractPrice = (text) => {
+    const match = text.match(/\$\d+(?:\.\d{2})?/);
+    return match ? match[0] : null;
+  };
+
+  const lines = markdown.split('\n');
+  const plans = [];
+  let currentPlan = null;
+
+  for (const line of lines) {
+    const cleanLine = cleanText(line);
+    
+    // Look for plan headers
+    if (line.startsWith('##') && (line.toLowerCase().includes('plan') || line.toLowerCase().includes('unlimited'))) {
+      if (currentPlan) {
+        plans.push(currentPlan);
+      }
+      currentPlan = {
+        name: cleanText(line.replace(/^#+\s*/, '')),
+        features: [],
+        perks: [],
+        prices: {}
+      };
+    }
+    // Extract prices
+    else if (currentPlan && cleanLine.includes('$')) {
+      const price = extractPrice(cleanLine);
+      if (price) {
+        if (cleanLine.toLowerCase().includes('/line')) {
+          currentPlan.prices.perLine = price;
+        } else if (cleanLine.toLowerCase().includes('/mo')) {
+          currentPlan.prices.monthly = price;
+        } else {
+          currentPlan.prices.base = price;
+        }
+      }
+    }
+    // Extract features and perks
+    else if (currentPlan && cleanLine.length > 0) {
+      if (cleanLine.toLowerCase().includes('perk') || cleanLine.toLowerCase().includes('benefit')) {
+        currentPlan.perks.push(cleanLine);
+      } else {
+        currentPlan.features.push(cleanLine);
+      }
+    }
+  }
+
+  // Add the last plan
+  if (currentPlan) {
+    plans.push(currentPlan);
+  }
+
+  return plans;
+}
 
 // Endpoint for bill analysis
 app.post('/analyze-bill', upload.single('file'), async (req, res) => {
@@ -302,4 +294,8 @@ app.post('/analyze-bill', upload.single('file'), async (req, res) => {
     console.error('Error analyzing bill:', error);
     res.status(500).json({ error: 'Failed to analyze bill' });
   }
+});
+
+app.listen(port, () => {
+  console.log(`Verizon MCP Server running on port ${port}`);
 });
