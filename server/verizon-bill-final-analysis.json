@@ -143,6 +143,14 @@
       "phoneNumber": "2517472221"
     },
     {
+      "id": "byod-credit-2517472221",
+      "description": "Bring Your Own Device (2517472221)",
+      "amount": -10,
+      "type": "credit",
+      "category": "discount",
+      "phoneNumber": "2517472221"
+    },
+    {
       "id": "taxes-2517472221",
       "description": "Taxes & Fees (2517472221)",
       "amount": 7.5,
@@ -263,6 +271,14 @@
       "phoneNumber": "2517479281"
     },
     {
+      "id": "byod-credit-2517479281",
+      "description": "Bring Your Own Device (2517479281)",
+      "amount": -10,
+      "type": "credit",
+      "category": "discount",
+      "phoneNumber": "2517479281"
+    },
+    {
       "id": "taxes-2517479281",
       "description": "Taxes & Fees (2517479281)",
       "amount": 7.5,
@@ -320,7 +336,86 @@
     ]
   },
   "subtotals": {
-    "lineItems": 1687.9499999999998,
+    "lineItems": 1667.9499999999998,
     "otherCharges": 0
+<<<<<<< HEAD
   }
 }
+=======
+  },
+  "phoneLines": [
+    {
+      "phoneNumber": "2517470017",
+      "deviceName": "Apple iPhone 15 Pro Max",
+      "planName": "Unknown plan",
+      "monthlyTotal": 15.34,
+      "charges": [],
+      "devicePaymentNumber": "11",
+      "deviceTotalPayments": "36"
+    },
+    {
+      "phoneNumber": "2517470238",
+      "deviceName": "Apple iPhone 15",
+      "planName": "Plus",
+      "monthlyTotal": 15.34,
+      "charges": [],
+      "devicePaymentNumber": "11",
+      "deviceTotalPayments": "36"
+    },
+    {
+      "phoneNumber": "2517472221",
+      "deviceName": "Apple iPhone 13",
+      "planName": "Plus",
+      "monthlyTotal": 15.34,
+      "charges": [],
+      "devicePaymentNumber": "11",
+      "deviceTotalPayments": "36"
+    },
+    {
+      "phoneNumber": "2517472223",
+      "deviceName": "Apple iPhone 14 Plus",
+      "planName": "Plus",
+      "monthlyTotal": 15.34,
+      "charges": [],
+      "devicePaymentNumber": "11",
+      "deviceTotalPayments": "36"
+    },
+    {
+      "phoneNumber": "2517479281",
+      "deviceName": "Apple iPhone 14",
+      "planName": "Plus",
+      "monthlyTotal": 15.34,
+      "charges": [],
+      "devicePaymentNumber": "11",
+      "deviceTotalPayments": "36"
+    }
+  ],
+  "devices": [
+    {
+      "phoneNumber": "2517470017",
+      "deviceName": "Apple iPhone 15 Pro Max",
+      "deviceDetails": {}
+    },
+    {
+      "phoneNumber": "2517470238",
+      "deviceName": "Apple iPhone 15",
+      "deviceDetails": {}
+    },
+    {
+      "phoneNumber": "2517472221",
+      "deviceName": "Apple iPhone 13",
+      "deviceDetails": {}
+    },
+    {
+      "phoneNumber": "2517472223",
+      "deviceName": "Apple iPhone 14 Plus",
+      "deviceDetails": {}
+    },
+    {
+      "phoneNumber": "2517479281",
+      "deviceName": "Apple iPhone 14",
+      "deviceDetails": {}
+    }
+  ]
+}
+>>>>>>> b22acb8 (updates)
