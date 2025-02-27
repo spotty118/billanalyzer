@@ -287,16 +287,54 @@ class ApiService {
           // Convert PDF to text - use a fresh copy of the ArrayBuffer
           const pdfText = await this.extractTextFromPDF(fileContent.slice(0));
           
+          // Define the types for our default analysis
+          type DefaultUsageAnalysis = {
+            trend: 'increasing' | 'decreasing' | 'stable';
+            percentageChange: number;
+            seasonalFactors: {
+              highUsageMonths: string[];
+              lowUsageMonths: string[];
+            };
+          };
+
+          type DefaultCostAnalysis = {
+            averageMonthlyBill: number;
+            projectedNextBill: number;
+            unusualCharges: Array<{
+              description: string;
+              amount: number;
+              reason: string;
+            }>;
+            potentialSavings: Array<{
+              description: string;
+              estimatedSaving: number;
+              confidence: number;
+            }>;
+          };
+
+          type DefaultPlanRecommendation = {
+            recommendedPlan: string;
+            reasons: string[];
+            estimatedMonthlySavings: number;
+            confidenceScore: number;
+            alternativePlans: Array<{
+              planName: string;
+              pros: string[];
+              cons: string[];
+              estimatedSavings: number;
+            }>;
+          };
+
           // Get enhanced analysis from server
           const defaultAnalysis = {
             usageAnalysis: {
-              trend: 'stable' as const,
+              trend: 'stable' as 'increasing' | 'decreasing' | 'stable',
               percentageChange: 0,
               seasonalFactors: {
                 highUsageMonths: ['December', 'January'],
                 lowUsageMonths: ['June', 'July']
               }
-            },
+            } as DefaultUsageAnalysis,
             costAnalysis: {
               averageMonthlyBill: verizonBill.billSummary.totalDue,
               projectedNextBill: verizonBill.billSummary.totalDue * 1.05,
@@ -310,7 +348,7 @@ class ApiService {
                 estimatedSaving: number;
                 confidence: number;
               }>
-            },
+            } as DefaultCostAnalysis,
             planRecommendation: {
               recommendedPlan: 'Unlimited Plus',
               reasons: ['Based on current usage', 'Better value for your needs'],
@@ -322,10 +360,15 @@ class ApiService {
                 cons: ['Fewer features'],
                 estimatedSavings: verizonBill.billSummary.totalDue * 0.2
               }]
-            }
+            } as DefaultPlanRecommendation
           };
           
-          let enhancedAnalysis = { ...defaultAnalysis };
+          // Create a variable to hold our enhanced analysis results
+          let enhancedAnalysis = {
+            usageAnalysis: { ...defaultAnalysis.usageAnalysis },
+            costAnalysis: { ...defaultAnalysis.costAnalysis },
+            planRecommendation: { ...defaultAnalysis.planRecommendation }
+          };
           
           try {
             const serverEnhanced = await this.analyzeWithServer(pdfText);
