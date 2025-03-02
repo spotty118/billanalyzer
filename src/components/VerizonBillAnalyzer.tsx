@@ -111,6 +111,11 @@ const VerizonBillAnalyzer: React.FC = () => {
       const formData = new FormData();
       formData.append('billFile', file);
       
+      // Check if file type is supported
+      if (file.type !== 'application/pdf' && file.type !== 'text/plain') {
+        throw new Error('Unsupported file format. Please upload a PDF or text file.');
+      }
+      
       // Send the file to the server for processing
       const response = await fetch('/api/analyze-bill', {
         method: 'POST',
@@ -118,7 +123,8 @@ const VerizonBillAnalyzer: React.FC = () => {
       });
       
       if (!response.ok) {
-        throw new Error(`Error analyzing bill: ${response.statusText}`);
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(`Error analyzing bill: ${errorData.error || response.statusText}`);
       }
       
       // Get the analysis results from the server
