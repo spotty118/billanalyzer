@@ -1,230 +1,612 @@
-
-import { server } from './server';
 import { extractPdfText } from '../utils/pdf-parser';
 
-// Real API endpoint for bill analysis
-server.post('/api/analyze-bill', async (request: Request) => {
+// Type definitions
+export interface BillLineDetails {
+  planCost?: number;
+  planDiscount?: number;
+  devicePayment?: number;
+  deviceCredit?: number;
+  protection?: number;
+  perks?: number;
+  perksDiscount?: number;
+  surcharges?: number;
+  taxes?: number;
+}
+
+export interface PhoneLine {
+  phoneNumber: string;
+  deviceName: string;
+  planName: string;
+  monthlyTotal: number;
+  details: BillLineDetails;
+  charges?: any[];
+}
+
+export interface BillAnalysisResponse {
+  accountNumber: string;
+  totalAmount: number;
+  billingPeriod: string;
+  phoneLines: PhoneLine[];
+  chargesByCategory: {
+    plans: number;
+    devices: number;
+    protection: number;
+    surcharges: number;
+    taxes: number;
+    other: number;
+  };
+}
+
+// Main API endpoint for bill analysis
+export async function POST(req: Request) {
   try {
-    // Get the form data from the request
-    const formData = await request.formData();
+    const formData = await req.formData();
     const billFile = formData.get('billFile') as File;
     
     if (!billFile) {
-      return new Response(JSON.stringify({ error: 'No file provided' }), { 
+      return new Response(JSON.stringify({ error: 'No file uploaded' }), {
         status: 400,
         headers: { 'Content-Type': 'application/json' }
       });
     }
-
-    // Extract text based on file type
-    let fileContent = '';
     
-    if (billFile.type === 'application/pdf') {
-      // Handle PDF files
-      try {
-        const buffer = await billFile.arrayBuffer();
-        fileContent = await extractPdfText(buffer);
-      } catch (pdfError) {
-        console.error('Error extracting text from PDF:', pdfError);
-        return new Response(JSON.stringify({ error: 'Failed to extract text from PDF' }), {
-          status: 500,
-          headers: { 'Content-Type': 'application/json' }
-        });
-      }
-    } else {
-      // Handle text files or other formats
-      fileContent = await billFile.text();
-    }
+    // Process the file based on its type
+    const fileType = billFile.type;
+    const fileBuffer = await billFile.arrayBuffer();
+    const analysisResult = await processBillData(fileBuffer, billFile.type);
     
-    // Process the bill data
-    const result = await processBillData(fileContent);
-    
-    return Response.json(result);
+    return new Response(JSON.stringify(analysisResult), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' }
+    });
   } catch (error) {
     console.error('Error processing bill:', error);
-    return new Response(JSON.stringify({ error: 'Error processing bill' }), {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+    
+    return new Response(JSON.stringify({ error: errorMessage }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' }
     });
   }
-});
-
-// Process the bill data based on file content
-async function processBillData(fileContent: string) {
-  // Extract account information
-  const accountNumber = extractAccountNumber(fileContent);
-  const billingPeriod = extractBillingPeriod(fileContent);
-  const totalAmount = extractTotalAmount(fileContent);
-  
-  // Extract all phone lines and their charges
-  const phoneLines = extractPhoneLines(fileContent);
-  
-  // Categorize charges
-  const chargesByCategory = categorizeCharges(fileContent);
-  
-  return {
-    accountNumber,
-    billingPeriod,
-    totalAmount,
-    phoneLines,
-    chargesByCategory
-  };
 }
 
-// Helper functions to extract information from bill text
-function extractAccountNumber(text: string): string {
-  const accountMatch = text.match(/Account:?\s*([A-Za-z0-9\-]+)/i);
-  return accountMatch ? accountMatch[1] : 'Unknown';
-}
-
-function extractBillingPeriod(text: string): string {
-  const periodMatch = text.match(/Billing Period:?\s*([A-Za-z0-9\s\-]+)/i);
-  return periodMatch ? periodMatch[1].trim() : 'Unknown';
-}
-
-function extractTotalAmount(text: string): number {
-  const amountMatch = text.match(/Total Amount Due\s*\$?([0-9,]+\.[0-9]{2})/i) || 
-                      text.match(/Total due.*\$?([0-9,]+\.[0-9]{2})/i);
+// Process the uploaded bill file
+async function processBillData(fileBuffer: ArrayBuffer, fileType: string): Promise<BillAnalysisResponse> {
+  let billText: string;
   
-  if (amountMatch) {
-    return parseFloat(amountMatch[1].replace(/,/g, ''));
+  if (fileType === 'application/pdf') {
+    // Extract text from PDF
+    billText = await extractPdfText(fileBuffer);
+  } else if (fileType === 'text/plain') {
+    // Convert ArrayBuffer to string for text files
+    const decoder = new TextDecoder('utf-8');
+    billText = decoder.decode(fileBuffer);
+  } else {
+    throw new Error('Unsupported file format');
   }
+  
+  // Analyze the bill text and extract relevant information
+  return analyzeBillText(billText);
+}
+
+// Analyze bill text to extract structured data
+function analyzeBillText(billText: string): BillAnalysisResponse {
+  try {
+    // Initialize result structure
+    const result: BillAnalysisResponse = {
+      accountNumber: extractAccountNumber(billText),
+      totalAmount: extractTotalAmount(billText),
+      billingPeriod: extractBillingPeriod(billText),
+      phoneLines: extractPhoneLines(billText),
+      chargesByCategory: {
+        plans: 0,
+        devices: 0,
+        protection: 0,
+        surcharges: 0,
+        taxes: 0,
+        other: 0
+      }
+    };
+    
+    // Calculate charges by category based on the phone lines
+    calculateChargesByCategory(result);
+    
+    return result;
+  } catch (error) {
+    console.error('Error in bill text analysis:', error);
+    throw new Error('Failed to analyze bill text');
+  }
+}
+
+// Extract account number from bill text
+function extractAccountNumber(billText: string): string {
+  const accountNumberRegex = /Account:?\s*([A-Za-z0-9\-]+)/i;
+  const match = billText.match(accountNumberRegex);
+  
+  if (match && match[1]) {
+    return match[1];
+  }
+  
+  // Fallback in case the account number format is different
+  return 'Unknown Account';
+}
+
+// Extract total amount from bill text
+function extractTotalAmount(billText: string): number {
+  const totalAmountRegex = /Total\s+Amount\s+Due\s*\$?([0-9,]+\.[0-9]{2})/i;
+  const match = billText.match(totalAmountRegex);
+  
+  if (match && match[1]) {
+    return parseFloat(match[1].replace(',', ''));
+  }
+  
+  // Secondary attempt with a different pattern
+  const secondaryRegex = /Total\s+due.*?:?\s*\$?([0-9,]+\.[0-9]{2})/i;
+  const secondaryMatch = billText.match(secondaryRegex);
+  
+  if (secondaryMatch && secondaryMatch[1]) {
+    return parseFloat(secondaryMatch[1].replace(',', ''));
+  }
+  
+  // Fallback value if no amount is found
   return 0;
 }
 
-function extractPhoneLines(text: string): any[] {
-  const lines = [];
-  const lineMatches = text.matchAll(/([A-Za-z\s]+)\s*-\s*([^(]+)\s*\((\d{3}-\d{3}-\d{4})\).*?:\s*\$?([0-9.]+)/g);
+// Extract billing period from bill text
+function extractBillingPeriod(billText: string): string {
+  const billingPeriodRegex = /Billing\s+Period:?\s*([A-Za-z0-9\s\-]+)/i;
+  const match = billText.match(billingPeriodRegex);
   
-  for (const match of lineMatches) {
-    const [_, owner, device, phoneNumber, amountStr] = match;
-    const amount = parseFloat(amountStr);
+  if (match && match[1]) {
+    return match[1].trim();
+  }
+  
+  // Fallback in case the billing period format is different
+  const dateRegex = /(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+\d{1,2}\s*-\s*(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+\d{1,2},?\s+\d{4}/i;
+  const dateMatch = billText.match(dateRegex);
+  
+  if (dateMatch && dateMatch[0]) {
+    return dateMatch[0];
+  }
+  
+  // Default value if no billing period is found
+  return 'Current Billing Period';
+}
+
+// Extract phone lines from bill text
+function extractPhoneLines(billText: string): PhoneLine[] {
+  const phoneLines: PhoneLine[] = [];
+  
+  // Look for line details sections
+  const lineDetailsSections = extractLineSections(billText);
+  
+  if (lineDetailsSections.length === 0) {
+    // Fallback to simpler pattern matching if structured sections aren't found
+    return extractSimplePhoneLines(billText);
+  }
+  
+  // Process each line detail section
+  for (const section of lineDetailsSections) {
+    const phoneNumber = extractPhoneNumber(section);
+    const deviceName = extractDeviceName(section);
     
-    if (!isNaN(amount)) {
-      lines.push({
-        phoneNumber: phoneNumber.trim(),
-        deviceName: device.trim(),
-        planName: extractPlanName(text, phoneNumber),
-        monthlyTotal: amount,
-        details: extractLineDetails(text, phoneNumber)
+    if (phoneNumber) {
+      const details: BillLineDetails = {
+        planCost: extractPlanCost(section),
+        planDiscount: extractPlanDiscount(section),
+        devicePayment: extractDevicePayment(section),
+        deviceCredit: extractDeviceCredit(section),
+        protection: extractProtectionPlan(section),
+        perks: extractPerks(section),
+        perksDiscount: extractPerksDiscount(section),
+        surcharges: extractSurcharges(section),
+        taxes: extractTaxes(section)
+      };
+      
+      // Calculate monthly total for this line
+      const monthlyTotal = calculateMonthlyTotal(details);
+      
+      phoneLines.push({
+        phoneNumber,
+        deviceName: deviceName || `Device (${phoneNumber})`,
+        planName: extractPlanName(section) || 'Verizon Plan',
+        monthlyTotal,
+        details
       });
     }
   }
   
-  return lines;
+  return phoneLines;
 }
 
-function extractPlanName(text: string, phoneNumber: string): string {
-  // Find the plan name in text near the phone number
-  const planRegex = new RegExp(`${phoneNumber}[\\s\\S]*?Plan\\s+-\\s+([^-\\n]+)`, 'i');
-  const planMatch = text.match(planRegex);
-  return planMatch ? planMatch[1].trim() : 'Unlimited Plan';
-}
-
-function extractLineDetails(text: string, phoneNumber: string): any {
-  // Extract detailed charges for a line
-  const details = {
-    planCost: 0,
-    planDiscount: 0,
-    devicePayment: 0,
-    deviceCredit: 0,
-    protection: 0,
-    perks: 0,
-    perksDiscount: 0,
-    surcharges: 0,
-    taxes: 0
-  };
+// Extract line sections from the bill text
+function extractLineSections(billText: string): string[] {
+  const sections: string[] = [];
   
-  // Extract the section for this phone number
-  const phoneSection = extractSectionForPhone(text, phoneNumber);
+  // Look for patterns that indicate the start of a line section
+  const phoneNumberRegex = /(\d{3}[-\.\s]?\d{3}[-\.\s]?\d{4})/g;
+  const phoneMatches = [...billText.matchAll(phoneNumberRegex)];
   
-  if (phoneSection) {
-    // Extract plan cost
-    const planMatch = phoneSection.match(/Plan\s+.*?:\s*\$?([0-9.]+)/i);
-    if (planMatch) details.planCost = parseFloat(planMatch[1]);
+  if (phoneMatches.length === 0) {
+    return sections;
+  }
+  
+  // Extract sections around each phone number
+  for (let i = 0; i < phoneMatches.length; i++) {
+    const match = phoneMatches[i];
+    if (!match.index) continue;
     
-    // Extract plan discount
-    const discountMatch = phoneSection.match(/discount.*?:\s*-\$?([0-9.]+)/i);
-    if (discountMatch) details.planDiscount = parseFloat(discountMatch[1]);
+    const startIdx = match.index;
+    const endIdx = i < phoneMatches.length - 1 && phoneMatches[i + 1].index 
+      ? phoneMatches[i + 1].index 
+      : billText.length;
     
-    // Extract device payment
-    const deviceMatch = phoneSection.match(/Device.*?payment.*?:\s*\$?([0-9.]+)/i) || 
-                        phoneSection.match(/Devices.*?([0-9.]+)/i);
-    if (deviceMatch) details.devicePayment = parseFloat(deviceMatch[1]);
-    
-    // Extract device credit
-    const creditMatch = phoneSection.match(/Device.*?credit.*?:\s*-\$?([0-9.]+)/i);
-    if (creditMatch) details.deviceCredit = parseFloat(creditMatch[1]);
-    
-    // Extract protection
-    const protectionMatch = phoneSection.match(/Protection.*?:\s*\$?([0-9.]+)/i);
-    if (protectionMatch) details.protection = parseFloat(protectionMatch[1]);
-    
-    // Extract surcharges and taxes
-    const surchargeMatches = phoneSection.matchAll(/Surcharges.*?:\s*\$?([0-9.]+)/gi);
-    for (const match of surchargeMatches) {
-      details.surcharges += parseFloat(match[1]);
-    }
-    
-    const taxMatches = phoneSection.matchAll(/Tax.*?:\s*\$?([0-9.]+)/gi);
-    for (const match of taxMatches) {
-      details.taxes += parseFloat(match[1]);
+    const section = billText.slice(startIdx, endIdx);
+    if (section.length > 20) { // Ensure section is substantial
+      sections.push(section);
     }
   }
   
-  return details;
+  return sections;
 }
 
-function extractSectionForPhone(text: string, phoneNumber: string): string {
-  // Find the section of text related to a specific phone number
-  const phoneRegex = new RegExp(`${phoneNumber}[\\s\\S]*?(?=(\\d{3}-\\d{3}-\\d{4}|Total:|$))`, 'i');
-  const sectionMatch = text.match(phoneRegex);
-  return sectionMatch ? sectionMatch[0] : '';
+// Fallback method to extract phone lines using simpler patterns
+function extractSimplePhoneLines(billText: string): PhoneLine[] {
+  const phoneLines: PhoneLine[] = [];
+  const phoneNumberRegex = /(\d{3}-\d{3}-\d{4})/g;
+  const phoneMatches = [...billText.matchAll(phoneNumberRegex)];
+  
+  for (const match of phoneMatches) {
+    const phoneNumber = match[0];
+    const surroundingText = extractSurroundingText(billText, match.index || 0, 200);
+    
+    // Extract device name from surrounding text
+    const deviceName = extractDeviceNameFromSurrounding(surroundingText) || `Device (${phoneNumber})`;
+    
+    // Create estimated details based on surrounding text
+    const details: BillLineDetails = {
+      planCost: estimatePlanCost(surroundingText),
+      devicePayment: estimateDevicePayment(surroundingText),
+      protection: estimateProtectionCost(surroundingText),
+      surcharges: estimateSurcharges(surroundingText),
+      taxes: estimateTaxes(surroundingText)
+    };
+    
+    // Calculate monthly total for this line
+    const monthlyTotal = calculateMonthlyTotal(details);
+    
+    phoneLines.push({
+      phoneNumber,
+      deviceName,
+      planName: extractPlanNameFromSurrounding(surroundingText) || 'Verizon Plan',
+      monthlyTotal,
+      details
+    });
+  }
+  
+  return phoneLines;
 }
 
-function categorizeCharges(text: string): any {
-  // Categorize all charges
-  return {
-    plans: extractCategoryTotal(text, 'plan'),
-    devices: extractCategoryTotal(text, 'device'),
-    protection: extractCategoryTotal(text, 'protection'),
-    surcharges: extractCategoryTotal(text, 'surcharge'),
-    taxes: extractCategoryTotal(text, 'tax'),
-    other: extractCategoryTotal(text, 'other')
-  };
+// Extract text surrounding a specific position
+function extractSurroundingText(text: string, position: number, range: number): string {
+  const start = Math.max(0, position - range / 2);
+  const end = Math.min(text.length, position + range / 2);
+  return text.slice(start, end);
 }
 
-function extractCategoryTotal(text: string, category: string): number {
+// Extract phone number from a section
+function extractPhoneNumber(section: string): string {
+  const phoneNumberRegex = /(\d{3}[-\.\s]?\d{3}[-\.\s]?\d{4})/;
+  const match = section.match(phoneNumberRegex);
+  return match ? match[1] : '';
+}
+
+// Extract device name from a section
+function extractDeviceName(section: string): string {
+  // Look for common device naming patterns
+  const deviceNameRegex = /(Apple iPhone \d+|iPhone \d+|Samsung Galaxy S\d+|iPad|Apple Watch)/i;
+  const match = section.match(deviceNameRegex);
+  
+  if (match && match[1]) {
+    return match[1];
+  }
+  
+  // Look for a pattern like "Device: Name"
+  const deviceLabelRegex = /Device:?\s*([A-Za-z0-9\s]+)/i;
+  const labelMatch = section.match(deviceLabelRegex);
+  
+  if (labelMatch && labelMatch[1]) {
+    return labelMatch[1].trim();
+  }
+  
+  return '';
+}
+
+// Extract device name from surrounding text
+function extractDeviceNameFromSurrounding(text: string): string {
+  const devicePatterns = [
+    /Apple iPhone (\d+\s?(?:Pro|Plus|Max)?)/i,
+    /iPhone (\d+\s?(?:Pro|Plus|Max)?)/i,
+    /Samsung Galaxy S(\d+)/i,
+    /iPad (?:Pro|Air|Mini)?/i,
+    /Apple Watch/i
+  ];
+  
+  for (const pattern of devicePatterns) {
+    const match = text.match(pattern);
+    if (match) {
+      return match[0];
+    }
+  }
+  
+  return '';
+}
+
+// Extract plan name from a section
+function extractPlanName(section: string): string {
+  const planNamePatterns = [
+    /Plan - (.*?) -/i,
+    /Plan: (.*?)(?:\n|$)/i,
+    /(Unlimited Plus|Unlimited Welcome|Unlimited Ultimate)/i,
+    /(Start Unlimited|Play More Unlimited|Do More Unlimited|Get More Unlimited)/i
+  ];
+  
+  for (const pattern of planNamePatterns) {
+    const match = section.match(pattern);
+    if (match && match[1]) {
+      return match[1].trim();
+    }
+  }
+  
+  return '';
+}
+
+// Extract plan name from surrounding text
+function extractPlanNameFromSurrounding(text: string): string {
+  const planPatterns = [
+    /(Unlimited Plus|Unlimited Welcome|Unlimited Ultimate)/i,
+    /(Start Unlimited|Play More Unlimited|Do More Unlimited|Get More Unlimited)/i,
+    /Plan: (.*?)(?:\n|$)/i
+  ];
+  
+  for (const pattern of planPatterns) {
+    const match = text.match(pattern);
+    if (match) {
+      return match[1] || match[0];
+    }
+  }
+  
+  return '';
+}
+
+// Extract plan cost from section
+function extractPlanCost(section: string): number {
+  const planCostRegex = /Plan.*?:?\s*\$?([0-9\.]+)/i;
+  const match = section.match(planCostRegex);
+  
+  if (match && match[1]) {
+    return parseFloat(match[1]);
+  }
+  
+  return 0;
+}
+
+// Extract plan discount from section
+function extractPlanDiscount(section: string): number {
+  const discountRegex = /(?:discount|access discount).*?-\$?([0-9\.]+)/i;
+  const match = section.match(discountRegex);
+  
+  if (match && match[1]) {
+    return parseFloat(match[1]);
+  }
+  
+  return 0;
+}
+
+// Extract device payment from section
+function extractDevicePayment(section: string): number {
+  const devicePaymentRegex = /(?:Device|Payment).*?\$?([0-9\.]+)/i;
+  const match = section.match(devicePaymentRegex);
+  
+  if (match && match[1]) {
+    return parseFloat(match[1]);
+  }
+  
+  return 0;
+}
+
+// Extract device credit from section
+function extractDeviceCredit(section: string): number {
+  const creditRegex = /(?:Device\sPromo|Credit).*?-\$?([0-9\.]+)/i;
+  const match = section.match(creditRegex);
+  
+  if (match && match[1]) {
+    return parseFloat(match[1]);
+  }
+  
+  return 0;
+}
+
+// Extract protection plan cost from section
+function extractProtectionPlan(section: string): number {
+  const protectionRegex = /(?:Protection|Insurance).*?\$?([0-9\.]+)/i;
+  const match = section.match(protectionRegex);
+  
+  if (match && match[1]) {
+    return parseFloat(match[1]);
+  }
+  
+  return 0;
+}
+
+// Extract perks costs from section
+function extractPerks(section: string): number {
+  const perksRegex = /(?:perks|premium|services).*?\$?([0-9\.]+)/i;
+  const match = section.match(perksRegex);
+  
+  if (match && match[1]) {
+    return parseFloat(match[1]);
+  }
+  
+  return 0;
+}
+
+// Extract perks discount from section
+function extractPerksDiscount(section: string): number {
+  const perksDiscountRegex = /(?:perks|premium|services).*?discount.*?-\$?([0-9\.]+)/i;
+  const match = section.match(perksDiscountRegex);
+  
+  if (match && match[1]) {
+    return parseFloat(match[1]);
+  }
+  
+  return 0;
+}
+
+// Extract surcharges from section
+function extractSurcharges(section: string): number {
+  const surchargesRegex = /(?:Surcharges|Recovery|Regulatory).*?\$?([0-9\.]+)/i;
+  const matches = [...section.matchAll(new RegExp(surchargesRegex, 'gi'))];
+  
   let total = 0;
-  
-  // Different regex patterns based on category
-  let pattern;
-  switch(category) {
-    case 'plan':
-      pattern = /Plan\s+.*?:\s*\$?([0-9.]+)/gi;
-      break;
-    case 'device':
-      pattern = /Device.*?:\s*\$?([0-9.]+)/gi;
-      break;
-    case 'protection':
-      pattern = /Protection.*?:\s*\$?([0-9.]+)/gi;
-      break;
-    case 'surcharge':
-      pattern = /Surcharge.*?:\s*\$?([0-9.]+)/gi;
-      break;
-    case 'tax':
-      pattern = /Tax.*?:\s*\$?([0-9.]+)/gi;
-      break;
-    case 'other':
-      // Catch-all for other charges
-      pattern = /fee.*?:\s*\$?([0-9.]+)/gi;
-      break;
-  }
-  
-  const matches = text.matchAll(pattern);
   for (const match of matches) {
-    total += parseFloat(match[1]);
+    if (match[1]) {
+      total += parseFloat(match[1]);
+    }
   }
   
   return total;
+}
+
+// Extract taxes from section
+function extractTaxes(section: string): number {
+  const taxesRegex = /(?:Taxes|Tax|Fee).*?\$?([0-9\.]+)/i;
+  const matches = [...section.matchAll(new RegExp(taxesRegex, 'gi'))];
+  
+  let total = 0;
+  for (const match of matches) {
+    if (match[1]) {
+      total += parseFloat(match[1]);
+    }
+  }
+  
+  return total;
+}
+
+// Estimate plan cost from text
+function estimatePlanCost(text: string): number {
+  const planCostRegex = /(?:plan|monthly|service).*?\$?(\d+\.\d{2}|\d+)/i;
+  const match = text.match(planCostRegex);
+  
+  if (match && match[1]) {
+    return parseFloat(match[1]);
+  }
+  
+  // Fallback estimates based on common plan costs
+  if (text.match(/unlimited/i)) {
+    return 70; // Average unlimited plan cost
+  }
+  
+  return 50; // Default plan cost estimate
+}
+
+// Estimate device payment from text
+function estimateDevicePayment(text: string): number {
+  const devicePaymentRegex = /(?:device|phone|equipment).*?payment.*?\$?(\d+\.\d{2}|\d+)/i;
+  const match = text.match(devicePaymentRegex);
+  
+  if (match && match[1]) {
+    return parseFloat(match[1]);
+  }
+  
+  return 0;
+}
+
+// Estimate protection cost from text
+function estimateProtectionCost(text: string): number {
+  const protectionRegex = /(?:protection|insurance|damage).*?\$?(\d+\.\d{2}|\d+)/i;
+  const match = text.match(protectionRegex);
+  
+  if (match && match[1]) {
+    return parseFloat(match[1]);
+  }
+  
+  if (text.match(/protection|insurance|damage/i)) {
+    return 15; // Average protection plan cost
+  }
+  
+  return 0;
+}
+
+// Estimate surcharges from text
+function estimateSurcharges(text: string): number {
+  const surchargesRegex = /(?:surcharge|recovery|regulatory).*?\$?(\d+\.\d{2}|\d+)/i;
+  const match = text.match(surchargesRegex);
+  
+  if (match && match[1]) {
+    return parseFloat(match[1]);
+  }
+  
+  return 3; // Default surcharges estimate
+}
+
+// Estimate taxes from text
+function estimateTaxes(text: string): number {
+  const taxesRegex = /(?:tax|fee).*?\$?(\d+\.\d{2}|\d+)/i;
+  const match = text.match(taxesRegex);
+  
+  if (match && match[1]) {
+    return parseFloat(match[1]);
+  }
+  
+  return 5; // Default taxes estimate
+}
+
+// Calculate monthly total for a line based on details
+function calculateMonthlyTotal(details: BillLineDetails): number {
+  const planCost = (details.planCost || 0) - (details.planDiscount || 0);
+  const deviceCost = (details.devicePayment || 0) - (details.deviceCredit || 0);
+  const perksCost = (details.perks || 0) - (details.perksDiscount || 0);
+  const feesAndTaxes = (details.surcharges || 0) + (details.taxes || 0);
+  
+  return planCost + deviceCost + (details.protection || 0) + perksCost + feesAndTaxes;
+}
+
+// Calculate charges by category based on phone lines
+function calculateChargesByCategory(result: BillAnalysisResponse): void {
+  let totalPlans = 0;
+  let totalDevices = 0;
+  let totalProtection = 0;
+  let totalSurcharges = 0;
+  let totalTaxes = 0;
+  let totalOther = 0;
+  
+  for (const line of result.phoneLines) {
+    totalPlans += (line.details.planCost || 0) - (line.details.planDiscount || 0);
+    totalDevices += (line.details.devicePayment || 0) - (line.details.deviceCredit || 0);
+    totalProtection += (line.details.protection || 0);
+    totalSurcharges += (line.details.surcharges || 0);
+    totalTaxes += (line.details.taxes || 0);
+    
+    // Other contains perks and any remaining amounts
+    const perks = (line.details.perks || 0) - (line.details.perksDiscount || 0);
+    const lineTotal = line.monthlyTotal;
+    const accountedFor = (line.details.planCost || 0) - (line.details.planDiscount || 0) +
+                          (line.details.devicePayment || 0) - (line.details.deviceCredit || 0) +
+                          (line.details.protection || 0) + 
+                          (line.details.surcharges || 0) + 
+                          (line.details.taxes || 0) +
+                          perks;
+    
+    totalOther += perks + Math.max(0, lineTotal - accountedFor);
+  }
+  
+  result.chargesByCategory = {
+    plans: parseFloat(totalPlans.toFixed(2)),
+    devices: parseFloat(totalDevices.toFixed(2)),
+    protection: parseFloat(totalProtection.toFixed(2)),
+    surcharges: parseFloat(totalSurcharges.toFixed(2)),
+    taxes: parseFloat(totalTaxes.toFixed(2)),
+    other: parseFloat(totalOther.toFixed(2))
+  };
 }
