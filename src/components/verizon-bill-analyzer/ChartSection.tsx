@@ -12,6 +12,12 @@ const ChartSection: React.FC<ChartSectionProps> = ({ billData }) => {
   const lineData = prepareLineItemsData(billData);
   const categoryData = prepareCategoryData(billData);
 
+  // Custom formatter for tooltip values to handle various types that might come from recharts
+  const currencyFormatter = (value: any) => {
+    // Make sure the value is a number before using toFixed
+    return typeof value === 'number' ? `$${value.toFixed(2)}` : `$${value}`;
+  };
+
   return (
     <div className="mb-8">
       <h2 className="text-xl font-bold mb-4">Bill Breakdown</h2>
@@ -26,7 +32,7 @@ const ChartSection: React.FC<ChartSectionProps> = ({ billData }) => {
               >
                 <XAxis dataKey="name" />
                 <YAxis />
-                <Tooltip formatter={(value) => `$${value.toFixed(2)}`} />
+                <Tooltip formatter={currencyFormatter} />
                 <Legend />
                 <Bar dataKey="plan" name="Plan" stackId="a" fill={COLORS[0]} />
                 <Bar dataKey="device" name="Device" stackId="a" fill={COLORS[1]} />
@@ -53,11 +59,11 @@ const ChartSection: React.FC<ChartSectionProps> = ({ billData }) => {
                   nameKey="name"
                   label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
                 >
-                  {categoryData.map((entry, index) => (
+                  {categoryData.map((_, index) => (
                     <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                   ))}
                 </Pie>
-                <Tooltip formatter={(value) => `$${value.toFixed(2)}`} />
+                <Tooltip formatter={currencyFormatter} />
                 <Legend />
               </PieChart>
             </ResponsiveContainer>
