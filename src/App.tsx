@@ -1,4 +1,4 @@
-import React from 'react';
+
 import VerizonBillAnalyzer from "./components/VerizonBillAnalyzer";
 
 function App() {

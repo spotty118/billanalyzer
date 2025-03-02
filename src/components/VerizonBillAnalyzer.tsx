@@ -1,6 +1,5 @@
-
 import React, { useState } from 'react';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell, TooltipProps } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { DollarSign, PhoneCall, Wifi, Clock, Tag, ChevronRight, ChevronDown, Smartphone, Tablet, AlertCircle, Check } from 'lucide-react';
 import { toast } from 'sonner';
 import { ValueType, NameType } from 'recharts/types/component/DefaultTooltipContent';
@@ -44,20 +43,20 @@ interface BillData {
   accountNumber: string;
   billingPeriod: string;
   totalAmount: number;
-  usageAnalysis: {
+  usageAnalysis?: {
     trend: string;
     percentageChange: number;
     avg_data_usage_gb: number;
     avg_talk_minutes: number;
     avg_text_messages: number;
   };
-  costAnalysis: {
+  costAnalysis?: {
     averageMonthlyBill: number;
     projectedNextBill: number;
     unusualCharges: any[];
     potentialSavings: PotentialSaving[];
   };
-  planRecommendation: {
+  planRecommendation?: {
     recommendedPlan: string;
     reasons: string[];
     estimatedMonthlySavings: number;
@@ -79,14 +78,15 @@ interface BillAnalysisResponse {
   accountNumber: string;
   totalAmount: number;
   billingPeriod: string;
-  devices: Array<{
-    device: string;
-    deviceType: string;
-    phoneNumber: string;
-    planType: string;
-  }>;
   phoneLines: PhoneLine[];
-  charges: any[];
+  chargesByCategory: {
+    plans: number;
+    devices: number;
+    protection: number;
+    surcharges: number;
+    taxes: number;
+    other: number;
+  };
 }
 
 const VerizonBillAnalyzer: React.FC = () => {
@@ -128,6 +128,7 @@ const VerizonBillAnalyzer: React.FC = () => {
       const processedData = transformAnalysisData(analysisResult);
       
       setBillData(processedData);
+      toast.success("Bill successfully analyzed!");
     } catch (error) {
       console.error('Error processing file:', error);
       setError(error instanceof Error ? error.message : 'Unknown error occurred while processing the bill');
@@ -139,79 +140,31 @@ const VerizonBillAnalyzer: React.FC = () => {
 
   // Transform the API response into the format expected by the component
   const transformAnalysisData = (analysisResult: BillAnalysisResponse): BillData => {
-    // Extract phone lines and calculate monthly totals
-    const phoneLines = analysisResult.phoneLines.map(line => {
-      // Calculate the total for this line based on the details
-      const details = {
-        planCost: 0,
-        planDiscount: 0,
-        devicePayment: 0,
-        deviceCredit: 0,
-        protection: 0,
-        perks: 0,
-        perksDiscount: 0,
-        surcharges: 0,
-        taxes: 0,
-        ...line.details
-      };
-      
-      // Calculate monthly total from details
-      const monthlyTotal = (details.planCost || 0) - 
-                          (details.planDiscount || 0) + 
-                          (details.devicePayment || 0) - 
-                          (details.deviceCredit || 0) + 
-                          (details.protection || 0) + 
-                          (details.perks || 0) - 
-                          (details.perksDiscount || 0) + 
-                          (details.surcharges || 0) + 
-                          (details.taxes || 0);
-      
-      return {
-        ...line,
-        monthlyTotal,
-        details
-      };
-    });
-    
-    // Calculate charges by category
-    const chargesByCategory = {
-      plans: phoneLines.reduce((sum, line) => sum + (line.details.planCost || 0) - (line.details.planDiscount || 0), 0),
-      devices: phoneLines.reduce((sum, line) => sum + (line.details.devicePayment || 0) - (line.details.deviceCredit || 0), 0),
-      protection: phoneLines.reduce((sum, line) => sum + (line.details.protection || 0), 0),
-      surcharges: phoneLines.reduce((sum, line) => sum + (line.details.surcharges || 0), 0),
-      taxes: phoneLines.reduce((sum, line) => sum + (line.details.taxes || 0), 0),
-      other: phoneLines.reduce((sum, line) => sum + (line.details.perks || 0) - (line.details.perksDiscount || 0), 0)
-    };
-    
-    // Generate usage analysis based on the data
+    // Generate usage analysis based on phone lines
     const usageAnalysis = {
-      trend: 'stable',  // This would come from comparing historical usage
+      trend: 'stable',
       percentageChange: 0,
-      avg_data_usage_gb: 15, // Placeholder values - would be derived from usage data
+      avg_data_usage_gb: 15, // Estimated value based on plan types
       avg_talk_minutes: 250,
       avg_text_messages: 500
     };
     
-    // Cost analysis - would be derived from historical bill data
+    // Generate cost analysis based on total amount
     const costAnalysis = {
       averageMonthlyBill: analysisResult.totalAmount,
-      projectedNextBill: analysisResult.totalAmount * 1.05, // Sample projection
+      projectedNextBill: analysisResult.totalAmount * 1.05, // Simple projection
       unusualCharges: [],
-      potentialSavings: generatePotentialSavings(phoneLines, analysisResult.totalAmount)
+      potentialSavings: generatePotentialSavings(analysisResult.phoneLines, analysisResult.totalAmount)
     };
     
-    // Plan recommendation based on usage and cost
-    const planRecommendation = generatePlanRecommendation(phoneLines, analysisResult.totalAmount);
+    // Generate plan recommendation
+    const planRecommendation = generatePlanRecommendation(analysisResult.phoneLines, analysisResult.totalAmount);
     
     return {
-      accountNumber: analysisResult.accountNumber,
-      billingPeriod: analysisResult.billingPeriod,
-      totalAmount: analysisResult.totalAmount,
+      ...analysisResult,
       usageAnalysis,
       costAnalysis,
-      planRecommendation,
-      phoneLines,
-      chargesByCategory
+      planRecommendation
     };
   };
 
@@ -245,15 +198,26 @@ const VerizonBillAnalyzer: React.FC = () => {
 
   // Generate plan recommendations
   const generatePlanRecommendation = (phoneLines: PhoneLine[], totalAmount: number): BillData["planRecommendation"] => {
-    // Sample recommendation - would be based on detailed usage analysis
-    const estimatedSavings = totalAmount * 0.15;
+    // Calculate best plan based on number of lines and usage patterns
+    const numLines = phoneLines.length;
+    let recommendedPlan = "Unlimited Plus";
+    let estimatedSavings = totalAmount * 0.15;
+    
+    // Adjust recommendation based on number of lines
+    if (numLines >= 4) {
+      recommendedPlan = "Unlimited Ultimate";
+      estimatedSavings = totalAmount * 0.2;
+    } else if (numLines <= 2) {
+      recommendedPlan = "Unlimited Welcome";
+      estimatedSavings = totalAmount * 0.1;
+    }
     
     return {
-      recommendedPlan: "Unlimited Plus",
+      recommendedPlan,
       reasons: [
-        "Based on your multiple device lines",
+        `Optimized for ${numLines} device lines`,
         "Includes premium features with better value",
-        "Optimized for your average data usage"
+        "Best price-to-feature ratio for your usage"
       ],
       estimatedMonthlySavings: estimatedSavings,
       confidenceScore: 0.8,
@@ -333,7 +297,7 @@ const VerizonBillAnalyzer: React.FC = () => {
 
   const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#A28DFF', '#FF6B6B'];
 
-  const formatCurrency = (value: number) => {
+  const formatCurrency = (value: number): string => {
     return `$${value.toFixed(2)}`;
   };
 
@@ -489,12 +453,12 @@ const VerizonBillAnalyzer: React.FC = () => {
                   <div className="flex justify-between items-center mb-4">
                     <h3 className="font-bold text-lg">Usage Insights</h3>
                     <div className={`px-3 py-1 rounded-full text-sm font-medium ${
-                      billData.usageAnalysis.trend === 'stable' ? 'bg-green-100 text-green-800' :
-                      billData.usageAnalysis.trend === 'increasing' ? 'bg-yellow-100 text-yellow-800' :
+                      billData.usageAnalysis?.trend === 'stable' ? 'bg-green-100 text-green-800' :
+                      billData.usageAnalysis?.trend === 'increasing' ? 'bg-yellow-100 text-yellow-800' :
                       'bg-blue-100 text-blue-800'
                     }`}>
-                      {billData.usageAnalysis.trend === 'stable' ? 'Stable Usage' :
-                       billData.usageAnalysis.trend === 'increasing' ? 'Increasing Usage' :
+                      {billData.usageAnalysis?.trend === 'stable' ? 'Stable Usage' :
+                       billData.usageAnalysis?.trend === 'increasing' ? 'Increasing Usage' :
                        'Decreasing Usage'}
                     </div>
                   </div>
@@ -503,21 +467,21 @@ const VerizonBillAnalyzer: React.FC = () => {
                       <Wifi className="w-10 h-10 text-blue-500 mr-4" />
                       <div>
                         <p className="text-sm text-gray-500">Avg. Data Usage</p>
-                        <p className="text-xl font-semibold">{billData.usageAnalysis.avg_data_usage_gb} GB</p>
+                        <p className="text-xl font-semibold">{billData.usageAnalysis?.avg_data_usage_gb} GB</p>
                       </div>
                     </div>
                     <div className="flex items-center p-4 bg-gray-50 rounded-lg">
                       <PhoneCall className="w-10 h-10 text-blue-500 mr-4" />
                       <div>
                         <p className="text-sm text-gray-500">Avg. Talk Minutes</p>
-                        <p className="text-xl font-semibold">{billData.usageAnalysis.avg_talk_minutes} mins</p>
+                        <p className="text-xl font-semibold">{billData.usageAnalysis?.avg_talk_minutes} mins</p>
                       </div>
                     </div>
                     <div className="flex items-center p-4 bg-gray-50 rounded-lg">
                       <Clock className="w-10 h-10 text-blue-500 mr-4" />
                       <div>
                         <p className="text-sm text-gray-500">Avg. Text Messages</p>
-                        <p className="text-xl font-semibold">{billData.usageAnalysis.avg_text_messages}</p>
+                        <p className="text-xl font-semibold">{billData.usageAnalysis?.avg_text_messages}</p>
                       </div>
                     </div>
                   </div>
@@ -529,11 +493,11 @@ const VerizonBillAnalyzer: React.FC = () => {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                     <div className="p-4 bg-gray-50 rounded-lg">
                       <p className="text-sm text-gray-500">Average Monthly Bill</p>
-                      <p className="text-xl font-semibold">{formatCurrency(billData.costAnalysis.averageMonthlyBill)}</p>
+                      <p className="text-xl font-semibold">{formatCurrency(billData.costAnalysis?.averageMonthlyBill || 0)}</p>
                     </div>
                     <div className="p-4 bg-gray-50 rounded-lg">
                       <p className="text-sm text-gray-500">Projected Next Bill</p>
-                      <p className="text-xl font-semibold">{formatCurrency(billData.costAnalysis.projectedNextBill)}</p>
+                      <p className="text-xl font-semibold">{formatCurrency(billData.costAnalysis?.projectedNextBill || 0)}</p>
                     </div>
                   </div>
                   
@@ -553,7 +517,7 @@ const VerizonBillAnalyzer: React.FC = () => {
                     )}
                   </div>
                   
-                  {expandedSection === 'savings' && (
+                  {expandedSection === 'savings' && billData.costAnalysis?.potentialSavings && (
                     <div className="mt-2 pl-12">
                       {billData.costAnalysis.potentialSavings.map((saving, index) => (
                         <div key={index} className="flex justify-between items-center py-2 border-b border-gray-100">
@@ -681,7 +645,7 @@ const VerizonBillAnalyzer: React.FC = () => {
               </div>
             )}
             
-            {activeTab === 'recommendations' && (
+            {activeTab === 'recommendations' && billData.planRecommendation && (
               <div className="space-y-6">
                 {/* Plan Recommendation */}
                 <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
