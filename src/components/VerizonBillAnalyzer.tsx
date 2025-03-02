@@ -1,8 +1,11 @@
 
 import React, { useState } from 'react';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
-import { Check, DollarSign, AlertCircle, PhoneCall, Smartphone, Tablet, Wifi, Clock, Tag, ChevronRight, ChevronDown } from 'lucide-react';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell, TooltipProps } from 'recharts';
+import { DollarSign, PhoneCall, Wifi, Clock, Tag, ChevronRight, ChevronDown, Smartphone, Tablet, AlertCircle, Check } from 'lucide-react';
+import { toast } from 'sonner';
+import { ValueType, NameType } from 'recharts/types/component/DefaultTooltipContent';
 
+// Define the data structures for bill analysis
 interface BillLineDetails {
   planCost?: number;
   planDiscount?: number;
@@ -21,6 +24,7 @@ interface PhoneLine {
   planName: string;
   monthlyTotal: number;
   details: BillLineDetails;
+  charges?: any[];
 }
 
 interface PotentialSaving {
@@ -71,6 +75,20 @@ interface BillData {
   };
 }
 
+interface BillAnalysisResponse {
+  accountNumber: string;
+  totalAmount: number;
+  billingPeriod: string;
+  devices: Array<{
+    device: string;
+    deviceType: string;
+    phoneNumber: string;
+    planType: string;
+  }>;
+  phoneLines: PhoneLine[];
+  charges: any[];
+}
+
 const VerizonBillAnalyzer: React.FC = () => {
   const [billData, setBillData] = useState<BillData | null>(null);
   const [fileSelected, setFileSelected] = useState<boolean>(false);
@@ -78,6 +96,7 @@ const VerizonBillAnalyzer: React.FC = () => {
   const [activeTab, setActiveTab] = useState<string>('summary');
   const [expandedLine, setExpandedLine] = useState<number | null>(null);
   const [expandedSection, setExpandedSection] = useState<string>('charges');
+  const [error, setError] = useState<string | null>(null);
 
   const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -85,28 +104,189 @@ const VerizonBillAnalyzer: React.FC = () => {
     
     setFileSelected(true);
     setIsLoading(true);
+    setError(null);
 
     try {
-      // Here we would normally process the file and extract bill data
-      // For now, we'll just simulate a loading delay
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      // Read the file and create a FormData object to send to the server
+      const formData = new FormData();
+      formData.append('billFile', file);
       
-      // In a real implementation, we would:
-      // 1. Read the file (PDF or text)
-      // 2. Parse the content
-      // 3. Extract bill data
-      // 4. Structure it according to our BillData interface
-      // 5. Set the data with setBillData(extractedData)
+      // Send the file to the server for processing
+      const response = await fetch('/api/analyze-bill', {
+        method: 'POST',
+        body: formData,
+      });
       
-      // Instead of using mock data directly, we'll set billData to null 
-      // until a real implementation is available
-      setBillData(null);
+      if (!response.ok) {
+        throw new Error(`Error analyzing bill: ${response.statusText}`);
+      }
       
+      // Get the analysis results from the server
+      const analysisResult: BillAnalysisResponse = await response.json();
+      
+      // Transform the analysis result into the BillData format
+      const processedData = transformAnalysisData(analysisResult);
+      
+      setBillData(processedData);
     } catch (error) {
       console.error('Error processing file:', error);
+      setError(error instanceof Error ? error.message : 'Unknown error occurred while processing the bill');
+      toast.error('Failed to analyze the bill. Please try again or use a different file format.');
     } finally {
       setIsLoading(false);
     }
+  };
+
+  // Transform the API response into the format expected by the component
+  const transformAnalysisData = (analysisResult: BillAnalysisResponse): BillData => {
+    // Extract phone lines and calculate monthly totals
+    const phoneLines = analysisResult.phoneLines.map(line => {
+      // Calculate the total for this line based on the details
+      const details = {
+        planCost: 0,
+        planDiscount: 0,
+        devicePayment: 0,
+        deviceCredit: 0,
+        protection: 0,
+        perks: 0,
+        perksDiscount: 0,
+        surcharges: 0,
+        taxes: 0,
+        ...line.details
+      };
+      
+      // Calculate monthly total from details
+      const monthlyTotal = (details.planCost || 0) - 
+                          (details.planDiscount || 0) + 
+                          (details.devicePayment || 0) - 
+                          (details.deviceCredit || 0) + 
+                          (details.protection || 0) + 
+                          (details.perks || 0) - 
+                          (details.perksDiscount || 0) + 
+                          (details.surcharges || 0) + 
+                          (details.taxes || 0);
+      
+      return {
+        ...line,
+        monthlyTotal,
+        details
+      };
+    });
+    
+    // Calculate charges by category
+    const chargesByCategory = {
+      plans: phoneLines.reduce((sum, line) => sum + (line.details.planCost || 0) - (line.details.planDiscount || 0), 0),
+      devices: phoneLines.reduce((sum, line) => sum + (line.details.devicePayment || 0) - (line.details.deviceCredit || 0), 0),
+      protection: phoneLines.reduce((sum, line) => sum + (line.details.protection || 0), 0),
+      surcharges: phoneLines.reduce((sum, line) => sum + (line.details.surcharges || 0), 0),
+      taxes: phoneLines.reduce((sum, line) => sum + (line.details.taxes || 0), 0),
+      other: phoneLines.reduce((sum, line) => sum + (line.details.perks || 0) - (line.details.perksDiscount || 0), 0)
+    };
+    
+    // Generate usage analysis based on the data
+    const usageAnalysis = {
+      trend: 'stable',  // This would come from comparing historical usage
+      percentageChange: 0,
+      avg_data_usage_gb: 15, // Placeholder values - would be derived from usage data
+      avg_talk_minutes: 250,
+      avg_text_messages: 500
+    };
+    
+    // Cost analysis - would be derived from historical bill data
+    const costAnalysis = {
+      averageMonthlyBill: analysisResult.totalAmount,
+      projectedNextBill: analysisResult.totalAmount * 1.05, // Sample projection
+      unusualCharges: [],
+      potentialSavings: generatePotentialSavings(phoneLines, analysisResult.totalAmount)
+    };
+    
+    // Plan recommendation based on usage and cost
+    const planRecommendation = generatePlanRecommendation(phoneLines, analysisResult.totalAmount);
+    
+    return {
+      accountNumber: analysisResult.accountNumber,
+      billingPeriod: analysisResult.billingPeriod,
+      totalAmount: analysisResult.totalAmount,
+      usageAnalysis,
+      costAnalysis,
+      planRecommendation,
+      phoneLines,
+      chargesByCategory
+    };
+  };
+
+  // Generate potential savings recommendations
+  const generatePotentialSavings = (phoneLines: PhoneLine[], totalAmount: number): PotentialSaving[] => {
+    const potentialSavings: PotentialSaving[] = [];
+    
+    // Check for protection plans that might be redundant
+    const protectionCosts = phoneLines.reduce((sum, line) => sum + (line.details.protection || 0), 0);
+    if (protectionCosts > 0) {
+      potentialSavings.push({
+        description: "Optimize device protection plans",
+        estimatedSaving: protectionCosts * 0.4
+      });
+    }
+    
+    // Check for plan optimization opportunities
+    potentialSavings.push({
+      description: "Switch to a more appropriate plan based on your usage",
+      estimatedSaving: totalAmount * 0.15
+    });
+    
+    // Check for autopay and paperless billing discounts
+    potentialSavings.push({
+      description: "Enable autopay and paperless billing",
+      estimatedSaving: phoneLines.length * 10
+    });
+    
+    return potentialSavings;
+  };
+
+  // Generate plan recommendations
+  const generatePlanRecommendation = (phoneLines: PhoneLine[], totalAmount: number): BillData["planRecommendation"] => {
+    // Sample recommendation - would be based on detailed usage analysis
+    const estimatedSavings = totalAmount * 0.15;
+    
+    return {
+      recommendedPlan: "Unlimited Plus",
+      reasons: [
+        "Based on your multiple device lines",
+        "Includes premium features with better value",
+        "Optimized for your average data usage"
+      ],
+      estimatedMonthlySavings: estimatedSavings,
+      confidenceScore: 0.8,
+      alternativePlans: [
+        {
+          name: "Unlimited Welcome",
+          monthlyCost: totalAmount - estimatedSavings - 20,
+          pros: [
+            "Lower cost",
+            "Unlimited data"
+          ],
+          cons: [
+            "Fewer premium features",
+            "Lower priority data"
+          ],
+          estimatedSavings: estimatedSavings + 20
+        },
+        {
+          name: "Unlimited Ultimate",
+          monthlyCost: totalAmount - estimatedSavings + 30,
+          pros: [
+            "Premium streaming quality",
+            "Maximum mobile hotspot data",
+            "All available perks included"
+          ],
+          cons: [
+            "Higher monthly cost",
+            "May include features you don't need"
+          ],
+          estimatedSavings: estimatedSavings - 30
+        }
+      ]
+    };
   };
 
   const toggleLineExpansion = (index: number) => {
@@ -157,6 +337,14 @@ const VerizonBillAnalyzer: React.FC = () => {
     return `$${value.toFixed(2)}`;
   };
 
+  // Custom tooltip formatter to handle different value types
+  const customTooltipFormatter = (value: ValueType, name: NameType) => {
+    if (typeof value === 'number') {
+      return [`$${value.toFixed(2)}`, name];
+    }
+    return [value, name];
+  };
+
   return (
     <div className="flex flex-col w-full max-w-6xl mx-auto bg-white rounded-lg shadow">
       {!billData ? (
@@ -188,6 +376,13 @@ const VerizonBillAnalyzer: React.FC = () => {
             <div className="mt-6 flex flex-col items-center">
               <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
               <p className="mt-2 text-gray-600">Analyzing your bill...</p>
+            </div>
+          )}
+          {error && (
+            <div className="mt-6 p-4 bg-red-50 border border-red-200 rounded-lg text-red-700">
+              <p className="font-medium">Error analyzing bill</p>
+              <p className="text-sm">{error}</p>
+              <p className="mt-2 text-sm">Try uploading a different file format or contact support.</p>
             </div>
           )}
         </div>
@@ -250,7 +445,7 @@ const VerizonBillAnalyzer: React.FC = () => {
                           <CartesianGrid strokeDasharray="3 3" />
                           <XAxis type="number" tickFormatter={value => `$${value}`} />
                           <YAxis dataKey="name" type="category" width={100} />
-                          <Tooltip formatter={(value) => [`$${Number(value).toFixed(2)}`, null]} />
+                          <Tooltip formatter={customTooltipFormatter} />
                           <Legend />
                           <Bar dataKey="plan" name="Plan" stackId="a" fill="#0088FE" />
                           <Bar dataKey="device" name="Device" stackId="a" fill="#00C49F" />
@@ -282,7 +477,7 @@ const VerizonBillAnalyzer: React.FC = () => {
                               <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                             ))}
                           </Pie>
-                          <Tooltip formatter={(value) => [`$${Number(value).toFixed(2)}`, null]} />
+                          <Tooltip formatter={customTooltipFormatter} />
                         </PieChart>
                       </ResponsiveContainer>
                     </div>
