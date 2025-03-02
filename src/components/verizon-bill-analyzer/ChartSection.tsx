@@ -42,7 +42,7 @@ const ChartSection: React.FC<ChartSectionProps> = ({ summary }) => {
                 label={({ name, percentage }) => `${name}: ${percentage}%`}
                 labelLine={false}
               >
-                {categoryDataWithPercentage.map((item, index) => (
+                {categoryDataWithPercentage.map((_, index) => (
                   <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                 ))}
               </Pie>
