@@ -1,59 +1,143 @@
 
-import React from 'react';
-import { DollarSign } from 'lucide-react';
+import React, { useState } from 'react';
+import { Button } from '../ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
+import { Alert, AlertTitle, AlertDescription } from '../ui/alert';
+import { supabase } from '../../integrations/supabase/client';
+import { Loader2 } from 'lucide-react';
 
 interface BillUploaderProps {
-  fileSelected: boolean;
-  isLoading: boolean;
-  error: string | null;
-  handleFileChange: (event: React.ChangeEvent<HTMLInputElement>) => void;
+  onBillAnalyzed: (analysis: any) => void;
 }
 
-const BillUploader: React.FC<BillUploaderProps> = ({ 
-  fileSelected, 
-  isLoading, 
-  error, 
-  handleFileChange 
-}) => {
+const BillUploader: React.FC<BillUploaderProps> = ({ onBillAnalyzed }) => {
+  const [file, setFile] = useState<File | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [uploadSuccess, setUploadSuccess] = useState(false);
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const selectedFile = e.target.files?.[0];
+    
+    if (!selectedFile) {
+      return;
+    }
+    
+    if (selectedFile.type !== 'application/pdf') {
+      setError('Please upload a PDF file.');
+      setFile(null);
+      return;
+    }
+    
+    if (selectedFile.size > 10 * 1024 * 1024) {
+      setError('File size must be less than 10MB.');
+      setFile(null);
+      return;
+    }
+    
+    setFile(selectedFile);
+    setError(null);
+  };
+
+  const analyzeBill = async () => {
+    if (!file) {
+      setError('Please select a file first.');
+      return;
+    }
+
+    setIsUploading(true);
+    setError(null);
+    setUploadSuccess(false);
+
+    try {
+      // Create a FormData object to send the file
+      const formData = new FormData();
+      formData.append('bill', file);
+
+      // Get the Edge Function URL from Supabase
+      const { data: functionData } = await supabase.functions.invoke("analyze-bill", {
+        body: formData,
+        headers: {
+          // No need for explicit content type as FormData sets it automatically with boundary
+        },
+        method: 'POST',
+      });
+
+      if (functionData.error) {
+        throw new Error(functionData.error);
+      }
+
+      // Set success and call the callback with the analysis data
+      setUploadSuccess(true);
+      onBillAnalyzed(functionData.data);
+    } catch (err) {
+      console.error('Error analyzing bill:', err);
+      setError('Failed to analyze the bill. Please try again.');
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
   return (
-    <div className="flex flex-col items-center justify-center p-8 text-center">
-      <div className="flex items-center justify-center w-16 h-16 mb-4 rounded-full bg-blue-50">
-        <DollarSign className="w-8 h-8 text-blue-500" />
-      </div>
-      <h2 className="mb-2 text-2xl font-bold">Verizon Bill Analyzer</h2>
-      <p className="mb-6 text-gray-600">
-        Upload your Verizon bill to analyze charges, get insights, and find potential savings.
-      </p>
-      <div className="flex flex-col items-center w-full max-w-md p-6 border-2 border-dashed rounded-lg border-gray-300 hover:border-blue-500">
-        <label className="flex flex-col items-center w-full cursor-pointer">
-          <span className="text-blue-600 font-medium mb-2">
-            {fileSelected ? "File selected" : "Choose a bill file"}
-          </span>
-          <span className="text-sm text-gray-500">
-            {fileSelected ? "Click to change file" : "PDF or text file supported"}
-          </span>
-          <input 
-            type="file" 
-            className="hidden" 
-            accept=".pdf,.txt" 
-            onChange={handleFileChange} 
-          />
-        </label>
-      </div>
-      {isLoading && (
-        <div className="mt-6 flex flex-col items-center">
-          <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
-          <p className="mt-2 text-gray-600">Analyzing your bill...</p>
+    <Card className="w-full">
+      <CardHeader>
+        <CardTitle>Upload Verizon Bill</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div className="flex flex-col gap-4">
+          <div className="border-2 border-dashed border-gray-300 rounded-md p-6 text-center">
+            <input
+              type="file"
+              id="bill-upload"
+              className="hidden"
+              onChange={handleFileChange}
+              accept=".pdf"
+              disabled={isUploading}
+            />
+            <label 
+              htmlFor="bill-upload" 
+              className="cursor-pointer text-blue-600 hover:text-blue-800"
+            >
+              Select a PDF bill to upload
+            </label>
+            {file && (
+              <div className="mt-2 text-sm text-gray-600">
+                Selected file: {file.name}
+              </div>
+            )}
+          </div>
+
+          {error && (
+            <Alert variant="destructive">
+              <AlertTitle>Error</AlertTitle>
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          )}
+
+          {uploadSuccess && (
+            <Alert className="bg-green-50 text-green-800 border-green-200">
+              <AlertTitle>Success</AlertTitle>
+              <AlertDescription>Your bill has been analyzed successfully.</AlertDescription>
+            </Alert>
+          )}
+
+          <Button 
+            onClick={analyzeBill} 
+            disabled={!file || isUploading}
+            className="w-full"
+          >
+            {isUploading ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Analyzing...
+              </>
+            ) : (
+              'Analyze Bill'
+            )}
+          </Button>
         </div>
-      )}
-      {error && (
-        <div className="mt-6 p-4 bg-red-50 border border-red-200 rounded-lg text-red-700">
-          <p className="font-medium">Error analyzing bill</p>
-          <p className="text-sm">{error}</p>
-          <p className="mt-2 text-sm">Try uploading a different file format or contact support.</p>
-        </div>
-      )}
-    </div>
+      </CardContent>
+    </Card>
   );
 };
 

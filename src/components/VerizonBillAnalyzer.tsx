@@ -1,126 +1,102 @@
 
 import React, { useState } from 'react';
-import { toast } from 'sonner';
-import { BillData } from './verizon-bill-analyzer/types';
 import BillUploader from './verizon-bill-analyzer/BillUploader';
-import BillHeader from './verizon-bill-analyzer/BillHeader';
+import { Card } from './ui/card';
 import BillTabs from './verizon-bill-analyzer/BillTabs';
-import BillSummaryTab from './verizon-bill-analyzer/BillSummaryTab';
-import LineDetailsTab from './verizon-bill-analyzer/LineDetailsTab';
-import RecommendationsTab from './verizon-bill-analyzer/RecommendationsTab';
-import { supabase } from "@/integrations/supabase/client";
+import BillHeader from './verizon-bill-analyzer/BillHeader';
+import { BillAnalysis } from './verizon-bill-analyzer/types';
 
 const VerizonBillAnalyzer: React.FC = () => {
-  const [billData, setBillData] = useState<BillData | null>(null);
-  const [fileSelected, setFileSelected] = useState<boolean>(false);
-  const [isLoading, setIsLoading] = useState<boolean>(false);
-  const [activeTab, setActiveTab] = useState<string>('summary');
-  const [expandedLine, setExpandedLine] = useState<number | null>(null);
-  const [expandedSection, setExpandedSection] = useState<string>('charges');
-  const [error, setError] = useState<string | null>(null);
+  const [billAnalysis, setBillAnalysis] = useState<BillAnalysis | null>(null);
 
-  const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-    
-    setFileSelected(true);
-    setIsLoading(true);
-    setError(null);
+  const handleBillAnalyzed = (analysis: any) => {
+    // Transform the data from the Edge Function into the format expected by our components
+    const transformedData: BillAnalysis = {
+      accountNumber: analysis.accountNumber,
+      billingPeriod: analysis.billingPeriod,
+      totalAmount: analysis.totalAmount,
+      lineItems: analysis.lineItems.map((item: any) => ({
+        lineNumber: item.lineNumber,
+        phoneNumber: item.phoneNumber || 'Unknown',
+        planName: item.planName || 'Unknown Plan',
+        devicePayment: item.devicePayment || 0,
+        planCharge: item.charges - (item.devicePayment || 0),
+        totalCharge: item.charges,
+        dataUsage: {
+          used: item.dataUsage || 0,
+          included: item.dataUsage ? (item.dataUsage + 2) : 10, // Simplified assumption
+          units: 'GB'
+        }
+      })),
+      summary: {
+        totalDevicePayments: analysis.totalDevicePayments,
+        totalPlanCharges: analysis.totalPlanCharges, 
+        totalFees: analysis.totalFees,
+        totalTaxes: analysis.totalTaxes,
+        grandTotal: analysis.totalAmount
+      },
+      fees: analysis.fees,
+      recommendations: generateRecommendations(analysis)
+    };
 
-    try {
-      // Check if file type is supported
-      if (file.type !== 'application/pdf' && file.type !== 'text/plain') {
-        throw new Error('Unsupported file format. Please upload a PDF or text file.');
-      }
-      
-      // Create form data to send the file
-      const formData = new FormData();
-      formData.append('file', file);
-      
-      console.log('Uploading bill for analysis...');
-      
-      // Call the Supabase Edge Function
-      const { data, error } = await supabase.functions.invoke('analyze-bill', {
-        body: formData,
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
+    setBillAnalysis(transformedData);
+  };
+
+  // Generate recommendations based on the bill analysis
+  const generateRecommendations = (analysis: any) => {
+    const recommendations = [];
+
+    // Check if they could benefit from a family plan
+    if (analysis.lineItems.length > 1) {
+      recommendations.push({
+        title: "Family Plan Savings",
+        description: "You have multiple lines. Switching to our family plan could save you up to $20 per line.",
+        potentialSavings: analysis.lineItems.length * 20
       });
-      
-      if (error) {
-        throw new Error(`API error: ${error.message}`);
-      }
-      
-      if (!data) {
-        throw new Error('No data returned from analysis');
-      }
-      
-      console.log('Analysis data received:', data);
-      
-      // Set the bill data from the response
-      setBillData(data);
-      toast.success("Bill successfully analyzed!");
-    } catch (error) {
-      console.error('Error processing file:', error);
-      setError(error instanceof Error ? error.message : 'Unknown error occurred while processing the bill');
-      toast.error('Failed to analyze the bill. Please try again or use a different file format.');
-    } finally {
-      setIsLoading(false);
     }
-  };
 
-  const toggleLineExpansion = (index: number) => {
-    if (expandedLine === index) {
-      setExpandedLine(null);
-    } else {
-      setExpandedLine(index);
+    // Check for device payment recommendations
+    const hasDevicePayments = analysis.lineItems.some((item: any) => (item.devicePayment || 0) > 0);
+    if (hasDevicePayments) {
+      recommendations.push({
+        title: "Device Payment Options",
+        description: "Save on your device payments by trading in your old device or switching to a different payment plan.",
+        potentialSavings: analysis.totalDevicePayments * 0.2 // Assume 20% savings
+      });
     }
-  };
 
-  const toggleSectionExpansion = (section: string) => {
-    if (expandedSection === section) {
-      setExpandedSection('');
-    } else {
-      setExpandedSection(section);
-    }
+    // Check for plan optimization
+    recommendations.push({
+      title: "Plan Optimization",
+      description: "Based on your usage patterns, you might benefit from switching to our new Unlimited plan.",
+      potentialSavings: analysis.totalPlanCharges * 0.15 // Assume 15% savings
+    });
+
+    // Add more recommendations as needed
+    recommendations.push({
+      title: "Paperless Billing & AutoPay",
+      description: "Sign up for paperless billing and AutoPay to save $10 per month.",
+      potentialSavings: 10
+    });
+
+    return recommendations;
   };
 
   return (
-    <div className="flex flex-col w-full max-w-6xl mx-auto bg-white rounded-lg shadow">
-      {!billData ? (
-        <BillUploader 
-          fileSelected={fileSelected}
-          isLoading={isLoading}
-          error={error}
-          handleFileChange={handleFileChange}
-        />
+    <div className="container mx-auto px-4 py-8">
+      <h1 className="text-3xl font-bold mb-6">Verizon Bill Analyzer</h1>
+      
+      {!billAnalysis ? (
+        <BillUploader onBillAnalyzed={handleBillAnalyzed} />
       ) : (
-        <div className="flex flex-col">
-          <BillHeader billData={billData} />
-          <BillTabs activeTab={activeTab} setActiveTab={setActiveTab} />
-          
-          <div className="p-6">
-            {activeTab === 'summary' && (
-              <BillSummaryTab 
-                billData={billData} 
-                expandedSection={expandedSection}
-                toggleSectionExpansion={toggleSectionExpansion}
-              />
-            )}
-            
-            {activeTab === 'lines' && (
-              <LineDetailsTab 
-                billData={billData}
-                expandedLine={expandedLine}
-                toggleLineExpansion={toggleLineExpansion}
-              />
-            )}
-            
-            {activeTab === 'recommendations' && (
-              <RecommendationsTab billData={billData} />
-            )}
-          </div>
-        </div>
+        <Card className="w-full">
+          <BillHeader 
+            accountNumber={billAnalysis.accountNumber}
+            billingPeriod={billAnalysis.billingPeriod}
+            totalAmount={billAnalysis.totalAmount}
+          />
+          <BillTabs billAnalysis={billAnalysis} />
+        </Card>
       )}
     </div>
   );

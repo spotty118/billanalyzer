@@ -1,75 +1,103 @@
 
 import React from 'react';
-import { Bar, BarChart, Cell, Pie, PieChart, ResponsiveContainer, XAxis, YAxis, Tooltip, Legend } from 'recharts';
-import { BillData } from './types';
-import { COLORS, prepareCategoryData, prepareLineItemsData } from './utils';
+import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend, BarChart, Bar, XAxis, YAxis, CartesianGrid } from 'recharts';
+import { ChartDataItem, CategoryDataItem } from './types';
+import { BillSummary } from './types';
+import { ValueType } from 'recharts/types/component/DefaultTooltipContent';
 
 interface ChartSectionProps {
-  billData: BillData;
+  summary: BillSummary;
 }
 
-const ChartSection: React.FC<ChartSectionProps> = ({ billData }) => {
-  const lineData = prepareLineItemsData(billData);
-  const categoryData = prepareCategoryData(billData);
+// Custom formatter to safely handle non-numeric values
+const safeNumberFormatter = (value: ValueType) => {
+  if (typeof value === 'number') {
+    return value.toFixed(2);
+  }
+  return String(value);
+};
 
-  // Custom formatter for tooltip values to handle various types that might come from recharts
-  const currencyFormatter = (value: any) => {
-    // Make sure the value is a number before using toFixed
-    return typeof value === 'number' ? `$${value.toFixed(2)}` : `$${value}`;
+const ChartSection: React.FC<ChartSectionProps> = ({ summary }) => {
+  const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042'];
+  
+  const costBreakdownData = [
+    { name: 'Plan Charges', value: summary.totalPlanCharges },
+    { name: 'Device Payments', value: summary.totalDevicePayments },
+    { name: 'Fees', value: summary.totalFees },
+    { name: 'Taxes', value: summary.totalTaxes }
+  ];
+  
+  const customTooltip = ({ active, payload }: { active?: boolean, payload?: Array<any> }) => {
+    if (active && payload && payload.length) {
+      return (
+        <div className="bg-white p-2 border border-gray-200 shadow-sm rounded-md">
+          <p className="font-medium">{`${payload[0].name}: $${safeNumberFormatter(payload[0].value)}`}</p>
+          <p className="text-sm text-gray-500">
+            {`${((payload[0].value / summary.grandTotal) * 100).toFixed(1)}% of total`}
+          </p>
+        </div>
+      );
+    }
+    return null;
   };
-
+  
+  // Calculate percentages for the bar chart
+  const percentageData = costBreakdownData.map(item => ({
+    name: item.name,
+    percentage: (item.value / summary.grandTotal) * 100
+  }));
+  
   return (
-    <div className="mb-8">
-      <h2 className="text-xl font-bold mb-4">Bill Breakdown</h2>
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="bg-white p-4 rounded-lg shadow">
-          <h3 className="text-lg font-semibold mb-2">Charges by Line</h3>
-          <div className="h-64">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart
-                data={lineData}
-                margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <Card>
+        <CardHeader>
+          <CardTitle>Cost Breakdown</CardTitle>
+        </CardHeader>
+        <CardContent className="h-80">
+          <ResponsiveContainer width="100%" height="100%">
+            <PieChart>
+              <Pie
+                data={costBreakdownData}
+                cx="50%"
+                cy="50%"
+                labelLine={false}
+                outerRadius={80}
+                fill="#8884d8"
+                dataKey="value"
+                label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(1)}%`}
               >
-                <XAxis dataKey="name" />
-                <YAxis />
-                <Tooltip formatter={currencyFormatter} />
-                <Legend />
-                <Bar dataKey="plan" name="Plan" stackId="a" fill={COLORS[0]} />
-                <Bar dataKey="device" name="Device" stackId="a" fill={COLORS[1]} />
-                <Bar dataKey="protection" name="Protection" stackId="a" fill={COLORS[2]} />
-                <Bar dataKey="taxes" name="Taxes & Fees" stackId="a" fill={COLORS[3]} />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-        
-        <div className="bg-white p-4 rounded-lg shadow">
-          <h3 className="text-lg font-semibold mb-2">Charges by Category</h3>
-          <div className="h-64">
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie
-                  data={categoryData}
-                  cx="50%"
-                  cy="50%"
-                  labelLine={false}
-                  outerRadius={80}
-                  fill="#8884d8"
-                  dataKey="value"
-                  nameKey="name"
-                  label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
-                >
-                  {categoryData.map((_, index) => (
-                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                  ))}
-                </Pie>
-                <Tooltip formatter={currencyFormatter} />
-                <Legend />
-              </PieChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-      </div>
+                {costBreakdownData.map((_, index) => (
+                  <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                ))}
+              </Pie>
+              <Tooltip content={customTooltip} />
+              <Legend />
+            </PieChart>
+          </ResponsiveContainer>
+        </CardContent>
+      </Card>
+      
+      <Card>
+        <CardHeader>
+          <CardTitle>Bill Composition (%)</CardTitle>
+        </CardHeader>
+        <CardContent className="h-80">
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart
+              data={percentageData}
+              layout="vertical"
+              margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
+            >
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis type="number" domain={[0, 100]} tickFormatter={(value) => `${value}%`} />
+              <YAxis type="category" dataKey="name" width={100} />
+              <Tooltip formatter={(value) => [`${safeNumberFormatter(value)}%`, 'Percentage']} />
+              <Bar dataKey="percentage" fill="#82ca9d" />
+            </BarChart>
+          </ResponsiveContainer>
+        </CardContent>
+      </Card>
     </div>
   );
 };
