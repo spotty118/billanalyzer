@@ -1,14 +1,83 @@
+
 import React, { useState } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { Check, DollarSign, AlertCircle, PhoneCall, Smartphone, Tablet, Wifi, Clock, Tag, ChevronRight, ChevronDown } from 'lucide-react';
 
-const VerizonBillAnalyzer = () => {
-  const [billData, setBillData] = useState<any>(null);
-  const [fileSelected, setFileSelected] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
-  const [activeTab, setActiveTab] = useState('summary');
+interface BillLineDetails {
+  planCost?: number;
+  planDiscount?: number;
+  devicePayment?: number;
+  deviceCredit?: number;
+  protection?: number;
+  perks?: number;
+  perksDiscount?: number;
+  surcharges?: number;
+  taxes?: number;
+}
+
+interface PhoneLine {
+  phoneNumber: string;
+  deviceName: string;
+  planName: string;
+  monthlyTotal: number;
+  details: BillLineDetails;
+}
+
+interface PotentialSaving {
+  description: string;
+  estimatedSaving: number;
+}
+
+interface AlternativePlan {
+  name: string;
+  monthlyCost: number;
+  pros: string[];
+  cons: string[];
+  estimatedSavings: number;
+}
+
+interface BillData {
+  accountNumber: string;
+  billingPeriod: string;
+  totalAmount: number;
+  usageAnalysis: {
+    trend: string;
+    percentageChange: number;
+    avg_data_usage_gb: number;
+    avg_talk_minutes: number;
+    avg_text_messages: number;
+  };
+  costAnalysis: {
+    averageMonthlyBill: number;
+    projectedNextBill: number;
+    unusualCharges: any[];
+    potentialSavings: PotentialSaving[];
+  };
+  planRecommendation: {
+    recommendedPlan: string;
+    reasons: string[];
+    estimatedMonthlySavings: number;
+    confidenceScore: number;
+    alternativePlans: AlternativePlan[];
+  };
+  phoneLines: PhoneLine[];
+  chargesByCategory: {
+    plans: number;
+    devices: number;
+    protection: number;
+    surcharges: number;
+    taxes: number;
+    other: number;
+  };
+}
+
+const VerizonBillAnalyzer: React.FC = () => {
+  const [billData, setBillData] = useState<BillData | null>(null);
+  const [fileSelected, setFileSelected] = useState<boolean>(false);
+  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [activeTab, setActiveTab] = useState<string>('summary');
   const [expandedLine, setExpandedLine] = useState<number | null>(null);
-  const [expandedSection, setExpandedSection] = useState('charges');
+  const [expandedSection, setExpandedSection] = useState<string>('charges');
 
   const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -18,102 +87,21 @@ const VerizonBillAnalyzer = () => {
     setIsLoading(true);
 
     try {
+      // Here we would normally process the file and extract bill data
+      // For now, we'll just simulate a loading delay
       await new Promise(resolve => setTimeout(resolve, 1500));
       
-      const mockData = {
-        accountNumber: "526905159-00001",
-        billingPeriod: "December 12, 2024 to January 11, 2025",
-        totalAmount: 646.30,
-        usageAnalysis: {
-          trend: "stable",
-          percentageChange: 0,
-          avg_data_usage_gb: 25.4,
-          avg_talk_minutes: 120,
-          avg_text_messages: 85
-        },
-        costAnalysis: {
-          averageMonthlyBill: 646.30,
-          projectedNextBill: 678.62,
-          unusualCharges: [],
-          potentialSavings: [
-            { description: "Switch to autopay discount", estimatedSaving: 50.00 },
-            { description: "Consolidate streaming services", estimatedSaving: 25.00 }
-          ]
-        },
-        planRecommendation: {
-          recommendedPlan: "Unlimited Plus",
-          reasons: [
-            "Better value for multiple lines",
-            "Includes premium streaming perks",
-            "Higher mobile hotspot data allowance"
-          ],
-          estimatedMonthlySavings: 96.95,
-          confidenceScore: 0.8,
-          alternativePlans: [
-            {
-              name: "Unlimited Welcome",
-              monthlyCost: 581.67,
-              pros: ["Lower cost", "Unlimited data"],
-              cons: ["Fewer premium features", "Lower priority data"],
-              estimatedSavings: 64.63
-            }
-          ]
-        },
-        phoneLines: [
-          {
-            phoneNumber: "251-747-0017",
-            deviceName: "Apple iPhone 15 Pro Max",
-            planName: "Unlimited Plus",
-            monthlyTotal: 40.78,
-            details: {
-              planCost: 52.00,
-              planDiscount: 26.00,
-              devicePayment: 0,
-              protection: 7.95,
-              perks: 10.00,
-              perksDiscount: 5.00,
-              surcharges: 4.25,
-              taxes: 2.58
-            }
-          },
-          {
-            phoneNumber: "251-215-3255",
-            deviceName: "Apple iPad (8TH Generation)",
-            planName: "More Unlimited",
-            monthlyTotal: 15.34,
-            details: {
-              planCost: 30.00,
-              planDiscount: 22.50,
-              devicePayment: 12.77,
-              deviceCredit: 12.77,
-              protection: 4.95,
-              surcharges: 1.62,
-              taxes: 1.27
-            }
-          },
-          {
-            phoneNumber: "251-747-0017",
-            deviceName: "Apple Watch Ultra 2 (Number Share)",
-            planName: "Number Share",
-            monthlyTotal: 10.37,
-            details: {
-              planCost: 4.13,
-              surcharges: 4.25,
-              taxes: 2.49
-            }
-          }
-        ],
-        chargesByCategory: {
-          plans: 190.13,
-          devices: 245.22,
-          protection: 28.80,
-          surcharges: 18.37,
-          taxes: 15.57,
-          other: 148.21
-        }
-      };
+      // In a real implementation, we would:
+      // 1. Read the file (PDF or text)
+      // 2. Parse the content
+      // 3. Extract bill data
+      // 4. Structure it according to our BillData interface
+      // 5. Set the data with setBillData(extractedData)
       
-      setBillData(mockData);
+      // Instead of using mock data directly, we'll set billData to null 
+      // until a real implementation is available
+      setBillData(null);
+      
     } catch (error) {
       console.error('Error processing file:', error);
     } finally {
@@ -140,10 +128,10 @@ const VerizonBillAnalyzer = () => {
   const prepareLineItemsData = () => {
     if (!billData?.phoneLines) return [];
     
-    return billData.phoneLines.map((line: any) => ({
+    return billData.phoneLines.map((line) => ({
       name: line.deviceName.split(' ').slice(0, 3).join(' '), // Shorten device name
       total: line.monthlyTotal,
-      plan: line.details.planCost - (line.details.planDiscount || 0),
+      plan: line.details.planCost ? line.details.planCost - (line.details.planDiscount || 0) : 0,
       device: (line.details.devicePayment || 0) - (line.details.deviceCredit || 0),
       protection: line.details.protection || 0,
       taxes: (line.details.surcharges || 0) + (line.details.taxes || 0)
@@ -205,6 +193,7 @@ const VerizonBillAnalyzer = () => {
         </div>
       ) : (
         <div className="flex flex-col">
+          {/* Header */}
           <div className="bg-blue-600 p-6 rounded-t-lg text-white">
             <div className="flex flex-wrap justify-between items-center gap-4">
               <div>
@@ -220,6 +209,7 @@ const VerizonBillAnalyzer = () => {
             </div>
           </div>
           
+          {/* Tabs */}
           <div className="flex border-b">
             <button 
               className={`px-6 py-3 font-medium ${activeTab === 'summary' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-gray-600'}`}
@@ -241,10 +231,13 @@ const VerizonBillAnalyzer = () => {
             </button>
           </div>
           
+          {/* Content */}
           <div className="p-6">
             {activeTab === 'summary' && (
               <div className="space-y-8">
+                {/* Charts Row */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {/* Line Items Chart */}
                   <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
                     <h3 className="font-bold text-lg mb-4">Charges by Line</h3>
                     <div className="h-64">
@@ -268,6 +261,7 @@ const VerizonBillAnalyzer = () => {
                     </div>
                   </div>
                   
+                  {/* Pie Chart */}
                   <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
                     <h3 className="font-bold text-lg mb-4">Breakdown by Category</h3>
                     <div className="h-64">
@@ -295,6 +289,7 @@ const VerizonBillAnalyzer = () => {
                   </div>
                 </div>
                 
+                {/* Usage Insights */}
                 <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
                   <div className="flex justify-between items-center mb-4">
                     <h3 className="font-bold text-lg">Usage Insights</h3>
@@ -333,6 +328,7 @@ const VerizonBillAnalyzer = () => {
                   </div>
                 </div>
                 
+                {/* Cost Analysis */}
                 <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
                   <h3 className="font-bold text-lg mb-4">Cost Analysis</h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
@@ -346,6 +342,7 @@ const VerizonBillAnalyzer = () => {
                     </div>
                   </div>
                   
+                  {/* Potential Savings */}
                   <div 
                     className="flex justify-between items-center p-4 bg-green-50 rounded-lg cursor-pointer"
                     onClick={() => toggleSectionExpansion('savings')}
@@ -363,7 +360,7 @@ const VerizonBillAnalyzer = () => {
                   
                   {expandedSection === 'savings' && (
                     <div className="mt-2 pl-12">
-                      {billData.costAnalysis.potentialSavings.map((saving: any, index: number) => (
+                      {billData.costAnalysis.potentialSavings.map((saving, index) => (
                         <div key={index} className="flex justify-between items-center py-2 border-b border-gray-100">
                           <span>{saving.description}</span>
                           <span className="font-semibold text-green-600">{formatCurrency(saving.estimatedSaving)}</span>
@@ -379,7 +376,7 @@ const VerizonBillAnalyzer = () => {
               <div className="space-y-4">
                 <h3 className="font-bold text-lg mb-4">Line Details</h3>
                 
-                {billData.phoneLines.map((line: any, index: number) => (
+                {billData.phoneLines.map((line, index) => (
                   <div 
                     key={index} 
                     className="border border-gray-200 rounded-lg overflow-hidden"
@@ -414,63 +411,63 @@ const VerizonBillAnalyzer = () => {
                     {expandedLine === index && (
                       <div className="px-6 py-4 bg-gray-50 border-t border-gray-200">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          {line.details.planCost > 0 && (
+                          {line.details.planCost && line.details.planCost > 0 && (
                             <div className="flex justify-between items-center py-2">
                               <span>Plan Cost</span>
                               <span className="font-medium">{formatCurrency(line.details.planCost)}</span>
                             </div>
                           )}
                           
-                          {line.details.planDiscount > 0 && (
+                          {line.details.planDiscount && line.details.planDiscount > 0 && (
                             <div className="flex justify-between items-center py-2">
                               <span>Plan Discount</span>
                               <span className="font-medium text-green-600">-{formatCurrency(line.details.planDiscount)}</span>
                             </div>
                           )}
                           
-                          {line.details.devicePayment > 0 && (
+                          {line.details.devicePayment && line.details.devicePayment > 0 && (
                             <div className="flex justify-between items-center py-2">
                               <span>Device Payment</span>
                               <span className="font-medium">{formatCurrency(line.details.devicePayment)}</span>
                             </div>
                           )}
                           
-                          {line.details.deviceCredit > 0 && (
+                          {line.details.deviceCredit && line.details.deviceCredit > 0 && (
                             <div className="flex justify-between items-center py-2">
                               <span>Device Credit</span>
                               <span className="font-medium text-green-600">-{formatCurrency(line.details.deviceCredit)}</span>
                             </div>
                           )}
                           
-                          {line.details.protection > 0 && (
+                          {line.details.protection && line.details.protection > 0 && (
                             <div className="flex justify-between items-center py-2">
                               <span>Protection Plan</span>
                               <span className="font-medium">{formatCurrency(line.details.protection)}</span>
                             </div>
                           )}
                           
-                          {line.details.perks > 0 && (
+                          {line.details.perks && line.details.perks > 0 && (
                             <div className="flex justify-between items-center py-2">
                               <span>Premium Services</span>
                               <span className="font-medium">{formatCurrency(line.details.perks)}</span>
                             </div>
                           )}
                           
-                          {line.details.perksDiscount > 0 && (
+                          {line.details.perksDiscount && line.details.perksDiscount > 0 && (
                             <div className="flex justify-between items-center py-2">
                               <span>Services Discount</span>
                               <span className="font-medium text-green-600">-{formatCurrency(line.details.perksDiscount)}</span>
                             </div>
                           )}
                           
-                          {line.details.surcharges > 0 && (
+                          {line.details.surcharges && line.details.surcharges > 0 && (
                             <div className="flex justify-between items-center py-2">
                               <span>Surcharges</span>
                               <span className="font-medium">{formatCurrency(line.details.surcharges)}</span>
                             </div>
                           )}
                           
-                          {line.details.taxes > 0 && (
+                          {line.details.taxes && line.details.taxes > 0 && (
                             <div className="flex justify-between items-center py-2">
                               <span>Taxes & Fees</span>
                               <span className="font-medium">{formatCurrency(line.details.taxes)}</span>
@@ -491,6 +488,7 @@ const VerizonBillAnalyzer = () => {
             
             {activeTab === 'recommendations' && (
               <div className="space-y-6">
+                {/* Plan Recommendation */}
                 <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
                   <div className="flex items-center mb-4">
                     <div className="p-2 rounded-full bg-blue-100 mr-4">
@@ -505,7 +503,7 @@ const VerizonBillAnalyzer = () => {
                       
                       <h5 className="font-medium text-gray-700 mt-4 mb-2">Why this plan?</h5>
                       <ul className="space-y-2">
-                        {billData.planRecommendation.reasons.map((reason: string, index: number) => (
+                        {billData.planRecommendation.reasons.map((reason, index) => (
                           <li key={index} className="flex items-start">
                             <Check className="w-5 h-5 text-green-500 mr-2 flex-shrink-0 mt-0.5" />
                             <span>{reason}</span>
@@ -530,10 +528,11 @@ const VerizonBillAnalyzer = () => {
                   </div>
                 </div>
                 
+                {/* Alternative Plans */}
                 <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
                   <h3 className="font-bold text-lg mb-4">Alternative Plans</h3>
                   
-                  {billData.planRecommendation.alternativePlans.map((plan: any, index: number) => (
+                  {billData.planRecommendation.alternativePlans.map((plan, index) => (
                     <div key={index} className="mb-4 p-4 border border-gray-200 rounded-lg">
                       <div className="flex justify-between items-center mb-2">
                         <h4 className="font-semibold text-lg">{plan.name}</h4>
@@ -547,7 +546,7 @@ const VerizonBillAnalyzer = () => {
                         <div>
                           <h5 className="font-medium text-green-700 mb-2">Pros</h5>
                           <ul className="space-y-1">
-                            {plan.pros.map((pro: string, i: number) => (
+                            {plan.pros.map((pro, i) => (
                               <li key={i} className="flex items-start">
                                 <Check className="w-4 h-4 text-green-500 mr-2 flex-shrink-0 mt-0.5" />
                                 <span>{pro}</span>
@@ -559,7 +558,7 @@ const VerizonBillAnalyzer = () => {
                         <div>
                           <h5 className="font-medium text-red-700 mb-2">Cons</h5>
                           <ul className="space-y-1">
-                            {plan.cons.map((con: string, i: number) => (
+                            {plan.cons.map((con, i) => (
                               <li key={i} className="flex items-start">
                                 <AlertCircle className="w-4 h-4 text-red-500 mr-2 flex-shrink-0 mt-0.5" />
                                 <span>{con}</span>
