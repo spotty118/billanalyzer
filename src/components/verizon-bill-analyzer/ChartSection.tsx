@@ -2,21 +2,23 @@
 import React from 'react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
 import { COLORS } from './utils';
-import { BillData, BillAnalysis, ChartSectionProps } from './types';
+import { BillSummary, CategoryDataItem } from './types';
 
-const ChartSection: React.FC<ChartSectionProps> = ({ billData, billAnalysis }) => {
+interface ChartSectionProps {
+  summary: BillSummary;
+}
+
+const ChartSection: React.FC<ChartSectionProps> = ({ summary }) => {
   const categoryData = [
-    { name: 'Plans', value: billData.chargesByCategory.plans },
-    { name: 'Devices', value: billData.chargesByCategory.devices },
-    { name: 'Protection', value: billData.chargesByCategory.protection },
-    { name: 'Surcharges', value: billData.chargesByCategory.surcharges },
-    { name: 'Taxes', value: billData.chargesByCategory.taxes },
-    { name: 'Other', value: billData.chargesByCategory.other }
+    { name: 'Plans', value: summary.totalPlanCharges },
+    { name: 'Devices', value: summary.totalDevicePayments },
+    { name: 'Fees', value: summary.totalFees },
+    { name: 'Taxes', value: summary.totalTaxes }
   ].filter(item => item.value > 0);
 
   const total = categoryData.reduce((sum, item) => sum + item.value, 0);
   
-  const categoryDataWithPercentage = categoryData.map(item => ({
+  const categoryDataWithPercentage: CategoryDataItem[] = categoryData.map(item => ({
     ...item,
     percentage: Math.round((item.value / total) * 100)
   }));
@@ -45,7 +47,7 @@ const ChartSection: React.FC<ChartSectionProps> = ({ billData, billAnalysis }) =
                 ))}
               </Pie>
               <Tooltip 
-                formatter={(value, name, props) => [`$${value.toFixed(2)}`, name]}
+                formatter={(value: number, name: string) => [`$${value.toFixed(2)}`, name]}
               />
               <Legend />
             </PieChart>
