@@ -1,8 +1,8 @@
 
-import { server } from '@/api/server';
+import { server } from './server';
 
 // Real API endpoint for bill analysis
-server.post('/api/analyze-bill', async (request: Request, response: Response) => {
+server.post('/api/analyze-bill', async (request: Request) => {
   try {
     // Get the form data from the request
     const formData = await request.formData();
@@ -16,7 +16,7 @@ server.post('/api/analyze-bill', async (request: Request, response: Response) =>
     const fileContent = await billFile.text();
     
     // Process the bill data
-    const result = await processBillData(fileContent, billFile.type);
+    const result = await processBillData(fileContent);
     
     return Response.json(result);
   } catch (error) {
@@ -28,8 +28,8 @@ server.post('/api/analyze-bill', async (request: Request, response: Response) =>
   }
 });
 
-// Process the bill data based on file content and type
-async function processBillData(fileContent: string, fileType: string) {
+// Process the bill data based on file content
+async function processBillData(fileContent: string) {
   // Extract account information
   const accountNumber = extractAccountNumber(fileContent);
   const billingPeriod = extractBillingPeriod(fileContent);
