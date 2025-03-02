@@ -2,13 +2,13 @@
 import React, { useState } from 'react';
 import { toast } from 'sonner';
 import { BillData } from './verizon-bill-analyzer/types';
-import { transformAnalysisData } from './verizon-bill-analyzer/utils';
 import BillUploader from './verizon-bill-analyzer/BillUploader';
 import BillHeader from './verizon-bill-analyzer/BillHeader';
 import BillTabs from './verizon-bill-analyzer/BillTabs';
 import BillSummaryTab from './verizon-bill-analyzer/BillSummaryTab';
 import LineDetailsTab from './verizon-bill-analyzer/LineDetailsTab';
 import RecommendationsTab from './verizon-bill-analyzer/RecommendationsTab';
+import { supabase } from "@/integrations/supabase/client";
 
 const VerizonBillAnalyzer: React.FC = () => {
   const [billData, setBillData] = useState<BillData | null>(null);
@@ -33,64 +33,32 @@ const VerizonBillAnalyzer: React.FC = () => {
         throw new Error('Unsupported file format. Please upload a PDF or text file.');
       }
       
-      // For now, we'll provide sample data as we don't have a server-side component
-      // In a production environment, you would send this to a real server endpoint
+      // Create form data to send the file
+      const formData = new FormData();
+      formData.append('file', file);
       
-      // Simulate API response with sample data
-      const sampleData = {
-        accountNumber: "123456789",
-        totalAmount: 185.99,
-        billingPeriod: "May 1 - May 31, 2023",
-        phoneLines: [
-          {
-            phoneNumber: "555-123-4567",
-            deviceName: "iPhone 13 Pro",
-            planName: "Unlimited Plus",
-            monthlyTotal: 90.99,
-            details: {
-              planCost: 80,
-              planDiscount: 10,
-              devicePayment: 29.99,
-              deviceCredit: 15,
-              protection: 15,
-              perks: 5,
-              perksDiscount: 5,
-              surcharges: 4,
-              taxes: 2
-            }
-          },
-          {
-            phoneNumber: "555-987-6543",
-            deviceName: "Samsung Galaxy S22",
-            planName: "Unlimited Welcome",
-            monthlyTotal: 75,
-            details: {
-              planCost: 65,
-              planDiscount: 5,
-              devicePayment: 25,
-              deviceCredit: 10,
-              protection: 12,
-              perks: 0,
-              perksDiscount: 0,
-              surcharges: 3.5,
-              taxes: 4.5
-            }
-          }
-        ],
-        chargesByCategory: {
-          plans: 130,
-          devices: 30,
-          protection: 27,
-          surcharges: 7.5,
-          taxes: 6.5,
-          other: 0
-        }
-      };
+      console.log('Uploading bill for analysis...');
       
-      // Transform the sample data into the BillData format
-      const processedData = transformAnalysisData(sampleData);
+      // Call the Supabase Edge Function
+      const { data, error } = await supabase.functions.invoke('analyze-bill', {
+        body: formData,
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
       
-      setBillData(processedData);
+      if (error) {
+        throw new Error(`API error: ${error.message}`);
+      }
+      
+      if (!data) {
+        throw new Error('No data returned from analysis');
+      }
+      
+      console.log('Analysis data received:', data);
+      
+      // Set the bill data from the response
+      setBillData(data);
       toast.success("Bill successfully analyzed!");
     } catch (error) {
       console.error('Error processing file:', error);
