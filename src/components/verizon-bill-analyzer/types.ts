@@ -98,6 +98,7 @@ export interface BillData {
 export interface PhoneLine {
   deviceName: string;
   phoneNumber: string;
+  planName: string; // Added planName property
   monthlyTotal: number;
   details: {
     planCost?: number;
@@ -105,6 +106,8 @@ export interface PhoneLine {
     devicePayment?: number;
     deviceCredit?: number;
     protection?: number;
+    perks?: number; // Added perks property
+    perksDiscount?: number; // Added perksDiscount property
     surcharges?: number;
     taxes?: number;
   };
@@ -120,4 +123,10 @@ export interface BillAnalysisResponse {
   billingPeriod: string;
   totalAmount: number;
   phoneLines: PhoneLine[];
+}
+
+// Add ChartSectionProps interface to fix type error
+export interface ChartSectionProps {
+  billData: BillData;
+  billAnalysis?: BillAnalysis;
 }

@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { Smartphone, Tablet, Wifi, ChevronRight, ChevronDown } from 'lucide-react';
-import { BillData } from './types';
+import { BillData, PhoneLine } from './types';
 import { formatCurrency } from './utils';
 
 interface LineDetailsTabProps {
@@ -19,7 +19,7 @@ const LineDetailsTab: React.FC<LineDetailsTabProps> = ({
     <div className="space-y-4">
       <h3 className="font-bold text-lg mb-4">Line Details</h3>
       
-      {billData.phoneLines.map((line, index) => (
+      {billData.phoneLines.map((line: PhoneLine, index: number) => (
         <div 
           key={index} 
           className="border border-gray-200 rounded-lg overflow-hidden"

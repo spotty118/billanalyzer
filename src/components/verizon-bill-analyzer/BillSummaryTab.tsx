@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { BillData } from './types';
+import { BillData, ChartSectionProps } from './types';
 import ChartSection from './ChartSection';
 import UsageInsights from './UsageInsights';
 import CostAnalysis from './CostAnalysis';
