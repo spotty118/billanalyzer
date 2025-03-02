@@ -2,7 +2,6 @@
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend, BarChart, Bar, XAxis, YAxis, CartesianGrid } from 'recharts';
-import { ChartDataItem, CategoryDataItem } from './types';
 import { BillSummary } from './types';
 import { ValueType } from 'recharts/types/component/DefaultTooltipContent';
 
