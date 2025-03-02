@@ -165,7 +165,7 @@ const VerizonBillAnalyzer = () => {
 
   const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#A28DFF', '#FF6B6B'];
 
-  const formatCurrency = (value) => {
+  const formatCurrency = (value: number) => {
     return `$${value.toFixed(2)}`;
   };
 
@@ -288,7 +288,7 @@ const VerizonBillAnalyzer = () => {
                               <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                             ))}
                           </Pie>
-                          <Tooltip formatter={(value) => [`$${value.toFixed(2)}`, null]} />
+                          <Tooltip formatter={(value) => [`$${Number(value).toFixed(2)}`, null]} />
                         </PieChart>
                       </ResponsiveContainer>
                     </div>
