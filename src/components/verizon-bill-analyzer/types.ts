@@ -1,6 +1,4 @@
 
-import { ValueType, NameType } from 'recharts/types/component/DefaultTooltipContent';
-
 // Define the data structures for bill analysis
 export interface BillLineDetails {
   planCost?: number;

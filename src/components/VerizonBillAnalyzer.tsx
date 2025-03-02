@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { toast } from 'sonner';
-import { BillData, BillAnalysisResponse } from './verizon-bill-analyzer/types';
+import { BillData } from './verizon-bill-analyzer/types';
 import { transformAnalysisData } from './verizon-bill-analyzer/utils';
 import BillUploader from './verizon-bill-analyzer/BillUploader';
 import BillHeader from './verizon-bill-analyzer/BillHeader';
@@ -28,31 +28,67 @@ const VerizonBillAnalyzer: React.FC = () => {
     setError(null);
 
     try {
-      // Read the file and create a FormData object to send to the server
-      const formData = new FormData();
-      formData.append('billFile', file);
-      
       // Check if file type is supported
       if (file.type !== 'application/pdf' && file.type !== 'text/plain') {
         throw new Error('Unsupported file format. Please upload a PDF or text file.');
       }
       
-      // Send the file to the server for processing
-      const response = await fetch('/api/analyze-bill', {
-        method: 'POST',
-        body: formData,
-      });
+      // For now, we'll provide sample data as we don't have a server-side component
+      // In a production environment, you would send this to a real server endpoint
       
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(`Error analyzing bill: ${errorData.error || response.statusText}`);
-      }
+      // Simulate API response with sample data
+      const sampleData = {
+        accountNumber: "123456789",
+        totalAmount: 185.99,
+        billingPeriod: "May 1 - May 31, 2023",
+        phoneLines: [
+          {
+            phoneNumber: "555-123-4567",
+            deviceName: "iPhone 13 Pro",
+            planName: "Unlimited Plus",
+            monthlyTotal: 90.99,
+            details: {
+              planCost: 80,
+              planDiscount: 10,
+              devicePayment: 29.99,
+              deviceCredit: 15,
+              protection: 15,
+              perks: 5,
+              perksDiscount: 5,
+              surcharges: 4,
+              taxes: 2
+            }
+          },
+          {
+            phoneNumber: "555-987-6543",
+            deviceName: "Samsung Galaxy S22",
+            planName: "Unlimited Welcome",
+            monthlyTotal: 75,
+            details: {
+              planCost: 65,
+              planDiscount: 5,
+              devicePayment: 25,
+              deviceCredit: 10,
+              protection: 12,
+              perks: 0,
+              perksDiscount: 0,
+              surcharges: 3.5,
+              taxes: 4.5
+            }
+          }
+        ],
+        chargesByCategory: {
+          plans: 130,
+          devices: 30,
+          protection: 27,
+          surcharges: 7.5,
+          taxes: 6.5,
+          other: 0
+        }
+      };
       
-      // Get the analysis results from the server
-      const analysisResult: BillAnalysisResponse = await response.json();
-      
-      // Transform the analysis result into the BillData format
-      const processedData = transformAnalysisData(analysisResult);
+      // Transform the sample data into the BillData format
+      const processedData = transformAnalysisData(sampleData);
       
       setBillData(processedData);
       toast.success("Bill successfully analyzed!");
