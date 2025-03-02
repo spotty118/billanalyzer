@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { Check, DollarSign, AlertCircle, PhoneCall, Smartphone, Tablet, Wifi, Clock, Tag, ChevronRight, ChevronDown } from 'lucide-react';
@@ -11,7 +10,6 @@ const VerizonBillAnalyzer = () => {
   const [expandedLine, setExpandedLine] = useState<number | null>(null);
   const [expandedSection, setExpandedSection] = useState('charges');
 
-  // Handle file selection
   const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -20,10 +18,8 @@ const VerizonBillAnalyzer = () => {
     setIsLoading(true);
 
     try {
-      // Simulate loading
       await new Promise(resolve => setTimeout(resolve, 1500));
       
-      // Get mock data
       const mockData = {
         accountNumber: "526905159-00001",
         billingPeriod: "December 12, 2024 to January 11, 2025",
@@ -125,7 +121,6 @@ const VerizonBillAnalyzer = () => {
     }
   };
 
-  // Toggle line expansion
   const toggleLineExpansion = (index: number) => {
     if (expandedLine === index) {
       setExpandedLine(null);
@@ -134,7 +129,6 @@ const VerizonBillAnalyzer = () => {
     }
   };
 
-  // Toggle section expansion
   const toggleSectionExpansion = (section: string) => {
     if (expandedSection === section) {
       setExpandedSection('');
@@ -143,7 +137,6 @@ const VerizonBillAnalyzer = () => {
     }
   };
 
-  // Prepare line items data for visualization
   const prepareLineItemsData = () => {
     if (!billData?.phoneLines) return [];
     
@@ -157,7 +150,6 @@ const VerizonBillAnalyzer = () => {
     }));
   };
 
-  // Prepare category data for pie chart
   const prepareCategoryData = () => {
     if (!billData?.chargesByCategory) return [];
     
@@ -171,11 +163,9 @@ const VerizonBillAnalyzer = () => {
     ];
   };
 
-  // Colors for pie chart
   const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#A28DFF', '#FF6B6B'];
 
-  // Format currency
-  const formatCurrency = (value: number) => {
+  const formatCurrency = (value) => {
     return `$${value.toFixed(2)}`;
   };
 
@@ -215,7 +205,6 @@ const VerizonBillAnalyzer = () => {
         </div>
       ) : (
         <div className="flex flex-col">
-          {/* Header */}
           <div className="bg-blue-600 p-6 rounded-t-lg text-white">
             <div className="flex flex-wrap justify-between items-center gap-4">
               <div>
@@ -231,7 +220,6 @@ const VerizonBillAnalyzer = () => {
             </div>
           </div>
           
-          {/* Tabs */}
           <div className="flex border-b">
             <button 
               className={`px-6 py-3 font-medium ${activeTab === 'summary' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-gray-600'}`}
@@ -253,13 +241,10 @@ const VerizonBillAnalyzer = () => {
             </button>
           </div>
           
-          {/* Content */}
           <div className="p-6">
             {activeTab === 'summary' && (
               <div className="space-y-8">
-                {/* Charts Row */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {/* Line Items Chart */}
                   <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
                     <h3 className="font-bold text-lg mb-4">Charges by Line</h3>
                     <div className="h-64">
@@ -283,7 +268,6 @@ const VerizonBillAnalyzer = () => {
                     </div>
                   </div>
                   
-                  {/* Pie Chart */}
                   <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
                     <h3 className="font-bold text-lg mb-4">Breakdown by Category</h3>
                     <div className="h-64">
@@ -298,20 +282,19 @@ const VerizonBillAnalyzer = () => {
                             fill="#8884d8"
                             paddingAngle={5}
                             dataKey="value"
-                            label={({name, percent}) => `${name} ${(Number(percent) * 100).toFixed(0)}%`}
+                            label={({name, percent}) => `${name} ${(percent * 100).toFixed(0)}%`}
                           >
-                            {prepareCategoryData().map((entry, index) => (
+                            {prepareCategoryData().map((_, index) => (
                               <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                             ))}
                           </Pie>
-                          <Tooltip formatter={(value) => [`$${Number(value).toFixed(2)}`, null]} />
+                          <Tooltip formatter={(value) => [`$${value.toFixed(2)}`, null]} />
                         </PieChart>
                       </ResponsiveContainer>
                     </div>
                   </div>
                 </div>
                 
-                {/* Usage Insights */}
                 <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
                   <div className="flex justify-between items-center mb-4">
                     <h3 className="font-bold text-lg">Usage Insights</h3>
@@ -350,7 +333,6 @@ const VerizonBillAnalyzer = () => {
                   </div>
                 </div>
                 
-                {/* Cost Analysis */}
                 <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
                   <h3 className="font-bold text-lg mb-4">Cost Analysis</h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
@@ -364,7 +346,6 @@ const VerizonBillAnalyzer = () => {
                     </div>
                   </div>
                   
-                  {/* Potential Savings */}
                   <div 
                     className="flex justify-between items-center p-4 bg-green-50 rounded-lg cursor-pointer"
                     onClick={() => toggleSectionExpansion('savings')}
@@ -510,7 +491,6 @@ const VerizonBillAnalyzer = () => {
             
             {activeTab === 'recommendations' && (
               <div className="space-y-6">
-                {/* Plan Recommendation */}
                 <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
                   <div className="flex items-center mb-4">
                     <div className="p-2 rounded-full bg-blue-100 mr-4">
@@ -550,7 +530,6 @@ const VerizonBillAnalyzer = () => {
                   </div>
                 </div>
                 
-                {/* Alternative Plans */}
                 <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
                   <h3 className="font-bold text-lg mb-4">Alternative Plans</h3>
                   
