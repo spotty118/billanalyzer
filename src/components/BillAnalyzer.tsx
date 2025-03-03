@@ -332,9 +332,10 @@ export function BillAnalyzer() {
         console.log('Using fallback data with error:', result.error);
         setIsDemoData(true);
         toast({
-          variant: "warning",
+          // Change from "warning" to "default" with custom styling
           title: "Using demo data",
-          description: result.error.message || "Analysis service unavailable, showing sample data"
+          description: result.error.message || "Analysis service unavailable, showing sample data",
+          className: "bg-amber-50 border-amber-200 text-amber-800"
         });
       } else if (result.error) {
         // Error with no fallback data
