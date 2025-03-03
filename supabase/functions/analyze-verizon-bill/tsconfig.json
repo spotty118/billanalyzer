@@ -1,0 +1,28 @@
+{
+  "compilerOptions": {
+    "target": "ESNext",
+    "module": "ESNext",
+    "lib": ["ESNext", "DOM"],
+    "moduleResolution": "node",
+    "strict": true,
+    "noImplicitAny": true,
+    "allowJs": true,
+    "checkJs": true,
+    "skipLibCheck": true,
+    "allowImportingTsExtensions": true,
+    "noEmit": true,
+    "typeRoots": [
+      "./deno.env.d.ts"
+    ],
+    "paths": {
+      "https://deno.land/std@0.177.0/*": ["./node_modules/@types/deno-types/*"],
+      "server": ["https://deno.land/std@0.177.0/http/server.ts"]
+    }
+  },
+  "include": [
+    "./**/*.ts"
+  ],
+  "exclude": [
+    "node_modules"
+  ]
+}
