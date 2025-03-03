@@ -16,7 +16,7 @@ export interface CarrierPlan {
   };
   dataAllowance: {
     premium: number | 'unlimited';
-    hotspot?: number;
+    hotspot?: number | 'unlimited';
   };
   features: string[];
   streamingPerks: string[];
@@ -166,12 +166,8 @@ export function formatCarrierPlanPrice(plan: CarrierPlan, numberOfLines: number)
   return formatCurrency(price);
 }
 
-export function findBestCarrierMatch(verizonPlanName: string, carrierId: string): string {
-  // Match Verizon plans to their closest equivalent in the specified carrier
-  
-  // Filter plans by carrier
-  const carrierPlans = alternativeCarrierPlans.filter(plan => plan.carrierId === carrierId);
-  
+export function findBestCarrierMatch(carrierId: string): string {
+  // Match carrier ID to their closest equivalent carrier plan
   if (carrierId === 'darkstar') {
     return 'darkstar-premium';
   } else if (carrierId === 'warp') {
@@ -181,6 +177,7 @@ export function findBestCarrierMatch(verizonPlanName: string, carrierId: string)
   }
   
   // Default to the first plan of the carrier if no match is found
+  const carrierPlans = alternativeCarrierPlans.filter(plan => plan.carrierId === carrierId);
   return carrierPlans.length > 0 ? carrierPlans[0].id : '';
 }
 

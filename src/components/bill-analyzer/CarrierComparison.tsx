@@ -1,4 +1,3 @@
-
 import { ArrowLeftRight, AlertCircle, Check, Star, Zap, Lightbulb } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { 
@@ -70,7 +69,7 @@ export function CarrierComparison({
             if (carrier.id !== activeCarrierTab) return null;
             
             const { monthlySavings, annualSavings, planName, price } = calculateCarrierSavings(carrier.id);
-            const matchedPlanId = findBestCarrierMatch(billData.phoneLines[0]?.planName || 'Unlimited Plus', carrier.id);
+            const matchedPlanId = findBestCarrierMatch(carrier.id);
             const carrierPlan = alternativeCarrierPlans.find(p => p.id === matchedPlanId);
             
             return (

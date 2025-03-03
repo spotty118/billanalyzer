@@ -1,4 +1,3 @@
-
 import { 
   ArrowLeftRight, 
   Star,
@@ -89,7 +88,7 @@ export function PlanComparison({
           
           {supportedCarriers.map(carrier => {
             const mainVerizonPlan = verizonPlans[0];
-            const matchedCarrierPlanId = findBestCarrierMatch(mainVerizonPlan.plan, carrier.id);
+            const matchedCarrierPlanId = findBestCarrierMatch(carrier.id);
             const carrierPlan = alternativeCarrierPlans.find(p => p.id === matchedCarrierPlanId) || alternativeCarrierPlans[0];
             
             const carrierTotalPrice = getCarrierPlanPrice(carrierPlan, numberOfLines);
