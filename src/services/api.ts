@@ -76,13 +76,27 @@ class ApiService {
         console.info('Skipping server call in development environment, using local file');
       }
       
-      // Fallback to local file data
+      // Fallback to local file data for development
       try {
-        // In a development environment, we can fetch the local file
-        const verizonFinalAnalysis = await import('../../server/verizon-bill-final-analysis.json');
+        // In development, we'll use both the improved and line items data
+        const improvedResult = await import('../../server/verizon-improved-result.json');
+        const lineItemsResult = await import('../../server/verizon-line-items-result.json');
         
-        // Return the final analysis format
-        return verizonFinalAnalysis;
+        // Merge the two results to get all phone lines
+        const mergedResult = {
+          ...improvedResult,
+          devices: improvedResult.devices || [],
+          phoneLines: this.mergePhoneLines(
+            improvedResult.phoneLines || [], 
+            lineItemsResult.enhancedBill?.phoneLines || []
+          ),
+          // Add line items and charges from the line items result
+          lineItems: lineItemsResult.enhancedBill?.lineItems || improvedResult.lineItems || [],
+          charges: lineItemsResult.enhancedBill?.charges || improvedResult.charges || []
+        };
+
+        console.log('Merged analysis data:', mergedResult);
+        return mergedResult;
       } catch (fallbackError) {
         console.error('Could not load local bill analysis file:', fallbackError);
         throw new Error('Failed to perform bill analysis');
@@ -91,6 +105,32 @@ class ApiService {
       console.error('Enhanced analysis failed completely:', error);
       throw error;
     }
+  }
+
+  /**
+   * Helper method to merge phone lines from different sources
+   */
+  private mergePhoneLines(primaryLines: any[], secondaryLines: any[]): any[] {
+    const phoneNumbers = new Set();
+    const mergedLines = [...primaryLines];
+    
+    // Add phone numbers from primary lines to the set
+    primaryLines.forEach(line => {
+      if (line.phoneNumber) {
+        phoneNumbers.add(line.phoneNumber);
+      }
+    });
+    
+    // Add unique lines from secondary source
+    secondaryLines.forEach(line => {
+      if (line.phoneNumber && !phoneNumbers.has(line.phoneNumber)) {
+        phoneNumbers.add(line.phoneNumber);
+        mergedLines.push(line);
+      }
+    });
+    
+    console.log(`Merged ${mergedLines.length} phone lines from ${primaryLines.length} primary and ${secondaryLines.length} secondary`);
+    return mergedLines;
   }
 
   /**
