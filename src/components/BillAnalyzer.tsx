@@ -303,7 +303,6 @@ const AnalysisResults = ({ analysis }: { analysis: BillAnalysis }) => (
 export function BillAnalyzer() {
   const [analysisResult, setAnalysisResult] = useState<BillAnalysis | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [isDemoData, setIsDemoData] = useState(false);
   const { toast } = useToast();
   const {
     file,
@@ -321,23 +320,12 @@ export function BillAnalyzer() {
 
     try {
       setIsAnalyzing(true);
-      setIsDemoData(false);
       console.log('Starting bill analysis...');
       
       const result = await analyzeBill(file);
       console.log('Analysis result:', result);
       
-      // Check if we have an error but also data (fallback scenario)
-      if (result.error && result.data) {
-        console.log('Using fallback data with error:', result.error);
-        setIsDemoData(true);
-        toast({
-          // Change from "warning" to "default" with custom styling
-          title: "Using demo data",
-          description: result.error.message || "Analysis service unavailable, showing sample data",
-          className: "bg-amber-50 border-amber-200 text-amber-800"
-        });
-      } else if (result.error) {
+      if (result.error) {
         // Error with no fallback data
         console.error('API returned error:', result.error);
         toast({
@@ -372,15 +360,12 @@ export function BillAnalyzer() {
       setAnalysisResult(result.data);
       console.log('Analysis successful:', result.data);
       
-      if (!isDemoData) {
-        toast({
-          title: "Analysis Complete",
-          description: "Your bill has been successfully analyzed."
-        });
-      }
+      toast({
+        title: "Analysis Complete",
+        description: "Your bill has been successfully analyzed."
+      });
     } catch (error) {
       console.error('Bill analysis error:', error);
-      setIsDemoData(false);
       reset();
       // Toast notification for error already shown above
     } finally {
@@ -392,7 +377,7 @@ export function BillAnalyzer() {
     <ErrorBoundary>
       <Card>
         <CardHeader>
-          <CardTitle>Bill Analyzer {isDemoData && "(Demo Mode)"}</CardTitle>
+          <CardTitle>Bill Analyzer</CardTitle>
         </CardHeader>
         <CardContent>
           {isLoading || isAnalyzing ? (
@@ -414,11 +399,6 @@ export function BillAnalyzer() {
               >
                 {isAnalyzing ? "Analyzing..." : "Analyze Bill"}
               </Button>
-              {isDemoData && !isAnalyzing && (
-                <div className="text-sm text-amber-600 bg-amber-50 p-2 rounded border border-amber-200">
-                  Note: Showing demo data. The analysis service is currently unavailable.
-                </div>
-              )}
               {analysisResult && (
                 <AnalysisResults analysis={analysisResult} />
               )}
