@@ -109,13 +109,19 @@ export function PlanComparison({
       </CardHeader>
       <CardContent>
         <Tabs defaultValue="usmobile" onValueChange={setActiveCarrier}>
-          <TabsList className="grid grid-cols-4 mb-4">
-            {supportedCarriers.map(carrier => (
-              <TabsTrigger key={carrier.id} value={carrier.id} className="flex items-center">
-                {getCarrierIcon(carrier.icon)}
-                <span className="ml-1">{carrier.name}</span>
-              </TabsTrigger>
-            ))}
+          <TabsList className="mb-4 w-full">
+            <div className="grid grid-cols-4 gap-2 w-full">
+              {supportedCarriers.map(carrier => (
+                <TabsTrigger 
+                  key={carrier.id} 
+                  value={carrier.id} 
+                  className="flex items-center justify-center px-2 py-2 text-sm whitespace-normal text-center h-auto"
+                >
+                  {getCarrierIcon(carrier.icon)}
+                  <span className="ml-1">{carrier.name}</span>
+                </TabsTrigger>
+              ))}
+            </div>
           </TabsList>
           
           {supportedCarriers.map(carrier => (
