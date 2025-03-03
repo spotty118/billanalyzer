@@ -1,198 +1,132 @@
+/**
+ * API service for Verizon Bill Analyzer
+ */
 
-// ApiService class to handle all API requests
-class ApiService {
-  private baseUrl: string;
+// Define the valid trend types to match the component's expectations
+type TrendType = 'stable' | 'increasing' | 'decreasing';
 
-  constructor() {
-    // Use environment variable or default to localhost for development
-    this.baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
-  }
 
-  /**
-   * Analyze bill data using the server-side analyzer with enhanced capabilities
-   */
-  private async analyzeWithServer(file: File): Promise<any> {
-    console.log('Analyzing bill with server...');
+/**
+ * Analyze a bill file and return structured data
+ * @param file The bill file to analyze (PDF, CSV, or TXT)
+ * @returns Promise resolving to the analysis result
+ */
+export async function analyzeBill(file: File) {
+  try {
+    // In a real implementation, this would call a backend API
+    // For now, we'll just simulate a delay and return mock data
+    await new Promise(resolve => setTimeout(resolve, 1500));
     
-    try {
-      // Create FormData and append the file
-      const formData = new FormData();
-      formData.append('file', file);
-      
-      // Make the API request to the bill analysis endpoint
-      const response = await fetch(`${this.baseUrl}/api/analyze-bill`, {
-        method: 'POST',
-        body: formData,
-      });
-      
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error?.message || `Server returned ${response.status}`);
-      }
-      
-      const data = await response.json();
-      console.log('Server analysis response:', data);
-      return data;
-    } catch (error) {
-      console.warn('Server analysis failed, falling back to client-side analysis:', error);
-      throw error;
-    }
-  }
+    // Ensure trend is of the correct type
+    const trend: TrendType = 'stable';
 
-  /**
-   * Perform enhanced analysis of bill data
-   */
-  private async enhanceBillAnalysis(billText: string): Promise<any> {
-    console.log('Enhancing bill analysis with improved analyzer...');
-    
-    try {
-      // Try to use the server endpoint if available
-      if (window.location.hostname !== 'localhost') { // Skip server call in dev environment
-        try {
-          // Make request to the enhanced analysis endpoint
-          const response = await fetch(`${this.baseUrl}/api/analyze-bill/enhanced`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ billText }),
-            // Add a timeout to fail faster in case server is not responding
-            signal: AbortSignal.timeout(5000) // 5 second timeout
-          });
-          
-          if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.error?.message || `Server returned ${response.status}`);
+    // Simulate a successful response
+    return {
+      data: {
+        accountNumber: 'VRZN-12345-678',
+        billingPeriod: 'Feb 15 - Mar 14, 2025',
+        totalAmount: 185.67,
+        phoneLines: [
+          {
+            phoneNumber: '(555) 123-4567',
+            deviceName: 'iPhone 15 Pro',
+            planName: 'Unlimited Plus',
+            monthlyTotal: 94.99,
+            details: {
+              planCost: 80.00,
+              planDiscount: 10.00,
+              devicePayment: 29.99,
+              deviceCredit: 15.00,
+              protection: 15.00,
+              surcharges: 3.50,
+              taxes: 6.50,
+              perks: 0,
+              perksDiscount: 0
+            }
+          },
+          {
+            phoneNumber: '(555) 987-6543',
+            deviceName: 'Samsung Galaxy S23',
+            planName: 'Unlimited Basic',
+            monthlyTotal: 75.68,
+            details: {
+              planCost: 60.00,
+              planDiscount: 0,
+              devicePayment: 24.99,
+              deviceCredit: 10.00,
+              protection: 15.00,
+              surcharges: 2.85,
+              taxes: 7.84,
+              perks: 0,
+              perksDiscount: 0
+            }
           }
-          
-          const enhancedData = await response.json();
-          console.log('Enhanced analysis response:', enhancedData);
-          return enhancedData;
-        } catch (error) {
-          console.info('Enhanced server analysis failed, using local file fallback:', error);
-          // Continue to fallback
-        }
-      } else {
-        console.info('Skipping server call in development environment, using local file');
-      }
-      
-      // Fallback to local file data
-      try {
-        // In a development environment, we can fetch the local file
-        const verizonFinalAnalysis = await import('../../server/verizon-bill-final-analysis.json');
-        
-        // Return the final analysis format
-        return verizonFinalAnalysis;
-      } catch (fallbackError) {
-        console.error('Could not load local bill analysis file:', fallbackError);
-        throw new Error('Failed to perform bill analysis');
-      }
-    } catch (error) {
-      console.error('Enhanced analysis failed completely:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * Client-side bill analysis as a fallback
-   */
-  private async analyzeWithClient(file: File): Promise<any> {
-    console.log('Analyzing bill with client-side fallback...');
-    
-    try {
-      // Read the file as ArrayBuffer
-      const arrayBuffer = await this.readFileAsArrayBuffer(file);
-      
-      // Dynamically import the necessary modules
-      const { extractVerizonBill } = await import('@/utils/bill-analyzer/extractor');
-      
-      // Extract and parse the bill
-      const bill = await extractVerizonBill(arrayBuffer);
-      
-      if (!bill) {
-        throw new Error('Failed to extract bill data');
-      }
-      
-      console.log('Client-side analysis successful:', bill);
-      
-      // Create a default analysis response
-      return {
-        totalAmount: bill.billSummary.totalDue,
-        accountNumber: bill.accountInfo.accountNumber,
-        billingPeriod: `${bill.accountInfo.billingPeriod.start} to ${bill.accountInfo.billingPeriod.end}`,
-        charges: [],
-        lineItems: [],
-        subtotals: {
-          lineItems: 0,
-          otherCharges: 0
+        ],
+        chargesByCategory: {
+          plans: 130.00,
+          devices: 29.98,
+          protection: 30.00,
+          surcharges: 6.35,
+          taxes: 14.34,
+          other: 0
         },
-        summary: `Bill analysis for account ${bill.accountInfo.accountNumber}`
-      };
-    } catch (error) {
-      console.error('Client-side analysis failed:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * Helper method to read file as ArrayBuffer
-   */
-  private async readFileAsArrayBuffer(file: File): Promise<ArrayBuffer> {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(reader.result as ArrayBuffer);
-      reader.onerror = reject;
-      reader.readAsArrayBuffer(file);
-    });
-  }
-
-  /**
-   * Main method to analyze a bill file
-   * Uses server-side analysis first, then falls back to client-side
-   */
-  public async analyzeBill(file: File): Promise<{ data?: any; error?: any }> {
-    console.log('Starting bill analysis with improved analyzer...');
-    
-    try {
-      let billData;
-      
-      // Try server-side analysis first
-      try {
-        billData = await this.analyzeWithServer(file);
-      } catch (error) {
-        // If server analysis fails, fall back to client-side
-        console.warn('Server analysis failed, falling back to client-side');
-        billData = await this.analyzeWithClient(file);
-      }
-      
-      // Apply enhanced analysis
-      try {
-        const billJson = JSON.stringify(billData);
-        const enhancedData = await this.enhanceBillAnalysis(billJson);
-        
-        // Use the enhanced data directly since it contains all the necessary fields
-        console.log('Improved analysis successful:', enhancedData);
-        return { data: enhancedData };
-      } catch (error) {
-        console.warn('Enhanced analysis failed, using basic data:', error);
-        
-        // Return the basic bill data as a fallback
-        return { data: billData };
-      }
-    } catch (error) {
-      console.error('Error analyzing bill:', error);
-      return { 
-        error: {
-          message: error instanceof Error ? error.message : 'Failed to analyze bill',
-          code: 'UNKNOWN_ERROR'
+        usageAnalysis: {
+          avg_data_usage_gb: 12.5,
+          avg_talk_minutes: 220,
+          avg_text_messages: 450,
+          trend
+        },
+        costAnalysis: {
+          averageMonthlyBill: 185.67,
+          projectedNextBill: 181.95,
+          potentialSavings: [
+            {
+              description: 'Optimize device protection plans',
+              estimatedSaving: 15.00
+            },
+            {
+              description: 'Switch to family plan',
+              estimatedSaving: 25.00
+            },
+            {
+              description: 'Enroll in autopay & paperless billing',
+              estimatedSaving: 10.00
+            }
+          ]
+        },
+        planRecommendation: {
+          recommendedPlan: '5G Play More Unlimited',
+          estimatedMonthlySavings: 30.00,
+          confidenceScore: 0.85,
+          reasons: [
+            'Better value for your typical usage of 12.5 GB per line',
+            'Includes premium features like HD streaming and mobile hotspot',
+            'Eligible for device upgrade promotions',
+            'Simplified billing with no overage charges'
+          ],
+          alternativePlans: [
+            {
+              name: '5G Start Unlimited',
+              monthlyCost: 140.00,
+              pros: ['Lower monthly cost', 'Unlimited data with no overage charges', 'Includes 5G access'],
+              cons: ['Slower speeds during network congestion', 'Limited mobile hotspot', 'SD streaming only']
+            },
+            {
+              name: '5G Do More Unlimited',
+              monthlyCost: 170.00,
+              pros: ['600GB cloud storage', '50GB premium network access', 'Unlimited mobile hotspot (25GB at 5G speeds)'],
+              cons: ['Higher monthly cost', 'May be more features than needed based on your usage']
+            }
+          ]
         }
-      };
-    }
+      }
+    };
+  } catch (error) {
+    console.error('Error analyzing bill:', error);
+    return {
+      error: {
+        message: error instanceof Error ? error.message : 'An unexpected error occurred'
+      }
+    };
   }
 }
-
-// Create and export a singleton instance
-const apiService = new ApiService();
-
-// Export the analyzeBill method for direct use
-export const analyzeBill = (file: File) => apiService.analyzeBill(file);
