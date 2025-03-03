@@ -303,6 +303,7 @@ const AnalysisResults = ({ analysis }: { analysis: BillAnalysis }) => (
 export function BillAnalyzer() {
   const [analysisResult, setAnalysisResult] = useState<BillAnalysis | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [isDemoData, setIsDemoData] = useState(false);
   const { toast } = useToast();
   const {
     file,
@@ -320,19 +321,30 @@ export function BillAnalyzer() {
 
     try {
       setIsAnalyzing(true);
+      setIsDemoData(false);
       console.log('Starting bill analysis...');
       
       const result = await analyzeBill(file);
       console.log('Analysis result:', result);
       
-      if (result.error) {
+      // Check if we have an error but also data (fallback scenario)
+      if (result.error && result.data) {
+        console.log('Using fallback data with error:', result.error);
+        setIsDemoData(true);
+        toast({
+          variant: "warning",
+          title: "Using demo data",
+          description: result.error.message || "Analysis service unavailable, showing sample data"
+        });
+      } else if (result.error) {
+        // Error with no fallback data
         console.error('API returned error:', result.error);
         toast({
           variant: "destructive",
           title: "Error analyzing bill",
           description: result.error.message || "An unexpected error occurred"
         });
-        throw new Error(result.error.message);
+        throw new Error(result.error.message || "API error");
       }
 
       if (!result.data) {
@@ -345,8 +357,8 @@ export function BillAnalyzer() {
         throw new Error('No analysis data received');
       }
 
-      // Check if we have valid data with the required fields
-      if (typeof result.data.totalAmount === 'undefined' && result.data.totalAmount !== 0) {
+      // Final validation check
+      if (typeof result.data.totalAmount === 'undefined') {
         console.error('Invalid analysis data - missing totalAmount');
         toast({
           variant: "destructive",
@@ -359,12 +371,15 @@ export function BillAnalyzer() {
       setAnalysisResult(result.data);
       console.log('Analysis successful:', result.data);
       
-      toast({
-        title: "Analysis Complete",
-        description: "Your bill has been successfully analyzed."
-      });
+      if (!isDemoData) {
+        toast({
+          title: "Analysis Complete",
+          description: "Your bill has been successfully analyzed."
+        });
+      }
     } catch (error) {
       console.error('Bill analysis error:', error);
+      setIsDemoData(false);
       reset();
       // Toast notification for error already shown above
     } finally {
@@ -376,7 +391,7 @@ export function BillAnalyzer() {
     <ErrorBoundary>
       <Card>
         <CardHeader>
-          <CardTitle>Bill Analyzer</CardTitle>
+          <CardTitle>Bill Analyzer {isDemoData && "(Demo Mode)"}</CardTitle>
         </CardHeader>
         <CardContent>
           {isLoading || isAnalyzing ? (
@@ -398,6 +413,11 @@ export function BillAnalyzer() {
               >
                 {isAnalyzing ? "Analyzing..." : "Analyze Bill"}
               </Button>
+              {isDemoData && !isAnalyzing && (
+                <div className="text-sm text-amber-600 bg-amber-50 p-2 rounded border border-amber-200">
+                  Note: Showing demo data. The analysis service is currently unavailable.
+                </div>
+              )}
               {analysisResult && (
                 <AnalysisResults analysis={analysisResult} />
               )}
