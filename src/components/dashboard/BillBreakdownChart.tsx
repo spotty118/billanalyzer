@@ -15,6 +15,20 @@ interface BillBreakdownChartProps {
   bills: Bill[];
 }
 
+// Define interface for phone line structure in analysis_data
+interface PhoneLine {
+  phoneNumber: string;
+  planName?: string;
+  monthlyTotal?: number;
+  details?: {
+    planCost?: number;
+    devicePayment?: number;
+    protection?: number;
+    surcharges?: number;
+    taxes?: number;
+  };
+}
+
 // Helper function to extract and aggregate bill data
 const extractBillBreakdown = (bills: Bill[]) => {
   // Default categories
@@ -34,7 +48,7 @@ const extractBillBreakdown = (bills: Bill[]) => {
     
     // Process phone line charges
     if (bill.analysis_data.phoneLines) {
-      bill.analysis_data.phoneLines.forEach(line => {
+      bill.analysis_data.phoneLines.forEach((line: PhoneLine) => {
         if (line.details) {
           // Plan costs
           if (line.details.planCost) {
