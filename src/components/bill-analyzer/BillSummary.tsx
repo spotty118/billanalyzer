@@ -25,13 +25,17 @@ export function BillSummary({
   const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#A28DFF', '#FF6B6B'];
 
   // Safely get values with fallbacks to prevent undefined errors
-  const averageMonthlyBill = billData.costAnalysis?.averageMonthlyBill || billData.totalAmount || 0;
-  const projectedNextBill = billData.costAnalysis?.projectedNextBill || (billData.totalAmount * 1.05) || 0;
-  const potentialSavings = billData.costAnalysis?.potentialSavings || [];
-  const usageTrend = billData.usageAnalysis?.trend || 'stable';
-  const avgDataUsage = billData.usageAnalysis?.avg_data_usage_gb || 0;
-  const avgTalkMinutes = billData.usageAnalysis?.avg_talk_minutes || 0;
-  const avgTextMessages = billData.usageAnalysis?.avg_text_messages || 0;
+  const costAnalysis = billData.costAnalysis || {};
+  const usageAnalysis = billData.usageAnalysis || {};
+  
+  const averageMonthlyBill = costAnalysis.averageMonthlyBill || billData.totalAmount || 0;
+  const projectedNextBill = costAnalysis.projectedNextBill || (billData.totalAmount * 1.05) || 0;
+  const potentialSavings = costAnalysis.potentialSavings || [];
+  
+  const usageTrend = usageAnalysis.trend || 'stable';
+  const avgDataUsage = usageAnalysis.avg_data_usage_gb || 0;
+  const avgTalkMinutes = usageAnalysis.avg_talk_minutes || 0;
+  const avgTextMessages = usageAnalysis.avg_text_messages || 0;
 
   return (
     <div className="space-y-8">

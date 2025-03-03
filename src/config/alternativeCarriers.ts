@@ -1,4 +1,3 @@
-
 import { formatCurrency } from "@/data/verizonPlans";
 
 export interface CarrierPlan {
@@ -23,6 +22,8 @@ export interface CarrierPlan {
   streamingQuality: '480p' | '720p' | '1080p' | '4K';
   network: 'Verizon' | 'T-Mobile' | 'Both' | 'AT&T' | 'Proprietary';
   iconName: string;
+  discountType?: 'percentage' | 'fixed';
+  discountValue?: number;
 }
 
 // Alternative Carrier plans
@@ -62,7 +63,9 @@ export const alternativeCarrierPlans: CarrierPlan[] = [
     ],
     streamingQuality: '4K',
     network: 'Verizon',
-    iconName: 'ArrowLeftRight'
+    iconName: 'ArrowLeftRight',
+    discountType: 'percentage',
+    discountValue: 10
   },
   {
     id: 'usmobile-unlimited-basic',
@@ -93,7 +96,9 @@ export const alternativeCarrierPlans: CarrierPlan[] = [
     ],
     streamingQuality: '1080p',
     network: 'Verizon',
-    iconName: 'ArrowLeftRight'
+    iconName: 'ArrowLeftRight',
+    discountType: 'fixed',
+    discountValue: 5
   },
   // DarkStar carrier plans (now under US Mobile)
   {
@@ -129,8 +134,10 @@ export const alternativeCarrierPlans: CarrierPlan[] = [
       "All streaming perks with 2+ lines"
     ],
     streamingQuality: '4K',
-    network: 'Both',
-    iconName: 'Star'
+    network: 'AT&T',
+    iconName: 'Star',
+    discountType: 'percentage',
+    discountValue: 15
   },
   // Warp carrier plans (now under US Mobile)
   {
@@ -164,7 +171,7 @@ export const alternativeCarrierPlans: CarrierPlan[] = [
       "Choose 2 perks with any plan"
     ],
     streamingQuality: '1080p',
-    network: 'T-Mobile',
+    network: 'Verizon',
     iconName: 'Zap'
   },
   // Lightspeed carrier plans (now under US Mobile)
@@ -201,8 +208,10 @@ export const alternativeCarrierPlans: CarrierPlan[] = [
       "All streaming perks included"
     ],
     streamingQuality: '4K',
-    network: 'AT&T',
-    iconName: 'Lightbulb'
+    network: 'T-Mobile',
+    iconName: 'Lightbulb',
+    discountType: 'fixed',
+    discountValue: 8
   }
 ];
 
@@ -218,7 +227,18 @@ export function getCarrierPlanPrice(plan: CarrierPlan, numberOfLines: number): n
     default: pricePerLine = plan.pricePerLine.line5Plus; break;
   }
   
-  return pricePerLine * numberOfLines;
+  const basePrice = pricePerLine * numberOfLines;
+  
+  // Apply discount if one exists
+  if (plan.discountType && plan.discountValue) {
+    if (plan.discountType === 'percentage') {
+      return basePrice * (1 - (plan.discountValue / 100));
+    } else if (plan.discountType === 'fixed') {
+      return Math.max(0, basePrice - plan.discountValue);
+    }
+  }
+  
+  return basePrice;
 }
 
 export function formatCarrierPlanPrice(plan: CarrierPlan, numberOfLines: number): string {
