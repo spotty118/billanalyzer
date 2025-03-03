@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { 
@@ -31,12 +30,6 @@ import {
   TabsList, 
   TabsTrigger 
 } from "@/components/ui/tabs";
-import { 
-  Tooltip as UITooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger 
-} from "@/components/ui/tooltip";
 
 const VerizonBillAnalyzer = () => {
   const [billData, setBillData] = useState<any>(null);
@@ -203,12 +196,10 @@ const VerizonBillAnalyzer = () => {
 
   const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#A28DFF', '#FF6B6B'];
 
-  // Format currency values
   const formatCurrency = (value: number): string => {
     return `$${value.toFixed(2)}`;
   };
 
-  // Calculate carrier plan price based on bill data
   const calculateCarrierSavings = (carrierId: string) => {
     if (!billData) return { monthlySavings: 0, annualSavings: 0, planName: '', price: 0 };
     
@@ -231,7 +222,6 @@ const VerizonBillAnalyzer = () => {
     };
   };
 
-  // Get carrier icon
   const getCarrierIcon = (iconName: string) => {
     switch (iconName) {
       case 'ArrowLeftRight': return <ArrowLeftRight className="h-5 w-5 inline-block mr-2" />;
@@ -367,7 +357,6 @@ const VerizonBillAnalyzer = () => {
                               <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                             ))}
                           </Pie>
-                          {/* Use Number to ensure we have a number before calling toFixed */}
                           <Tooltip formatter={(value) => [`$${Number(value).toFixed(2)}`, null]} />
                         </PieChart>
                       </ResponsiveContainer>
