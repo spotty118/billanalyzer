@@ -95,11 +95,11 @@ export const alternativeCarrierPlans: CarrierPlan[] = [
     network: 'Verizon',
     iconName: 'ArrowLeftRight'
   },
-  // Darkstar carrier plans
+  // DarkStar carrier plans (now under US Mobile)
   {
     id: 'darkstar-galactic',
     carrierId: 'darkstar',
-    carrierName: 'DarkStar',
+    carrierName: 'US Mobile DarkStar',
     name: 'Galactic Unlimited',
     basePrice: 50,
     pricePerLine: {
@@ -132,11 +132,11 @@ export const alternativeCarrierPlans: CarrierPlan[] = [
     network: 'Both',
     iconName: 'Star'
   },
-  // Warp carrier plans
+  // Warp carrier plans (now under US Mobile)
   {
     id: 'warp-hyperdrive',
     carrierId: 'warp',
-    carrierName: 'Warp',
+    carrierName: 'US Mobile Warp',
     name: 'Hyperdrive Plus',
     basePrice: 40,
     pricePerLine: {
@@ -167,11 +167,11 @@ export const alternativeCarrierPlans: CarrierPlan[] = [
     network: 'T-Mobile',
     iconName: 'Zap'
   },
-  // Lightspeed carrier plans
+  // Lightspeed carrier plans (now under US Mobile)
   {
     id: 'lightspeed-photon',
     carrierId: 'lightspeed',
-    carrierName: 'LightSpeed',
+    carrierName: 'US Mobile LightSpeed',
     name: 'Photon Unlimited',
     basePrice: 55,
     pricePerLine: {
@@ -251,9 +251,15 @@ export function findBestCarrierMatch(verizonPlanName: string, carrierId: string)
   return carrierPlans.length > 0 ? carrierPlans[0].id : '';
 }
 
+// Updated to show these are US Mobile sub-brands
 export const supportedCarriers = [
-  { id: 'usmobile', name: 'US Mobile', icon: 'ArrowLeftRight' },
-  { id: 'darkstar', name: 'DarkStar', icon: 'Star' },
-  { id: 'warp', name: 'Warp', icon: 'Zap' },
-  { id: 'lightspeed', name: 'LightSpeed', icon: 'Lightbulb' }
+  { id: 'usmobile', name: 'US Mobile', icon: 'ArrowLeftRight', isPrimary: true },
+  { id: 'darkstar', name: 'US Mobile DarkStar', icon: 'Star', isPrimary: false },
+  { id: 'warp', name: 'US Mobile Warp', icon: 'Zap', isPrimary: false },
+  { id: 'lightspeed', name: 'US Mobile LightSpeed', icon: 'Lightbulb', isPrimary: false }
 ];
+
+// Helper function to get all US Mobile carriers and sub-brands
+export function getUSMobileCarriers() {
+  return supportedCarriers;
+}

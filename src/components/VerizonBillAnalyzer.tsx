@@ -1,7 +1,42 @@
-
+<lov-code>
 import React, { useState } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
-import { Check, DollarSign, AlertCircle, PhoneCall, Smartphone, Tablet, Wifi, Clock, Tag, ChevronRight, ChevronDown } from 'lucide-react';
+import { 
+  Check, 
+  DollarSign, 
+  AlertCircle, 
+  PhoneCall, 
+  Smartphone, 
+  Tablet, 
+  Wifi, 
+  Clock, 
+  Tag, 
+  ChevronRight, 
+  ChevronDown,
+  ArrowLeftRight,
+  Star,
+  Zap,
+  Lightbulb
+} from 'lucide-react';
+import { 
+  alternativeCarrierPlans, 
+  findBestCarrierMatch, 
+  getCarrierPlanPrice,
+  supportedCarriers 
+} from "@/config/alternativeCarriers";
+import { Button } from "@/components/ui/button";
+import { 
+  Tabs, 
+  TabsContent, 
+  TabsList, 
+  TabsTrigger 
+} from "@/components/ui/tabs";
+import { 
+  Tooltip as UITooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger 
+} from "@/components/ui/tooltip";
 
 const VerizonBillAnalyzer = () => {
   const [billData, setBillData] = useState<any>(null);
@@ -10,6 +45,8 @@ const VerizonBillAnalyzer = () => {
   const [activeTab, setActiveTab] = useState('summary');
   const [expandedLine, setExpandedLine] = useState<number | null>(null);
   const [expandedSection, setExpandedSection] = useState('charges');
+  const [showCarrierComparison, setShowCarrierComparison] = useState(false);
+  const [activeCarrierTab, setActiveCarrierTab] = useState('usmobile');
 
   const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -171,6 +208,40 @@ const VerizonBillAnalyzer = () => {
     return `$${value.toFixed(2)}`;
   };
 
+  // Calculate carrier plan price based on bill data
+  const calculateCarrierSavings = (carrierId: string) => {
+    if (!billData) return { monthlySavings: 0, annualSavings: 0, planName: '', price: 0 };
+    
+    const numberOfLines = billData.phoneLines.length;
+    const mainVerizonPlan = billData.phoneLines[0]?.planName || 'Unlimited Plus';
+    
+    const matchedCarrierPlanId = findBestCarrierMatch(mainVerizonPlan, carrierId);
+    const carrierPlan = alternativeCarrierPlans.find(p => p.id === matchedCarrierPlanId);
+    
+    if (!carrierPlan) return { monthlySavings: 0, annualSavings: 0, planName: '', price: 0 };
+    
+    const carrierPrice = getCarrierPlanPrice(carrierPlan, numberOfLines);
+    const monthlySavings = billData.totalAmount - carrierPrice;
+    
+    return {
+      monthlySavings,
+      annualSavings: monthlySavings * 12,
+      planName: carrierPlan.name,
+      price: carrierPrice
+    };
+  };
+
+  // Get carrier icon
+  const getCarrierIcon = (iconName: string) => {
+    switch (iconName) {
+      case 'ArrowLeftRight': return <ArrowLeftRight className="h-5 w-5 inline-block mr-2" />;
+      case 'Star': return <Star className="h-5 w-5 inline-block mr-2" />;
+      case 'Zap': return <Zap className="h-5 w-5 inline-block mr-2" />;
+      case 'Lightbulb': return <Lightbulb className="h-5 w-5 inline-block mr-2" />;
+      default: return <ArrowLeftRight className="h-5 w-5 inline-block mr-2" />;
+    }
+  };
+
   return (
     <div className="flex flex-col w-full max-w-6xl mx-auto bg-white rounded-lg shadow">
       {!billData ? (
@@ -240,6 +311,12 @@ const VerizonBillAnalyzer = () => {
               onClick={() => setActiveTab('recommendations')}
             >
               Recommendations
+            </button>
+            <button 
+              className={`px-6 py-3 font-medium ${activeTab === 'alternatives' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-gray-600'}`}
+              onClick={() => { setActiveTab('alternatives'); setShowCarrierComparison(true); }}
+            >
+              US Mobile Plans
             </button>
           </div>
           
@@ -375,6 +452,14 @@ const VerizonBillAnalyzer = () => {
                     </div>
                   )}
                 </div>
+                <Button 
+                  variant="outline" 
+                  className="w-full mt-4 border-blue-200 bg-blue-50 hover:bg-blue-100 text-blue-800"
+                  onClick={() => { setActiveTab('alternatives'); setShowCarrierComparison(true); }}
+                >
+                  <ArrowLeftRight className="h-4 w-4 mr-2" />
+                  Compare with US Mobile Plans
+                </Button>
               </div>
             )}
             
@@ -576,11 +661,49 @@ const VerizonBillAnalyzer = () => {
                 </div>
               </div>
             )}
-          </div>
-        </div>
-      )}
-    </div>
-  );
-};
 
-export default VerizonBillAnalyzer;
+            {activeTab === 'alternatives' && showCarrierComparison && (
+              <div className="space-y-6">
+                <div className="bg-gradient-to-r from-sky-50 to-indigo-50 border-2 border-blue-100 rounded-lg p-6">
+                  <h3 className="text-xl font-bold text-blue-800 mb-4">
+                    <ArrowLeftRight className="h-5 w-5 inline-block mr-2" />
+                    US Mobile Alternative Plans
+                  </h3>
+                  
+                  <Tabs defaultValue="usmobile" onValueChange={setActiveCarrierTab}>
+                    <TabsList className="grid grid-cols-4 mb-6">
+                      {supportedCarriers.map(carrier => (
+                        <TabsTrigger key={carrier.id} value={carrier.id} className="flex items-center">
+                          {getCarrierIcon(carrier.icon)}
+                          <span className="ml-1">{carrier.name}</span>
+                        </TabsTrigger>
+                      ))}
+                    </TabsList>
+                    
+                    {supportedCarriers.map(carrier => {
+                      const { monthlySavings, annualSavings, planName, price } = calculateCarrierSavings(carrier.id);
+                      const matchedPlanId = findBestCarrierMatch(billData.phoneLines[0]?.planName || 'Unlimited Plus', carrier.id);
+                      const carrierPlan = alternativeCarrierPlans.find(p => p.id === matchedPlanId);
+                      
+                      return (
+                        <TabsContent key={carrier.id} value={carrier.id}>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div>
+                              <div className="bg-white rounded-lg p-5 shadow-sm border border-gray-100">
+                                <h4 className="text-lg font-semibold mb-4">{carrier.name} {planName}</h4>
+                                
+                                <div className="grid grid-cols-2 gap-4 mb-4">
+                                  <div>
+                                    <p className="text-sm text-gray-500">Monthly Cost</p>
+                                    <p className="text-xl font-bold">{formatCurrency(price)}</p>
+                                  </div>
+                                  <div>
+                                    <p className="text-sm text-gray-500">Your Current Bill</p>
+                                    <p className="text-xl font-bold">{formatCurrency(billData.totalAmount)}</p>
+                                  </div>
+                                </div>
+                                
+                                <div className="space-y-2 border-t pt-4 mt-2">
+                                  <div className="flex justify-between items-center">
+                                    <span>Monthly Savings:</span>
+                                    <span className={`font-bold text-lg ${monthlySavings > 0 ? 'text-green-600' : 'text-red

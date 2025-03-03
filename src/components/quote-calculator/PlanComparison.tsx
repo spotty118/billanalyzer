@@ -102,7 +102,7 @@ export function PlanComparison({
         <div className="flex justify-between items-center">
           <CardTitle className="text-lg font-bold text-blue-800">
             <ArrowLeftRight className="h-5 w-5 inline-block mr-2" />
-            Verizon vs Alternative Carriers Comparison
+            Verizon vs US Mobile Comparison
           </CardTitle>
           <Button variant="ghost" size="sm" onClick={onClose}>Close</Button>
         </div>
@@ -219,7 +219,7 @@ export function PlanComparison({
                   <AlertCircle className="h-5 w-5 text-blue-600 mr-2 flex-shrink-0" />
                   <div className="text-sm text-blue-800">
                     <p className="font-medium">Note:</p>
-                    <p>This is an estimate only. {carrier.name} plans offer different coverage and features. Visit {carrier.name}'s website for the most current plan information.</p>
+                    <p>This is an estimate only. {carrier.name} plans offer different coverage and features. Visit the US Mobile website for the most current plan information.</p>
                   </div>
                 </div>
               </div>
