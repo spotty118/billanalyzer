@@ -161,14 +161,14 @@ export function QuoteCalculator() {
                   breakdown={totalCalculation.breakdown}
                 />
                 
-                {/* Add compare with US Mobile button */}
+                {/* Update compare button with alternative carriers */}
                 <Button 
                   variant="outline" 
                   className="w-full mt-4 border-blue-200 bg-blue-50 hover:bg-blue-100 text-blue-800"
                   onClick={handleToggleComparison}
                 >
                   <ArrowLeftRight className="h-4 w-4 mr-2" />
-                  {showComparison ? "Hide Comparison" : "Compare with US Mobile"}
+                  {showComparison ? "Hide Comparison" : "Compare with Alternative Carriers"}
                 </Button>
                 
                 {/* Show comparison if toggled */}
