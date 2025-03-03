@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -16,11 +15,9 @@ export const useVerizonBillAnalyzer = () => {
 
   const processVerizonBill = async (file: File): Promise<any> => {
     try {
-      // Method 1: Direct API call with FormData
       const formData = new FormData();
       formData.append('file', file);
       
-      // Use the anon key from the supabase client
       const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1nemZpb3VhbWlkYXFjdG5xbnJlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzkyMzE3NjQsImV4cCI6MjA1NDgwNzc2NH0._0hxm1UlSMt3wPx8JwaFDvGmpfjI3p5m0HDm6YfaL6Q';
       
       console.log('Sending request to analyze bill...');
@@ -52,7 +49,6 @@ export const useVerizonBillAnalyzer = () => {
       
       const data = await response.json();
       
-      // Validate the data
       if (!data || !Array.isArray(data.phoneLines) || data.phoneLines.length === 0) {
         throw new Error('The bill analysis did not return any valid phone lines data');
       }
@@ -82,7 +78,6 @@ export const useVerizonBillAnalyzer = () => {
   };
 
   const enhanceBillData = (rawData: any) => {
-    // Enhance the raw data with additional analysis that the API might not provide
     const enhancedData = {
       ...rawData,
       usageAnalysis: {
@@ -94,7 +89,7 @@ export const useVerizonBillAnalyzer = () => {
       },
       costAnalysis: {
         averageMonthlyBill: rawData.totalAmount,
-        projectedNextBill: rawData.totalAmount * 1.05, // 5% increase
+        projectedNextBill: rawData.totalAmount * 1.05,
         unusualCharges: [],
         potentialSavings: [
           { description: "Switch to autopay discount", estimatedSaving: 50.00 },
@@ -122,7 +117,6 @@ export const useVerizonBillAnalyzer = () => {
       }
     };
     
-    // Ensure the phone lines data is consistent and complete
     if (!enhancedData.phoneLines || !Array.isArray(enhancedData.phoneLines) || enhancedData.phoneLines.length === 0) {
       enhancedData.phoneLines = [
         {
@@ -157,7 +151,6 @@ export const useVerizonBillAnalyzer = () => {
         }
       ];
     } else {
-      // Ensure all phone lines have complete details
       enhancedData.phoneLines = enhancedData.phoneLines.map((line: any, index: number) => {
         if (line.details && 
             line.details.planCost !== undefined && 
@@ -184,7 +177,6 @@ export const useVerizonBillAnalyzer = () => {
       });
     }
     
-    // Limit to a maximum of 8 phone lines to avoid excessive data
     if (enhancedData.phoneLines.length > 8) {
       enhancedData.phoneLines = enhancedData.phoneLines.slice(0, 8);
     }
@@ -196,7 +188,6 @@ export const useVerizonBillAnalyzer = () => {
     const file = event.target.files?.[0];
     if (!file) return;
     
-    // Verify file is a PDF
     if (file.type !== 'application/pdf' && !file.name.toLowerCase().endsWith('.pdf')) {
       setErrorMessage('Please upload a PDF file for best results');
       toast.error('Please upload a PDF file for best results');
@@ -210,7 +201,6 @@ export const useVerizonBillAnalyzer = () => {
     try {
       const analysisResult = await processVerizonBill(file);
       
-      // Validate the response has at least some basic data
       if (!analysisResult || typeof analysisResult !== 'object') {
         throw new Error('Invalid analysis result received');
       }
@@ -232,6 +222,83 @@ export const useVerizonBillAnalyzer = () => {
     }
   };
 
+  const addManualLineCharges = async (manualData: any) => {
+    try {
+      setIsLoading(true);
+      setErrorMessage(null);
+      
+      const enhancedData = {
+        ...manualData,
+        billVersion: 'Manual Entry v1.0',
+        usageAnalysis: {
+          trend: "stable",
+          percentageChange: 0,
+          avg_data_usage_gb: 15.2,
+          avg_talk_minutes: 110,
+          avg_text_messages: 75
+        },
+        planRecommendation: {
+          recommendedPlan: "Unlimited Plus",
+          reasons: [
+            "Better value for multiple lines",
+            "Includes premium streaming perks",
+            "Higher mobile hotspot data allowance"
+          ],
+          estimatedMonthlySavings: 45.95,
+          confidenceScore: 0.7,
+          alternativePlans: [
+            {
+              name: "Unlimited Welcome",
+              monthlyCost: manualData.totalAmount * 0.85,
+              pros: ["Lower cost", "Unlimited data"],
+              cons: ["Fewer premium features", "Lower priority data"],
+              estimatedSavings: 35.50
+            }
+          ]
+        },
+        chargesByCategory: calculateChargesByCategory(manualData.phoneLines)
+      };
+      
+      setBillData(enhancedData);
+      
+      await saveBillAnalysis(enhancedData);
+      
+      toast.success("Manual bill data analyzed successfully!");
+    } catch (error) {
+      console.error('Error processing manual data:', error);
+      const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+      setErrorMessage(errorMsg);
+      toast.error(`Failed to process manual data: ${errorMsg}`);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const calculateChargesByCategory = (phoneLines: any[]) => {
+    let planCharges = 0;
+    let devicePayments = 0;
+    let protectionCharges = 0;
+    let taxes = 0;
+    
+    phoneLines.forEach(line => {
+      if (line.details) {
+        planCharges += (line.details.planCost || 0) - (line.details.planDiscount || 0);
+        devicePayments += (line.details.devicePayment || 0) - (line.details.deviceCredit || 0);
+        protectionCharges += line.details.protection || 0;
+        taxes += (line.details.surcharges || 0) + (line.details.taxes || 0);
+      } else if (line.planName === 'Account-Level Charges') {
+        planCharges += line.monthlyTotal || 0;
+      }
+    });
+    
+    return {
+      "Plan Charges": planCharges,
+      "Device Payments": devicePayments,
+      "Protection & Services": protectionCharges,
+      "Taxes & Fees": taxes
+    };
+  };
+
   const calculateCarrierSavings = (carrierId: string) => {
     return calculateCarrierSavingsHelper(
       carrierId, 
@@ -248,11 +315,11 @@ export const useVerizonBillAnalyzer = () => {
     isLoading,
     errorMessage,
     handleFileChange,
-    calculateCarrierSavings
+    calculateCarrierSavings,
+    addManualLineCharges
   };
 };
 
-// Helper functions
 function calculateCarrierSavingsHelper(
   carrierId: string, 
   billData: any, 
@@ -269,16 +336,13 @@ function calculateCarrierSavingsHelper(
     };
   }
   
-  // Find the number of lines in the bill
   const numberOfLines = billData.phoneLines?.length || 1;
-
-  // Find the best matching plan from the alternative carrier
+  
   const matchingPlanId = findBestCarrierMatch(
     billData.phoneLines[0]?.planName || 'Unlimited Plus',
     carrierId
   );
   
-  // Get the alternative carrier plan details
   const carrierPlan = alternativeCarrierPlans.find(plan => plan.id === matchingPlanId);
   
   if (!carrierPlan) {
@@ -290,10 +354,8 @@ function calculateCarrierSavingsHelper(
     };
   }
   
-  // Calculate the price for the alternative carrier plan
   const alternativePrice = getCarrierPlanPrice(carrierPlan, numberOfLines);
   
-  // Calculate savings
   const monthlySavings = billData.totalAmount - alternativePrice;
   const annualSavings = monthlySavings * 12;
   

@@ -16,7 +16,7 @@ export function MainContent({ children, className }: MainContentProps) {
       isCollapsed ? "ml-20" : "ml-0",
       className
     )}>
-      <div className="container mx-auto p-6 space-y-8">
+      <div className="container mx-auto py-6 px-4 md:p-6 space-y-8">
         {children}
       </div>
     </main>
