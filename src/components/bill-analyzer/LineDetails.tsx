@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Smartphone, Tablet, Wifi, ChevronDown, ChevronRight } from 'lucide-react';
 
