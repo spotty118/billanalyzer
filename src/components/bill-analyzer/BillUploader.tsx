@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Upload, FileText, AlertCircle, FilePdf } from 'lucide-react';
+import { Upload, AlertCircle, File } from 'lucide-react';
 
 interface BillUploaderProps {
   fileSelected: boolean;
@@ -41,7 +41,7 @@ export function BillUploader({
           
           <div className="mb-5">
             <div className="w-16 h-16 flex items-center justify-center bg-blue-100 rounded-full">
-              <FilePdf className="w-8 h-8 text-blue-500" />
+              <File className="w-8 h-8 text-blue-500" />
             </div>
           </div>
           
