@@ -12,7 +12,10 @@ export function DashboardLayout({ children, className }: DashboardLayoutProps) {
   
   return (
     <div className={cn("min-h-screen bg-background", className)}>
-      <div className="flex min-h-screen transition-all duration-300">
+      <div className={cn(
+        "flex min-h-screen transition-all duration-300",
+        isCollapsed ? "sidebar-collapsed" : "sidebar-expanded"
+      )}>
         {children}
       </div>
     </div>
