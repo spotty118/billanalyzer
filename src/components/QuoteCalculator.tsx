@@ -1,13 +1,16 @@
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Plus, Info } from "lucide-react";
+import { Plus, Info, ArrowLeftRight } from "lucide-react";
 import { ErrorBoundary } from "@/components/ui/error-boundary";
 import { LineItem } from "./quote-calculator/LineItem";
 import { QuoteResult } from "./quote-calculator/QuoteResult";
+import { PlanComparison } from "./quote-calculator/PlanComparison";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useQuoteState, MAX_ALLOWED_LINES } from "@/hooks/use-quote-state";
 import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from "@/components/ui/tooltip";
+import { useState } from "react";
 
 /**
  * Quote Calculator component for calculating plan prices with perks
@@ -28,6 +31,9 @@ export function QuoteCalculator() {
     updateLinePerks,
     setStreamingBill
   } = useQuoteState();
+  
+  // Add state for showing/hiding the comparison
+  const [showComparison, setShowComparison] = useState(false);
 
   if (loading) {
     return (
@@ -63,6 +69,20 @@ export function QuoteCalculator() {
       </Card>
     );
   }
+
+  // Create verizon plan data for comparison
+  const verizonPlansForComparison = totalCalculation?.linePrices.map(line => ({
+    plan: line.plan,
+    planObject: availablePlans.find(p => p.name === line.plan),
+    price: line.price,
+    perks: line.perks
+  })) || [];
+
+  const handleToggleComparison = () => {
+    setShowComparison(!showComparison);
+  };
+
+  const streamingBillValue = parseFloat(streamingBill) || 0;
 
   return (
     <ErrorBoundary>
@@ -132,13 +152,35 @@ export function QuoteCalculator() {
             </div>
 
             {totalCalculation && totalCalculation.linePrices && totalCalculation.linePrices.length > 0 && (
-              <QuoteResult
-                linePrices={totalCalculation.linePrices}
-                total={totalCalculation.total}
-                hasDiscount={totalCalculation.hasDiscount}
-                annualSavings={totalCalculation.annualSavings || 0}
-                breakdown={totalCalculation.breakdown}
-              />
+              <>
+                <QuoteResult
+                  linePrices={totalCalculation.linePrices}
+                  total={totalCalculation.total}
+                  hasDiscount={totalCalculation.hasDiscount}
+                  annualSavings={totalCalculation.annualSavings || 0}
+                  breakdown={totalCalculation.breakdown}
+                />
+                
+                {/* Add compare with US Mobile button */}
+                <Button 
+                  variant="outline" 
+                  className="w-full mt-4 border-blue-200 bg-blue-50 hover:bg-blue-100 text-blue-800"
+                  onClick={handleToggleComparison}
+                >
+                  <ArrowLeftRight className="h-4 w-4 mr-2" />
+                  {showComparison ? "Hide Comparison" : "Compare with US Mobile"}
+                </Button>
+                
+                {/* Show comparison if toggled */}
+                {showComparison && (
+                  <PlanComparison 
+                    verizonPlans={verizonPlansForComparison}
+                    totalVerizonPrice={totalCalculation.total}
+                    streamingCost={streamingBillValue}
+                    onClose={() => setShowComparison(false)}
+                  />
+                )}
+              </>
             )}
           </div>
         </CardContent>
