@@ -1,3 +1,4 @@
+
 import { 
   ArrowLeftRight, 
   Star,
@@ -41,7 +42,7 @@ export function PlanComparison({
   streamingCost, 
   onClose 
 }: PlanComparisonProps) {
-  const [activeCarrier, setActiveCarrier] = useState('usmobile');
+  const [activeCarrier, setActiveCarrier] = useState('darkstar');
   
   if (!verizonPlans.length) return null;
 
@@ -49,7 +50,6 @@ export function PlanComparison({
   
   const getCarrierIcon = (iconName: string) => {
     switch (iconName) {
-      case 'ArrowLeftRight': return <ArrowLeftRight className="h-5 w-5 inline-block mr-2" />;
       case 'Star': return <Star className="h-5 w-5 inline-block mr-2" />;
       case 'Zap': return <Zap className="h-5 w-5 inline-block mr-2" />;
       case 'Lightbulb': return <Lightbulb className="h-5 w-5 inline-block mr-2" />;
@@ -71,9 +71,9 @@ export function PlanComparison({
         </div>
       </CardHeader>
       <CardContent>
-        <Tabs defaultValue="usmobile" onValueChange={setActiveCarrier}>
+        <Tabs defaultValue="darkstar" onValueChange={setActiveCarrier}>
           <TabsList className="mb-4 w-full">
-            <div className="grid grid-cols-4 gap-2 w-full">
+            <div className="grid grid-cols-3 gap-2 w-full">
               {supportedCarriers.map(carrier => (
                 <TabsTrigger 
                   key={carrier.id} 

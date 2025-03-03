@@ -1,3 +1,4 @@
+
 import { ArrowLeftRight, AlertCircle, Check, Star, Zap, Lightbulb } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { 
@@ -34,7 +35,6 @@ export function CarrierComparison({
 }: CarrierComparisonProps) {
   const getCarrierIcon = (iconName: string) => {
     switch (iconName) {
-      case 'ArrowLeftRight': return <ArrowLeftRight className="h-5 w-5 inline-block mr-2" />;
       case 'Star': return <Star className="h-5 w-5 inline-block mr-2" />;
       case 'Zap': return <Zap className="h-5 w-5 inline-block mr-2" />;
       case 'Lightbulb': return <Lightbulb className="h-5 w-5 inline-block mr-2" />;
@@ -52,7 +52,7 @@ export function CarrierComparison({
         
         <Tabs defaultValue={activeCarrierTab} value={activeCarrierTab} onValueChange={setActiveCarrierTab}>
           <TabsList className="mb-6 w-full">
-            <div className="grid grid-cols-4 gap-2 w-full">
+            <div className="grid grid-cols-3 gap-2 w-full">
               {supportedCarriers.map(carrier => (
                 <TabsTrigger 
                   key={carrier.id} 
@@ -166,7 +166,7 @@ export function CarrierComparison({
                             <li>• Savings estimates are based on your current bill total</li>
                             <li>• Device payments may not be included in carrier switch</li>
                             <li>• Visit carrier website for most current details</li>
-                            <li>• All US Mobile sub-brands run on Verizon or T-Mobile networks</li>
+                            <li>• All US Mobile sub-brands run on different networks</li>
                           </ul>
                         </div>
                       </div>

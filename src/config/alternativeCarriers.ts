@@ -28,78 +28,6 @@ export interface CarrierPlan {
 
 // Alternative Carrier plans
 export const alternativeCarrierPlans: CarrierPlan[] = [
-  // US Mobile plans
-  {
-    id: 'usmobile-premium-unlimited',
-    carrierId: 'usmobile',
-    carrierName: 'US Mobile',
-    name: 'Premium Unlimited',
-    basePrice: 45,
-    pricePerLine: {
-      line1: 45,
-      line2: 30,
-      line3: 20,
-      line4: 20, 
-      line5Plus: 20,
-    },
-    dataAllowance: {
-      premium: 'unlimited',
-      hotspot: 50,
-    },
-    features: [
-      "Unlimited priority data",
-      "Free international roaming",
-      "100GB cloud storage",
-      "50GB hotspot data",
-      "5G Ultra Wideband",
-      "Unlimited talk and text"
-    ],
-    streamingPerks: [
-      "Disney+",
-      "Hulu",
-      "Spotify",
-      "One premium perk with 1 line",
-      "All premium perks with 3+ lines"
-    ],
-    streamingQuality: '4K',
-    network: 'Verizon',
-    iconName: 'ArrowLeftRight',
-    discountType: 'percentage',
-    discountValue: 10
-  },
-  {
-    id: 'usmobile-unlimited-basic',
-    carrierId: 'usmobile',
-    carrierName: 'US Mobile',
-    name: 'Unlimited Basic',
-    basePrice: 35,
-    pricePerLine: {
-      line1: 35,
-      line2: 25,
-      line3: 15,
-      line4: 15,
-      line5Plus: 10,
-    },
-    dataAllowance: {
-      premium: 30,
-      hotspot: 15,
-    },
-    features: [
-      "30GB premium data",
-      "15GB hotspot data",
-      "Unlimited talk and text",
-      "5G nationwide",
-      "WiFi calling"
-    ],
-    streamingPerks: [
-      "One streaming perk with 3+ lines"
-    ],
-    streamingQuality: '1080p',
-    network: 'Verizon',
-    iconName: 'ArrowLeftRight',
-    discountType: 'fixed',
-    discountValue: 5
-  },
   // DarkStar carrier plans (now under US Mobile)
   {
     id: 'darkstar-galactic',
@@ -253,13 +181,7 @@ export function findBestCarrierMatch(verizonPlanName: string, carrierId: string)
   // Filter plans by carrier
   const carrierPlans = alternativeCarrierPlans.filter(plan => plan.carrierId === carrierId);
   
-  if (carrierId === 'usmobile') {
-    if (planName.includes('ultimate')) {
-      return 'usmobile-premium-unlimited';
-    } else {
-      return 'usmobile-unlimited-basic';
-    }
-  } else if (carrierId === 'darkstar') {
+  if (carrierId === 'darkstar') {
     return 'darkstar-galactic';
   } else if (carrierId === 'warp') {
     return 'warp-hyperdrive';
@@ -271,9 +193,8 @@ export function findBestCarrierMatch(verizonPlanName: string, carrierId: string)
   return carrierPlans.length > 0 ? carrierPlans[0].id : '';
 }
 
-// Updated to show these are US Mobile sub-brands
+// Updated to show only these three US Mobile sub-brands
 export const supportedCarriers = [
-  { id: 'usmobile', name: 'US Mobile', icon: 'ArrowLeftRight', isPrimary: true },
   { id: 'darkstar', name: 'US Mobile DarkStar', icon: 'Star', isPrimary: false },
   { id: 'warp', name: 'US Mobile Warp', icon: 'Zap', isPrimary: false },
   { id: 'lightspeed', name: 'US Mobile LightSpeed', icon: 'Lightbulb', isPrimary: false }
