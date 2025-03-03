@@ -31,20 +31,22 @@ const VerizonBillAnalyzer = () => {
       const formData = new FormData();
       formData.append('file', file);
       
-      // Get Supabase URL and key from env variables
-      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-      const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+      // Use the Supabase client directly from our imported client
+      const { data: functionUrl } = await supabase
+        .storage
+        .from('functions')
+        .getPublicUrl('analyze-verizon-bill');
       
-      if (!supabaseUrl || !supabaseKey) {
-        throw new Error('Supabase configuration is missing');
+      if (!functionUrl) {
+        throw new Error('Could not get URL for the analyze-verizon-bill function');
       }
       
       // Call the bill analyzer function
-      const response = await fetch(`${supabaseUrl}/functions/v1/analyze-verizon-bill`, {
+      const response = await fetch('https://mgzfiouamidaqctnqnre.supabase.co/functions/v1/analyze-verizon-bill', {
         method: 'POST',
         body: formData,
         headers: {
-          'Authorization': `Bearer ${supabaseKey}`
+          'Authorization': `Bearer ${supabase.auth.getSession().then(({data}) => data.session?.access_token)}`
         }
       });
       
@@ -101,7 +103,7 @@ const VerizonBillAnalyzer = () => {
       toast.success("Bill analysis completed successfully!");
     } catch (error) {
       console.error('Error processing file:', error);
-      toast.error("Failed to analyze bill. Please try again.");
+      toast.error(`Failed to analyze bill: ${error instanceof Error ? error.message : 'Unknown error'}`);
     } finally {
       setIsLoading(false);
     }
