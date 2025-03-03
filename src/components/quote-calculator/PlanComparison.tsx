@@ -1,3 +1,4 @@
+
 import { 
   ArrowLeftRight, 
   Star,
@@ -97,18 +98,32 @@ export function PlanComparison({
             const annualSavings = monthlySavings * 12;
             
             const priceBetter = monthlySavings > 0 ? 'carrier' : 'verizon';
+            
+            // Fix the data comparison logic to handle 'unlimited' string
             const dataBetter = 
-              carrierPlan.dataAllowance.premium === 'unlimited' && 
-              mainVerizonPlan.planObject?.dataAllowance.premium === 'unlimited'
+              (carrierPlan.dataAllowance.premium === 'unlimited' && 
+              mainVerizonPlan.planObject?.dataAllowance.premium === 'unlimited')
                 ? 'equal'
-                : carrierPlan.dataAllowance.premium === 'unlimited'
+                : (carrierPlan.dataAllowance.premium === 'unlimited')
                   ? 'carrier'
-                  : 'verizon';
+                  : (mainVerizonPlan.planObject?.dataAllowance.premium === 'unlimited')
+                    ? 'verizon'
+                    : ((typeof carrierPlan.dataAllowance.premium === 'number' && 
+                       typeof mainVerizonPlan.planObject?.dataAllowance.premium === 'number') && 
+                       carrierPlan.dataAllowance.premium > mainVerizonPlan.planObject?.dataAllowance.premium)
+                      ? 'carrier'
+                      : 'verizon';
+            
+            // Fix the hotspot comparison logic to handle 'unlimited' string
+            const carrierHotspot = carrierPlan.dataAllowance.hotspot;
+            const verizonHotspot = mainVerizonPlan.planObject?.dataAllowance.hotspot || 0;
             
             const hotspotBetter = 
-              (carrierPlan.dataAllowance.hotspot || 0) > (mainVerizonPlan.planObject?.dataAllowance.hotspot || 0)
+              (carrierHotspot === 'unlimited')
                 ? 'carrier'
-                : 'verizon';
+                : (typeof carrierHotspot === 'number' && carrierHotspot > verizonHotspot)
+                  ? 'carrier'
+                  : 'verizon';
             
             const perksCount = verizonPlans.reduce((acc, line) => acc + (line.perks?.length || 0), 0);
             const perksBetter = carrierPlan.streamingPerks.length > perksCount ? 'carrier' : 'verizon';

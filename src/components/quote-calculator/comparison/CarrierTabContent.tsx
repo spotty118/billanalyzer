@@ -22,7 +22,7 @@ interface CarrierTabContentProps {
     streamingPerks: string[];
     dataAllowance: {
       premium: string | number;
-      hotspot?: number;
+      hotspot?: number | 'unlimited';
     };
   };
   totalVerizonPrice: number;
