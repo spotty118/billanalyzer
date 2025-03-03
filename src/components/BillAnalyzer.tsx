@@ -1,9 +1,8 @@
-
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Upload } from "lucide-react";
 import { useFileUpload } from "@/hooks/use-file-upload";
-import { analyzeBill } from "@/services/api";
+import apiService from "@/services/api";
 import { ErrorBoundary } from "@/components/ui/error-boundary";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useState } from "react";
@@ -322,7 +321,8 @@ export function BillAnalyzer() {
       setIsAnalyzing(true);
       console.log('Starting bill analysis...');
       
-      const result = await analyzeBill(file);
+      const fileData = await file.text();
+      const result = await apiService.analyzeVerizonBill(fileData, file.name);
       console.log('Analysis result:', result);
       
       if (result.error) {
