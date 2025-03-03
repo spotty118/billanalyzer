@@ -2,3 +2,9 @@
 project_id = "mgzfiouamidaqctnqnre"
 [functions.analyze-bill]
 verify_jwt = false
+[functions.analyze-bill.cors]
+allowed_origins = ["*"]
+allowed_methods = ["GET", "POST", "OPTIONS"]
+allowed_headers = ["Content-Type", "Authorization", "x-client-info"]
+exposed_headers = []
+max_age = 600

@@ -25,6 +25,6 @@ export const analyzeBill = async (file: File) => {
     return { data }
   } catch (error) {
     console.error('Error analyzing bill:', error)
-    return { error }
+    return { error: { message: 'Failed to analyze bill' } }
   }
 }

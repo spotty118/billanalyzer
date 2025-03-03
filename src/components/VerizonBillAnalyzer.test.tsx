@@ -1,7 +1,7 @@
+
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import { VerizonBillAnalyzer } from './VerizonBillAnalyzer';
-import { analyzeBill } from '@/services/api';
 
 // Mock the API service
 vi.mock('@/services/api', () => ({
