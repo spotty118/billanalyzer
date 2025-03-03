@@ -1,4 +1,3 @@
-
 import { ArrowLeftRight, AlertCircle, Check, Star, Zap, Lightbulb } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { 
@@ -70,13 +69,12 @@ export function CarrierComparison({
           {supportedCarriers.map(carrier => {
             if (carrier.id !== activeCarrierTab) return null;
             
-            const { monthlySavings, annualSavings, planName, price } = calculateCarrierSavings(carrier.id);
+            const { monthlySavings, annualSavings } = calculateCarrierSavings(carrier.id);
             const matchedPlanId = findBestCarrierMatch(carrier.id);
             const carrierPlan = alternativeCarrierPlans.find(p => p.id === matchedPlanId);
             
             if (!carrierPlan) return null;
             
-            // Calculate the monthly equivalent of annual price
             const annualMonthlyEquivalent = carrierPlan.annualPrice ? carrierPlan.annualPrice / 12 : 0;
             const numberOfLines = billData?.phoneLines?.length || 1;
             
