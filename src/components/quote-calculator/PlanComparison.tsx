@@ -1,4 +1,3 @@
-
 import { 
   ArrowLeftRight, 
   Star,
@@ -48,7 +47,6 @@ export function PlanComparison({
 
   const numberOfLines = verizonPlans.length;
   
-  // Get icon component for the carrier
   const getCarrierIcon = (iconName: string) => {
     switch (iconName) {
       case 'ArrowLeftRight': return <ArrowLeftRight className="h-5 w-5 inline-block mr-2" />;
@@ -59,13 +57,15 @@ export function PlanComparison({
     }
   };
 
+  const activeCarrierName = supportedCarriers.find(c => c.id === activeCarrier)?.name || 'US Mobile';
+
   return (
     <Card className="mt-6 bg-gradient-to-r from-sky-50 to-indigo-50 border-2 border-blue-100">
       <CardHeader className="pb-2">
         <div className="flex justify-between items-center">
           <CardTitle className="text-lg font-bold text-blue-800">
             <ArrowLeftRight className="h-5 w-5 inline-block mr-2" />
-            Verizon vs US Mobile Comparison
+            Verizon vs {activeCarrierName} Comparison
           </CardTitle>
           <Button variant="ghost" size="sm" onClick={onClose}>Close</Button>
         </div>
@@ -88,19 +88,15 @@ export function PlanComparison({
           </TabsList>
           
           {supportedCarriers.map(carrier => {
-            // Find the best matching carrier plan based on the first Verizon plan
             const mainVerizonPlan = verizonPlans[0];
             const matchedCarrierPlanId = findBestCarrierMatch(mainVerizonPlan.plan, carrier.id);
             const carrierPlan = alternativeCarrierPlans.find(p => p.id === matchedCarrierPlanId) || alternativeCarrierPlans[0];
             
-            // Calculate carrier total price
             const carrierTotalPrice = getCarrierPlanPrice(carrierPlan, numberOfLines);
             
-            // Calculate savings
             const monthlySavings = totalVerizonPrice - carrierTotalPrice;
             const annualSavings = monthlySavings * 12;
             
-            // Determine if carrier or Verizon is better for different factors
             const priceBetter = monthlySavings > 0 ? 'carrier' : 'verizon';
             const dataBetter = 
               carrierPlan.dataAllowance.premium === 'unlimited' && 
