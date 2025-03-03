@@ -21,11 +21,11 @@ export function MonthlyCostComparison({
       <h3 className="font-semibold text-md mb-2">Monthly Cost</h3>
       <div className="space-y-2 text-sm">
         <div className="flex justify-between">
-          <span>Verizon:</span>
+          <span>Verizon Monthly:</span>
           <span className="font-medium">{formatCurrency(totalVerizonPrice)}</span>
         </div>
         <div className="flex justify-between">
-          <span>{carrierName}:</span>
+          <span>{carrierName} Monthly:</span>
           <span className="font-medium">{formatCurrency(carrierTotalPrice)}</span>
         </div>
         <div className="flex justify-between border-t pt-1 mt-1">

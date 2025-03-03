@@ -27,6 +27,9 @@ export function CarrierPlanDetails({
   pricePerLine,
   annualPrice
 }: CarrierPlanDetailsProps) {
+  // Calculate monthly cost of annual price for display
+  const annualMonthlyEquivalent = annualPrice ? annualPrice / 12 : 0;
+
   return (
     <div className="col-span-3 sm:col-span-1">
       <h3 className="font-semibold text-md mb-2">Plan Details</h3>
@@ -45,15 +48,21 @@ export function CarrierPlanDetails({
         </div>
         {pricePerLine && (
           <div className="flex justify-between">
-            <span>Price per Line:</span>
+            <span>Monthly Price:</span>
             <span className="font-medium">{formatCurrency(pricePerLine)}/mo</span>
           </div>
         )}
         {annualPrice && (
-          <div className="flex justify-between">
-            <span>Annual Option:</span>
-            <span className="font-medium">{formatCurrency(annualPrice)}/yr</span>
-          </div>
+          <>
+            <div className="flex justify-between">
+              <span>Annual Option:</span>
+              <span className="font-medium">{formatCurrency(annualPrice)}/yr</span>
+            </div>
+            <div className="flex justify-between">
+              <span>Annual (monthly equiv.):</span>
+              <span className="font-medium">≈{formatCurrency(annualMonthlyEquivalent)}/mo</span>
+            </div>
+          </>
         )}
         <div className="flex justify-between">
           <span>Verizon Data:</span>
