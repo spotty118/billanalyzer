@@ -1,0 +1,110 @@
+
+// Format currency with $ symbol and 2 decimal places
+export const formatCurrency = (value: number): string => {
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  }).format(value);
+};
+
+// Prepare line items data for charts
+export const prepareLineItemsData = (phoneLines: any[] = []) => {
+  if (!phoneLines || phoneLines.length === 0) return [];
+  
+  return phoneLines.map(line => {
+    const details = line.details || {};
+    return {
+      name: line.phoneNumber || 'Unknown',
+      plan: (details.planCost || 0) - (details.planDiscount || 0),
+      device: (details.devicePayment || 0) - (details.deviceCredit || 0),
+      protection: details.protection || 0,
+      taxes: (details.surcharges || 0) + (details.taxes || 0)
+    };
+  });
+};
+
+// Prepare category data for charts
+export const prepareCategoryData = (chargesByCategory: any = {}) => {
+  if (!chargesByCategory) {
+    // Default categories if none are provided
+    return [
+      { name: 'Plan Charges', value: 65 },
+      { name: 'Device Payments', value: 15 },
+      { name: 'Services & Add-ons', value: 10 },
+      { name: 'Taxes & Fees', value: 10 }
+    ];
+  }
+  
+  const result = [];
+  
+  for (const [key, value] of Object.entries(chargesByCategory)) {
+    if (typeof value === 'number' && value > 0) {
+      result.push({
+        name: key,
+        value: value
+      });
+    }
+  }
+  
+  return result.length > 0 ? result : [
+    { name: 'Plan Charges', value: 65 },
+    { name: 'Device Payments', value: 15 },
+    { name: 'Services & Add-ons', value: 10 },
+    { name: 'Taxes & Fees', value: 10 }
+  ];
+};
+
+// Calculate carrier savings
+export const calculateCarrierSavings = (
+  carrierId: string, 
+  billData: any, 
+  getCarrierPlanPrice: Function, 
+  findBestCarrierMatch: Function, 
+  alternativeCarrierPlans: any[]
+) => {
+  if (!billData) {
+    return {
+      monthlySavings: 0,
+      annualSavings: 0,
+      planName: "N/A",
+      price: 0
+    };
+  }
+  
+  // Find the number of lines in the bill
+  const numberOfLines = billData.phoneLines?.length || 1;
+
+  // Find the best matching plan from the alternative carrier
+  const matchingPlanId = findBestCarrierMatch(
+    billData.phoneLines[0]?.planName || 'Unlimited Plus',
+    carrierId
+  );
+  
+  // Get the alternative carrier plan details
+  const carrierPlan = alternativeCarrierPlans.find(plan => plan.id === matchingPlanId);
+  
+  if (!carrierPlan) {
+    return {
+      monthlySavings: 0,
+      annualSavings: 0,
+      planName: "No matching plan",
+      price: 0
+    };
+  }
+  
+  // Calculate the price for the alternative carrier plan
+  const alternativePrice = getCarrierPlanPrice(carrierPlan, numberOfLines);
+  
+  // Calculate savings
+  const monthlySavings = billData.totalAmount - alternativePrice;
+  const annualSavings = monthlySavings * 12;
+  
+  return {
+    monthlySavings,
+    annualSavings,
+    planName: carrierPlan.name,
+    price: alternativePrice
+  };
+};

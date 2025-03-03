@@ -45,6 +45,9 @@ export function CommissionCalculator() {
   const [services, setServices] = useState<ServiceContribution[]>([]);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
+  
+  // Setup and go fee for smartphones
+  const SETUP_AND_GO_FEE = 35;
 
   useEffect(() => {
     const fetchData = async () => {
@@ -103,6 +106,20 @@ export function CommissionCalculator() {
     setDevicePlans(newDevicePlans);
   };
 
+  // Check if a device is a smartphone based on its name or category
+  const isSmartphone = (device: DeviceContribution): boolean => {
+    const name = device.device_name.toLowerCase();
+    return (
+      name.includes('iphone') ||
+      name.includes('galaxy') ||
+      name.includes('pixel') ||
+      name.includes('fold') ||
+      name.includes('flip') ||
+      name.includes('s24') ||
+      name.includes('s23')
+    );
+  };
+
   const commission = useMemo(() => {
     let total = 0;
 
@@ -114,7 +131,11 @@ export function CommissionCalculator() {
                          planType === 'welcome_unlimited_upgrade' ? device.welcome_unlimited_upgrade :
                          device.plus_ultimate_upgrade;
         const spiffAmount = device.base_spiff ?? 0;
-        total += (planAmount ?? 0) + spiffAmount;
+        
+        // Add the setup and go fee if this is a smartphone
+        const setupFee = isSmartphone(device) ? SETUP_AND_GO_FEE : 0;
+        
+        total += (planAmount ?? 0) + spiffAmount + setupFee;
       }
     });
 

@@ -1,181 +1,173 @@
-
-import { AxiosError } from 'axios';
-import { ApiResponse, ApiError } from '@/types';
-import { VerizonBillAnalyzer } from '@/utils/bill-analyzer/analyzer';
-import { extractVerizonBill, analyzeBill as analyzeVerizonBill } from '@/utils/bill-analyzer/extractor';
-import type { BillData, VerizonBill } from '@/utils/bill-analyzer/types';
-
-interface ErrorResponse {
-  message?: string;
-}
-
-interface BillAnalysis {
-  totalAmount: number;
-  accountNumber: string;
-  billingPeriod: string;
-  charges: Array<{
-    description: string;
-    amount: number;
-    type: string;
-  }>;
-  lineItems: Array<{
-    description: string;
-    amount: number;
-    type: string;
-  }>;
-  subtotals: {
-    lineItems: number;
-    otherCharges: number;
-  };
-  summary: string;
-  recommendations?: Array<{
-    phone_number: string;
-    recommendation: string;
-    potential_savings: string;
-  }>;
-  usageAnalysis?: {
-    avg_data_usage_gb: number;
-    avg_talk_minutes: number;
-    avg_text_count: number;
-    high_data_users: string[];
-    high_talk_users: string[];
-    high_text_users: string[];
-  };
-}
+import { ApiResponse } from '../types';
 
 class ApiService {
-  private static instance: ApiService;
+  private apiKey: string | undefined;
+  private apiUrl: string;
 
-  private constructor() {}
-
-  public static getInstance(): ApiService {
-    if (!ApiService.instance) {
-      ApiService.instance = new ApiService();
-    }
-    return ApiService.instance;
+  constructor() {
+    this.apiKey = import.meta.env.VITE_OPENAI_API_KEY;
+    this.apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
   }
 
-  private handleError(error: AxiosError<ErrorResponse>): ApiError {
-    console.error('API Error:', error.response?.data || error.message);
-    return {
-      message: error.response?.data?.message || error.message || 'An error occurred',
-      code: 'API_ERROR',
-    };
-  }
-
-  private convertVerizonBillToBillData(verizonBill: VerizonBill): BillData {
-    return {
-      account_info: {
-        account_number: verizonBill.accountInfo.accountNumber,
-        customer_name: verizonBill.accountInfo.customerName,
-        billing_period_start: verizonBill.accountInfo.billingPeriod.start,
-        billing_period_end: verizonBill.accountInfo.billingPeriod.end
-      },
-      bill_summary: {
-        previous_balance: verizonBill.billSummary.previousBalance,
-        payments: verizonBill.billSummary.payments,
-        current_charges: verizonBill.billSummary.currentCharges,
-        total_due: verizonBill.billSummary.totalDue
-      },
-      plan_charges: verizonBill.lineItems.flatMap(item => 
-        item.planCharges.map(charge => ({
-          description: charge.description,
-          amount: charge.amount
-        }))
-      ),
-      equipment_charges: verizonBill.lineItems.flatMap(item => 
-        item.deviceCharges.map(charge => ({
-          description: charge.description,
-          amount: charge.amount
-        }))
-      ),
-      one_time_charges: [],
-      taxes_and_fees: verizonBill.lineItems.flatMap(item => [
-        ...item.surcharges.map(charge => ({
-          description: charge.description,
-          amount: charge.amount
-        })),
-        ...item.taxes.map(tax => ({
-          description: tax.description,
-          amount: tax.amount
-        }))
-      ]),
-      usage_details: Object.fromEntries(
-        verizonBill.lineItems.map(item => [
-          item.phoneNumber,
-          [{
-            data_usage: '0 GB',
-            talk_minutes: (
-              verizonBill.callActivity
-                .find(a => a.phoneNumber === item.phoneNumber)
-                ?.calls?.reduce((sum: number, call) => sum + call.minutes, 0) || 0
-            ).toString(),
-            text_count: '0'
-          }]
-        ])
-      )
-    };
-  }
-
-  public async analyzeBill(file: File): Promise<ApiResponse<BillAnalysis>> {
+  async getPlans(): Promise<ApiResponse<any>> {
     try {
-      if (!file.type.includes('pdf')) {
-        throw new Error('Invalid file type');
+      const response = await fetch(`${this.apiUrl}/api/plans`);
+      if (!response.ok) {
+        const errorData = await response.json();
+        return { error: { message: errorData.message || 'Failed to fetch plans', status: response.status } };
+      }
+      const data = await response.json();
+      return { data };
+    } catch (error: any) {
+      return { error: { message: error.message || 'Failed to fetch plans' } };
+    }
+  }
+
+  async getPromotions(): Promise<ApiResponse<any>> {
+     try {
+      const response = await fetch(`${this.apiUrl}/api/promotions`);
+      if (!response.ok) {
+        const errorData = await response.json();
+        return { error: { message: errorData.message || 'Failed to fetch promotions', status: response.status } };
+      }
+      const data = await response.json();
+      return { data };
+    } catch (error: any) {
+      return { error: { message: error.message || 'Failed to fetch promotions' } };
+    }
+  }
+
+  async contactUs(payload: any): Promise<ApiResponse<any>> {
+    try {
+      const response = await fetch(`${this.apiUrl}/api/contact`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        return { error: { message: errorData.message || 'Failed to submit form', status: response.status } };
       }
 
-      const buffer = await file.arrayBuffer();
-      
-      console.log('Starting bill analysis...');
-      const verizonBill = await extractVerizonBill(buffer);
-      const billAnalysis = analyzeVerizonBill(verizonBill);
-      
-      const billData = this.convertVerizonBillToBillData(verizonBill);
-      const analyzer = new VerizonBillAnalyzer(billData);
-      
-      const summary = analyzer.getBillSummary();
-      const optimization = analyzer.optimizePlan();
-      const usageAnalysis = analyzer.getUsageAnalysis();
+      const data = await response.json();
+      return { data };
+    } catch (error: any) {
+      return { error: { message: error.message || 'Failed to submit form' } };
+    }
+  }
+  
+  analyzeVerizonBill = async (fileData: string, fileName: string): Promise<any> => {
+    try {
+      // Production: Use the server API
+      if (import.meta.env.PROD) {
+        const response = await fetch(`${this.apiUrl}/api/analyze-verizon-bill`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-api-key': this.apiKey || '',
+          },
+          body: JSON.stringify({ fileData, fileName }),
+        });
 
-      const analysis: BillAnalysis = {
-        totalAmount: billAnalysis.totalAmount,
-        accountNumber: billAnalysis.accountNumber,
-        billingPeriod: `${verizonBill.accountInfo.billingPeriod.start} to ${verizonBill.accountInfo.billingPeriod.end}`,
-        charges: billAnalysis.linesBreakdown.map(item => ({
-          description: `${item.phoneNumber} - ${item.deviceType}`,
-          amount: item.totalCharges,
-          type: 'line'
-        })),
-        lineItems: [],
-        subtotals: {
-          lineItems: summary.total_charges.current_charges || 0,
-          otherCharges: 0
-        },
-        summary: `Bill analysis for account ${billAnalysis.accountNumber}`,
-        recommendations: optimization.line_recommendations,
-        usageAnalysis
-      };
+        if (!response.ok) {
+          const error = await response.json();
+          console.error('Server analysis failed:', error);
+          throw new Error(error.message || 'Bill analysis failed');
+        }
 
-      console.log('Analysis successful:', analysis);
-      return { data: analysis };
+        const result = await response.json();
+        console.log('Server analysis data:', result);
+        return result;
+      } else {
+        // Development: Skip server call and use local files
+        console.info('Skipping server call in development environment, using local file');
+      }
+      
+      // Fallback to local file data for development
+      try {
+        // In development, we'll use both the improved and line items data
+        const improvedResult = await import('../../server/verizon-improved-result.json');
+        const lineItemsResult = await import('../../server/verizon-analyzer-result.json');
+        
+        // Merge the two results to get all phone lines
+        const mergedResult = {
+          ...improvedResult.default,
+          devices: improvedResult.default.devices || [],
+          phoneLines: this.mergePhoneLines(
+            improvedResult.default.phoneLines || [], 
+            lineItemsResult.default.enhancedBill?.phoneLines || []
+          ),
+          // Add line items and charges from the line items result
+          lineItems: lineItemsResult.default.enhancedBill?.lineItems || [],
+          charges: lineItemsResult.default.enhancedBill?.charges || []
+        };
+
+        console.log('Merged analysis data:', mergedResult);
+        return mergedResult;
+      } catch (fallbackError) {
+        console.error('Could not load local bill analysis file:', fallbackError);
+        throw new Error('Failed to perform bill analysis');
+      }
     } catch (error) {
-      console.error('Error analyzing bill:', error);
-      
-      if (error instanceof AxiosError) {
-        return { error: this.handleError(error) };
+      console.error('Enhanced analysis failed completely:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Helper method to merge phone lines from different sources
+   */
+  private mergePhoneLines(primaryLines: any[], secondaryLines: any[]): any[] {
+    const phoneNumbers = new Set();
+    const mergedLines = [...primaryLines];
+    
+    // Add phone numbers from primary lines to the set
+    primaryLines.forEach(line => {
+      if (line.phoneNumber) {
+        phoneNumbers.add(line.phoneNumber);
       }
-      
-      return {
-        error: {
-          message: error instanceof Error ? error.message : 'An unexpected error occurred',
-          code: 'UNKNOWN_ERROR',
+    });
+    
+    // Add unique lines from secondary source
+    secondaryLines.forEach(line => {
+      if (line.phoneNumber && !phoneNumbers.has(line.phoneNumber)) {
+        phoneNumbers.add(line.phoneNumber);
+        mergedLines.push(line);
+      }
+    });
+    
+    console.log(`Merged ${mergedLines.length} phone lines from ${primaryLines.length} primary and ${secondaryLines.length} secondary`);
+    return mergedLines;
+  }
+
+  async analyzeTmobileBill(fileData: string, fileName: string): Promise<any> {
+    try {
+      const response = await fetch(`${this.apiUrl}/api/analyze-tmobile-bill`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': this.apiKey || '',
         },
-      };
+        body: JSON.stringify({ fileData, fileName }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        console.error('Server analysis failed:', error);
+        throw new Error(error.message || 'Bill analysis failed');
+      }
+
+      const result = await response.json();
+      console.log('Server analysis data:', result);
+      return result;
+    } catch (error) {
+      console.error('T-Mobile analysis failed completely:', error);
+      throw error;
     }
   }
 }
 
-export const apiService = ApiService.getInstance();
-
-export const analyzeBill = (file: File): Promise<ApiResponse<BillAnalysis>> => {
-  return apiService.analyzeBill(file);
-};
+export default new ApiService();

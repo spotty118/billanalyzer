@@ -7,10 +7,11 @@ import { DashboardLayout } from './components/layouts/DashboardLayout';
 import { MainContent } from './components/layouts/MainContent';
 import { PageHeader } from './components/layouts/PageHeader';
 import { ContentArea } from './components/layouts/ContentArea';
+import { SidebarProvider } from './contexts/SidebarContext';
 
 // Regular imports for main components
 import { QuoteCalculator } from './components/QuoteCalculator';
-import { BillAnalyzer } from './components/BillAnalyzer';
+import VerizonBillAnalyzer from './components/bill-analyzer/VerizonBillAnalyzer';
 import { CommissionCalculator } from './components/CommissionCalculator';
 import { PromotionsOverview } from './components/PromotionsOverview';
 
@@ -36,7 +37,7 @@ function Dashboard() {
         description="Welcome to your dashboard. Access all your tools and calculators here."
       />
       <ContentArea>
-        <BillAnalyzer />
+        <VerizonBillAnalyzer />
       </ContentArea>
     </>
   );
@@ -46,61 +47,63 @@ function App() {
   return (
     <ErrorBoundary>
       <Router basename="/">
-        <DashboardLayout>
-          <AppSidebar />
-          <MainContent>
-            <Suspense fallback={<LoadingFallback />}>
-              <Routes>
-                <Route path="/" element={<Dashboard />} />
-                <Route 
-                  path="/quotes" 
-                  element={
-                    <>
-                      <PageHeader 
-                        title="Quote Calculator" 
-                        description="Calculate quotes for different plan combinations"
-                      />
-                      <ContentArea>
-                        <QuoteCalculator />
-                      </ContentArea>
-                    </>
-                  }
-                />
-                <Route 
-                  path="/commissions" 
-                  element={
-                    <>
-                      <PageHeader 
-                        title="Commission Calculator" 
-                        description="Calculate your commission earnings"
-                      />
-                      <ContentArea>
-                        <CommissionCalculator />
-                      </ContentArea>
-                    </>
-                  }
-                />
-                <Route 
-                  path="/promotions" 
-                  element={
-                    <>
-                      <PageHeader 
-                        title="Promotions" 
-                        description="View and manage current promotions"
-                      />
-                      <ContentArea>
-                        <PromotionsOverview />
-                      </ContentArea>
-                    </>
-                  }
-                />
-                <Route path="/admin-login" element={<AdminLogin />} />
-                <Route path="/admin-dashboard" element={<AdminDashboard />} />
-                <Route path="*" element={<Navigate to="/" replace />} />
-              </Routes>
-            </Suspense>
-          </MainContent>
-        </DashboardLayout>
+        <SidebarProvider>
+          <DashboardLayout>
+            <AppSidebar />
+            <MainContent>
+              <Suspense fallback={<LoadingFallback />}>
+                <Routes>
+                  <Route path="/" element={<Dashboard />} />
+                  <Route 
+                    path="/quotes" 
+                    element={
+                      <>
+                        <PageHeader 
+                          title="Quote Calculator" 
+                          description="Calculate quotes for different plan combinations"
+                        />
+                        <ContentArea>
+                          <QuoteCalculator />
+                        </ContentArea>
+                      </>
+                    }
+                  />
+                  <Route 
+                    path="/commissions" 
+                    element={
+                      <>
+                        <PageHeader 
+                          title="Commission Calculator" 
+                          description="Calculate your commission earnings"
+                        />
+                        <ContentArea>
+                          <CommissionCalculator />
+                        </ContentArea>
+                      </>
+                    }
+                  />
+                  <Route 
+                    path="/promotions" 
+                    element={
+                      <>
+                        <PageHeader 
+                          title="Promotions" 
+                          description="View and manage current promotions"
+                        />
+                        <ContentArea>
+                          <PromotionsOverview />
+                        </ContentArea>
+                      </>
+                    }
+                  />
+                  <Route path="/admin-login" element={<AdminLogin />} />
+                  <Route path="/admin-dashboard" element={<AdminDashboard />} />
+                  <Route path="*" element={<Navigate to="/" replace />} />
+                </Routes>
+              </Suspense>
+            </MainContent>
+          </DashboardLayout>
+        </SidebarProvider>
       </Router>
     </ErrorBoundary>
   );

@@ -1,0 +1,76 @@
+
+{
+  "accountNumber": "526905159-00001",
+  "totalAmount": 646.3,
+  "billingPeriod": "Dec 12 - Jan 11, 2025",
+  "devices": [
+    {
+      "device": "Apple iPhone 15 Pro Max",
+      "deviceType": "iPhone",
+      "phoneNumber": "2517470017",
+      "planType": "Unknown plan"
+    },
+    {
+      "device": "Apple iPhone 15",
+      "deviceType": "iPhone",
+      "phoneNumber": "2517470238",
+      "planType": "Plus "
+    },
+    {
+      "device": "Apple iPhone 13",
+      "deviceType": "iPhone",
+      "phoneNumber": "2517472221",
+      "planType": "Plus "
+    },
+    {
+      "device": "Apple iPhone 14 Plus",
+      "deviceType": "iPhone",
+      "phoneNumber": "2517472223",
+      "planType": "Plus "
+    },
+    {
+      "device": "Apple iPhone 14",
+      "deviceType": "iPhone",
+      "phoneNumber": "2517479281",
+      "planType": "Plus "
+    }
+  ],
+  "phoneLines": [
+    {
+      "phoneNumber": "2517470017",
+      "deviceName": "Apple iPhone 15 Pro Max",
+      "planName": "Unknown plan",
+      "monthlyTotal": 0,
+      "charges": []
+    },
+    {
+      "phoneNumber": "2517470238",
+      "deviceName": "Apple iPhone 15",
+      "planName": "Plus ",
+      "monthlyTotal": 0,
+      "charges": []
+    },
+    {
+      "phoneNumber": "2517472221",
+      "deviceName": "Apple iPhone 13",
+      "planName": "Plus ",
+      "monthlyTotal": 0,
+      "charges": []
+    },
+    {
+      "phoneNumber": "2517472223",
+      "deviceName": "Apple iPhone 14 Plus",
+      "planName": "Plus ",
+      "monthlyTotal": 0,
+      "charges": []
+    },
+    {
+      "phoneNumber": "2517479281",
+      "deviceName": "Apple iPhone 14",
+      "planName": "Plus ",
+      "monthlyTotal": 0,
+      "charges": []
+    }
+  ],
+  "charges": []
+}

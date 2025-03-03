@@ -1,24 +1,28 @@
 
-import { VerizonBill } from './types';
 import { parseVerizonBill } from './parser';
-import type { TextItem, TextMarkedContent } from 'pdfjs-dist/types/src/display/api';
+import type { VerizonBill } from './types';
 
 /**
  * Extract text from a PDF file and parse the Verizon bill
  */
-export async function extractVerizonBill(pdfData: ArrayBuffer): Promise<VerizonBill> {
+export async function extractVerizonBill(pdfData: ArrayBuffer): Promise<VerizonBill | null> {
   try {
     const pdfjsLib = await import('pdfjs-dist');
     
-    // Set up pdf.js worker
-    pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
-      'pdfjs-dist/build/pdf.worker.mjs',
-      import.meta.url
-    ).toString();
+    // Use dynamic import to load the worker directly
+    await import('pdfjs-dist/build/pdf.worker.mjs');
+    
+    // Set worker inline - this avoids having to load from a CDN
+    if (typeof window !== 'undefined' && 'pdfjsLib' in window) {
+      pdfjsLib.GlobalWorkerOptions.workerPort = new Worker(
+        new URL('pdfjs-dist/build/pdf.worker.mjs', import.meta.url),
+        { type: 'module' }
+      );
+    }
 
     // Load the PDF document
     const loadingTask = pdfjsLib.getDocument({
-      data: pdfData,
+      data: new Uint8Array(pdfData.slice(0)),
       useWorkerFetch: false,
       isEvalSupported: false
     });
@@ -31,10 +35,10 @@ export async function extractVerizonBill(pdfData: ArrayBuffer): Promise<VerizonB
       const page = await pdf.getPage(i);
       const content = await page.getTextContent();
       const pageText = content.items
-        .filter((item: TextItem | TextMarkedContent): item is TextItem => 
-          !('type' in item) && 'str' in item
+        .filter((item: any) => 
+          typeof item.str === 'string'
         )
-        .map(item => item.str)
+        .map((item: any) => item.str)
         .join(' ');
       pages.push(pageText);
     }
@@ -47,7 +51,7 @@ export async function extractVerizonBill(pdfData: ArrayBuffer): Promise<VerizonB
     return parseVerizonBill(pages);
   } catch (error) {
     console.error('Error extracting Verizon bill:', error);
-    throw error;
+    return null;
   }
 }
 

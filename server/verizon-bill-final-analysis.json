@@ -1,0 +1,395 @@
+
+{
+  "accountNumber": "526905159-00001",
+  "billingPeriod": "December 12, 2024 to January 11, 2025",
+  "summary": "Bill analysis for account 526905159-00001",
+  "totalAmount": 646.3,
+  "charges": [],
+  "lineItems": [
+    {
+      "id": "access-2517470017",
+      "description": "Line Access (2517470017)",
+      "amount": 319.25,
+      "type": "access_fee",
+      "category": "recurring",
+      "phoneNumber": "2517470017"
+    },
+    {
+      "id": "devices-2517470017",
+      "description": "Devices (2517470017)",
+      "amount": 319.25,
+      "type": "devices",
+      "category": "equipment",
+      "phoneNumber": "2517470017"
+    },
+    {
+      "id": "device-details-2517470017",
+      "description": "Apple iPhone 15 Pro Max Payment 11 of 36 (Agreement 1628562967)",
+      "amount": 0,
+      "type": "device_details",
+      "category": "equipment_detail",
+      "phoneNumber": "2517470017"
+    },
+    {
+      "id": "monthly-service-2517470017",
+      "description": "Monthly Service: Apple iPhone 15 Pro Max (2517470017)",
+      "amount": 15.34,
+      "type": "service",
+      "category": "recurring",
+      "phoneNumber": "2517470017"
+    },
+    {
+      "id": "plan-discount-2517470017",
+      "description": "50% access discount (2517470017)",
+      "amount": -319.25,
+      "type": "discount",
+      "category": "recurring",
+      "phoneNumber": "2517470017"
+    },
+    {
+      "id": "byod-credit-2517470017",
+      "description": "Bring Your Own Device (2517470017)",
+      "amount": -10,
+      "type": "credit",
+      "category": "discount",
+      "phoneNumber": "2517470017"
+    },
+    {
+      "id": "access-2517470238",
+      "description": "Line Access (2517470238)",
+      "amount": 319.25,
+      "type": "access_fee",
+      "category": "recurring",
+      "phoneNumber": "2517470238"
+    },
+    {
+      "id": "devices-2517470238",
+      "description": "Devices (2517470238)",
+      "amount": 319.25,
+      "type": "devices",
+      "category": "equipment",
+      "phoneNumber": "2517470238"
+    },
+    {
+      "id": "device-details-2517470238",
+      "description": "Apple iPhone 15 Payment 11 of 36 (Agreement 1628562967)",
+      "amount": 0,
+      "type": "device_details",
+      "category": "equipment_detail",
+      "phoneNumber": "2517470238"
+    },
+    {
+      "id": "monthly-service-2517470238",
+      "description": "Monthly Service: Apple iPhone 15 (2517470238)",
+      "amount": 15.34,
+      "type": "service",
+      "category": "recurring",
+      "phoneNumber": "2517470238"
+    },
+    {
+      "id": "plan-discount-2517470238",
+      "description": "50% access discount (2517470238)",
+      "amount": -319.25,
+      "type": "discount",
+      "category": "recurring",
+      "phoneNumber": "2517470238"
+    },
+    {
+      "id": "byod-credit-2517470238",
+      "description": "Bring Your Own Device (2517470238)",
+      "amount": -10,
+      "type": "credit",
+      "category": "discount",
+      "phoneNumber": "2517470238"
+    },
+    {
+      "id": "access-2517472221",
+      "description": "Line Access (2517472221)",
+      "amount": 319.25,
+      "type": "access_fee",
+      "category": "recurring",
+      "phoneNumber": "2517472221"
+    },
+    {
+      "id": "devices-2517472221",
+      "description": "Devices (2517472221)",
+      "amount": 319.25,
+      "type": "devices",
+      "category": "equipment",
+      "phoneNumber": "2517472221"
+    },
+    {
+      "id": "device-details-2517472221",
+      "description": "Apple iPhone 13 Payment 11 of 36 (Agreement 1628562967)",
+      "amount": 0,
+      "type": "device_details",
+      "category": "equipment_detail",
+      "phoneNumber": "2517472221"
+    },
+    {
+      "id": "monthly-service-2517472221",
+      "description": "Monthly Service: Apple iPhone 13 (2517472221)",
+      "amount": 15.34,
+      "type": "service",
+      "category": "recurring",
+      "phoneNumber": "2517472221"
+    },
+    {
+      "id": "plan-discount-2517472221",
+      "description": "50% access discount (2517472221)",
+      "amount": -319.25,
+      "type": "discount",
+      "category": "recurring",
+      "phoneNumber": "2517472221"
+    },
+    {
+      "id": "taxes-2517472221",
+      "description": "Taxes & Fees (2517472221)",
+      "amount": 7.5,
+      "type": "tax",
+      "category": "regulatory",
+      "phoneNumber": "2517472221"
+    },
+    {
+      "id": "county-tax-2517472221",
+      "description": "Baldwin County Tax (2517472221)",
+      "amount": 7.5,
+      "type": "tax",
+      "category": "regulatory",
+      "phoneNumber": "2517472221"
+    },
+    {
+      "id": "access-2517472223",
+      "description": "Line Access (2517472223)",
+      "amount": 319.25,
+      "type": "access_fee",
+      "category": "recurring",
+      "phoneNumber": "2517472223"
+    },
+    {
+      "id": "devices-2517472223",
+      "description": "Devices (2517472223)",
+      "amount": 319.25,
+      "type": "devices",
+      "category": "equipment",
+      "phoneNumber": "2517472223"
+    },
+    {
+      "id": "device-details-2517472223",
+      "description": "Apple iPhone 14 Plus Payment 11 of 36 (Agreement 1628562967)",
+      "amount": 0,
+      "type": "device_details",
+      "category": "equipment_detail",
+      "phoneNumber": "2517472223"
+    },
+    {
+      "id": "monthly-service-2517472223",
+      "description": "Monthly Service: Apple iPhone 14 Plus (2517472223)",
+      "amount": 15.34,
+      "type": "service",
+      "category": "recurring",
+      "phoneNumber": "2517472223"
+    },
+    {
+      "id": "plan-discount-2517472223",
+      "description": "50% access discount (2517472223)",
+      "amount": -319.25,
+      "type": "discount",
+      "category": "recurring",
+      "phoneNumber": "2517472223"
+    },
+    {
+      "id": "byod-credit-2517472223",
+      "description": "Bring Your Own Device (2517472223)",
+      "amount": -10,
+      "type": "credit",
+      "category": "discount",
+      "phoneNumber": "2517472223"
+    },
+    {
+      "id": "taxes-2517472223",
+      "description": "Taxes & Fees (2517472223)",
+      "amount": 7.5,
+      "type": "tax",
+      "category": "regulatory",
+      "phoneNumber": "2517472223"
+    },
+    {
+      "id": "county-tax-2517472223",
+      "description": "Baldwin County Tax (2517472223)",
+      "amount": 7.5,
+      "type": "tax",
+      "category": "regulatory",
+      "phoneNumber": "2517472223"
+    },
+    {
+      "id": "access-2517479281",
+      "description": "Line Access (2517479281)",
+      "amount": 319.25,
+      "type": "access_fee",
+      "category": "recurring",
+      "phoneNumber": "2517479281"
+    },
+    {
+      "id": "devices-2517479281",
+      "description": "Devices (2517479281)",
+      "amount": 319.25,
+      "type": "devices",
+      "category": "equipment",
+      "phoneNumber": "2517479281"
+    },
+    {
+      "id": "device-details-2517479281",
+      "description": "Apple iPhone 14 Payment 11 of 36 (Agreement 1628562967)",
+      "amount": 0,
+      "type": "device_details",
+      "category": "equipment_detail",
+      "phoneNumber": "2517479281"
+    },
+    {
+      "id": "monthly-service-2517479281",
+      "description": "Monthly Service: Apple iPhone 14 (2517479281)",
+      "amount": 15.34,
+      "type": "service",
+      "category": "recurring",
+      "phoneNumber": "2517479281"
+    },
+    {
+      "id": "plan-discount-2517479281",
+      "description": "50% access discount (2517479281)",
+      "amount": -319.25,
+      "type": "discount",
+      "category": "recurring",
+      "phoneNumber": "2517479281"
+    },
+    {
+      "id": "taxes-2517479281",
+      "description": "Taxes & Fees (2517479281)",
+      "amount": 7.5,
+      "type": "tax",
+      "category": "regulatory",
+      "phoneNumber": "2517479281"
+    },
+    {
+      "id": "county-tax-2517479281",
+      "description": "Baldwin County Tax (2517479281)",
+      "amount": 7.5,
+      "type": "tax",
+      "category": "regulatory",
+      "phoneNumber": "2517479281"
+    }
+  ],
+  "usageAnalysis": {
+    "trend": "stable",
+    "percentageChange": 0,
+    "seasonalFactors": {
+      "holiday": true,
+      "summer": false
+    },
+    "avg_data_usage_gb": 0,
+    "avg_talk_minutes": 0,
+    "avg_text_messages": 0
+  },
+  "costAnalysis": {
+    "averageMonthlyBill": 646.3,
+    "projectedNextBill": 678.615,
+    "unusualCharges": [],
+    "potentialSavings": []
+  },
+  "planRecommendation": {
+    "recommendedPlan": "Unlimited Plus",
+    "reasons": [
+      "Based on your multiple device lines",
+      "Includes premium features with better value"
+    ],
+    "estimatedMonthlySavings": 96.945,
+    "confidenceScore": 0.8,
+    "alternativePlans": [
+      {
+        "name": "Unlimited Welcome",
+        "monthlyCost": 581.67,
+        "pros": [
+          "Lower cost",
+          "Unlimited data"
+        ],
+        "cons": [
+          "Fewer premium features",
+          "Lower priority data"
+        ]
+      }
+    ]
+  },
+  "subtotals": {
+    "lineItems": 1687.9499999999998,
+    "otherCharges": 0
+  },
+  "phoneLines": [
+    {
+      "phoneNumber": "2517470017",
+      "deviceName": "Apple iPhone 15 Pro Max",
+      "planName": "Unknown plan",
+      "monthlyTotal": 0,
+      "charges": []
+    },
+    {
+      "phoneNumber": "2517470238",
+      "deviceName": "Apple iPhone 15",
+      "planName": "Plus ",
+      "monthlyTotal": 0,
+      "charges": []
+    },
+    {
+      "phoneNumber": "2517472221",
+      "deviceName": "Apple iPhone 13",
+      "planName": "Plus ",
+      "monthlyTotal": 0,
+      "charges": []
+    },
+    {
+      "phoneNumber": "2517472223",
+      "deviceName": "Apple iPhone 14 Plus",
+      "planName": "Plus ",
+      "monthlyTotal": 0,
+      "charges": []
+    },
+    {
+      "phoneNumber": "2517479281",
+      "deviceName": "Apple iPhone 14",
+      "planName": "Plus ",
+      "monthlyTotal": 0,
+      "charges": []
+    }
+  ],
+  "devices": [
+    {
+      "device": "Apple iPhone 15 Pro Max",
+      "deviceType": "iphone",
+      "phoneNumber": "2517470017",
+      "planType": "Unknown plan"
+    },
+    {
+      "device": "Apple iPhone 15",
+      "deviceType": "iphone",
+      "phoneNumber": "2517470238",
+      "planType": "Plus "
+    },
+    {
+      "device": "Apple iPhone 13",
+      "deviceType": "iphone",
+      "phoneNumber": "2517472221",
+      "planType": "Plus "
+    },
+    {
+      "device": "Apple iPhone 14 Plus",
+      "deviceType": "iphone",
+      "phoneNumber": "2517472223",
+      "planType": "Plus "
+    },
+    {
+      "device": "Apple iPhone 14",
+      "deviceType": "iphone",
+      "phoneNumber": "2517479281",
+      "planType": "Plus "
+    }
+  ]
+}

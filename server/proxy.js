@@ -693,3 +693,5 @@ process.on('SIGINT', cleanup);
 app.listen(PORT, () => {
   logger.info('Server running:', { port: PORT });
 });
+
+export { app };

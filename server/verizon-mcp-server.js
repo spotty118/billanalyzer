@@ -1,6 +1,7 @@
 import express from 'express';
 import multer from 'multer';
 import { extractVerizonBillData } from './bill-parser.js';
+import { enhancedAnalysis } from './enhanced-bill-analysis.js';
 
 const app = express();
 const port = process.env.PORT || 4000; // Default port for Verizon MCP Server
@@ -13,6 +14,63 @@ const upload = multer({
 });
 
 app.use(express.json());
+
+async function use_mcp_tool({ serverName, toolName, arguments: args }) {
+  try {
+    const result = await fetch(`http://localhost:1337/tool/${toolName}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        serverName: serverName,
+        toolName: toolName,
+        arguments: args,
+      }),
+    });
+
+    const data = await result.json();
+    if (data.error) {
+      return { error: data.error };
+    }
+    return data;
+  } catch (error) {
+    console.error(`Error calling ${toolName} tool on ${serverName}:`, error);
+    return { error: error.message };
+  }
+}
+
+// Rate limiting setup
+const rateLimit = {
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  maxRequests: 100, // limit each IP to 100 requests per windowMs
+  requests: new Map()
+};
+
+// Rate limiting middleware
+app.use((req, res, next) => {
+  const ip = req.ip;
+  const now = Date.now();
+  const windowStart = now - rateLimit.windowMs;
+
+  // Clean up old requests
+  if (rateLimit.requests.has(ip)) {
+    rateLimit.requests.get(ip).requests = rateLimit.requests.get(ip).requests.filter(time => time > windowStart);
+  }
+
+  // Check rate limit
+  if (rateLimit.requests.has(ip) && rateLimit.requests.get(ip).requests.length >= rateLimit.maxRequests) {
+    return res.status(429).json({ error: 'Too many requests, please try again later' });
+  }
+
+  // Update request count
+  if (!rateLimit.requests.has(ip)) {
+    rateLimit.requests.set(ip, { requests: [] });
+  }
+  rateLimit.requests.get(ip).requests.push(now);
+
+  next();
+});
 
 // Endpoint to simulate Verizon plans lookup
 app.get('/plans', (req, res) => {
@@ -42,32 +100,110 @@ app.get('/price', (req, res) => {
   }
 });
 
-// Start the Verizon catered MCP server
-// Endpoint to scrape HTML tags from Verizon's plan page
+// Enhanced endpoint to scrape and analyze Verizon plans
 app.get('/scrape-tags', async (req, res) => {
   console.log('Received request to /scrape-tags');
   const url = req.query.url || 'https://www.verizon.com/plans/unlimited/';
+  
   try {
     console.log('Fetching URL:', url);
 
     // Use fetch_html tool to get the HTML content
-    const fetchHtmlResult = await fetch_html(url);
+    const fetchHtmlResult = await use_mcp_tool({
+      serverName: "github.com/zcaceres/fetch-mcp",
+      toolName: "fetch_html",
+      arguments: { url: url }
+    });
+
     if (fetchHtmlResult.error) {
       console.error('Error fetching HTML:', fetchHtmlResult.error);
       return res.status(500).json({ error: 'Failed to fetch HTML' });
     }
-    const html = fetchHtmlResult.content;
 
-    // Use webpage-to-markdown tool to convert the HTML to markdown
-    const webpageToMarkdownResult = await webpage_to_markdown(html);
-    if (webpageToMarkdownResult.error) {
-      console.error('Error converting to markdown:', webpageToMarkdownResult.error);
+    // Use webpage-to-markdown tool to convert HTML to markdown
+    const markdownResult = await use_mcp_tool({
+      serverName: "github.com/zcaceres/markdownify-mcp",
+      toolName: "webpage-to-markdown",
+      arguments: { url: fetchHtmlResult.content }
+    });
+
+    if (markdownResult.error) {
+      console.error('Error converting to markdown:', markdownResult.error);
       return res.status(500).json({ error: 'Failed to convert to markdown' });
     }
-    const markdown = webpageToMarkdownResult.markdown;
+
+    // Use sequential thinking to analyze plans
+    let sequentialAnalysis = [];
+    
+    // Step 1: Initial content analysis
+    let analysisStep = await use_mcp_tool({
+      serverName: "github.com/modelcontextprotocol/servers/tree/main/src/sequentialthinking",
+      toolName: "sequentialthinking",
+      arguments: {
+        thought: "Analyzing Verizon plans structure and format",
+        thoughtNumber: 1,
+        totalThoughts: 4,
+        nextThoughtNeeded: true
+      }
+    });
+    sequentialAnalysis.push(analysisStep.result);
+
+    // Step 2: Extract plan features and pricing
+    analysisStep = await use_mcp_tool({
+      serverName: "github.com/modelcontextprotocol/servers/tree/main/src/sequentialthinking",
+      toolName: "sequentialthinking",
+      arguments: {
+        thought: "Extracting and categorizing plan features and pricing",
+        thoughtNumber: 2,
+        totalThoughts: 4,
+        nextThoughtNeeded: true,
+        branchFromThought: 1
+      }
+    });
+    sequentialAnalysis.push(analysisStep.result);
+
+    // Step 3: Compare plans and identify benefits
+    analysisStep = await use_mcp_tool({
+      serverName: "github.com/modelcontextprotocol/servers/tree/main/src/sequentialthinking",
+      toolName: "sequentialthinking",
+      arguments: {
+        thought: "Comparing plans and identifying key benefits",
+        thoughtNumber: 3,
+        totalThoughts: 4,
+        nextThoughtNeeded: true,
+        branchFromThought: 2
+      }
+    });
+    sequentialAnalysis.push(analysisStep.result);
+
+    // Step 4: Generate recommendations
+    analysisStep = await use_mcp_tool({
+      serverName: "github.com/modelcontextprotocol/servers/tree/main/src/sequentialthinking",
+      toolName: "sequentialthinking",
+      arguments: {
+        thought: "Generating insights and recommendations for different user profiles",
+        thoughtNumber: 4,
+        totalThoughts: 4,
+        nextThoughtNeeded: false,
+        branchFromThought: 3
+      }
+    });
+    sequentialAnalysis.push(analysisStep.result);
+
+    // Extract insights from sequential analysis
+    const insights = {
+      structureAnalysis: sequentialAnalysis[0]?.result || {},
+      features: sequentialAnalysis[1]?.result || {},
+      comparison: sequentialAnalysis[2]?.result || {},
+      recommendations: sequentialAnalysis[3]?.result || {}
+    };
+
+    // Parse plan details from markdown
+    const plans = await parsePlansFromMarkdown(markdownResult.markdown);
 
     res.json({
-      markdown: markdown,
+      plans: plans,
+      insights: insights,
       timestamp: new Date().toISOString(),
       url: url
     });
@@ -77,74 +213,72 @@ app.get('/scrape-tags', async (req, res) => {
   }
 });
 
-async function fetch_html(url) {
-  try {
-    // Use fetch_html tool from fetch-mcp server
-    const result = await use_mcp_tool({
-      serverName: "github.com/zcaceres/fetch-mcp",
-      toolName: "fetch_html",
-      arguments: { url: url },
-    });
+async function parsePlansFromMarkdown(markdown) {
+  // Helper function to extract clean text
+  const cleanText = (text) => {
+    return text
+      .replace(/^\s*[•·-]\s*/, '') // Remove leading bullets
+      .replace(/\s+/g, ' ')        // Normalize spaces
+      .trim();
+  };
 
-    if (result.error) {
-      return { error: result.error };
+  // Helper function to extract price
+  const extractPrice = (text) => {
+    const match = text.match(/\$\d+(?:\.\d{2})?/);
+    return match ? match[0] : null;
+  };
+
+  const lines = markdown.split('\n');
+  const plans = [];
+  let currentPlan = null;
+
+  for (const line of lines) {
+    const cleanLine = cleanText(line);
+    
+    // Look for plan headers
+    if (line.startsWith('##') && (line.toLowerCase().includes('plan') || line.toLowerCase().includes('unlimited'))) {
+      if (currentPlan) {
+        plans.push(currentPlan);
+      }
+      currentPlan = {
+        name: cleanText(line.replace(/^#+\s*/, '')),
+        features: [],
+        perks: [],
+        prices: {}
+      };
     }
-    return { content: result.content };
-  } catch (error) {
-    console.error("Error calling fetch_html tool:", error);
-    return { error: error.message };
+    // Extract prices
+    else if (currentPlan && cleanLine.includes('$')) {
+      const price = extractPrice(cleanLine);
+      if (price) {
+        if (cleanLine.toLowerCase().includes('/line')) {
+          currentPlan.prices.perLine = price;
+        } else if (cleanLine.toLowerCase().includes('/mo')) {
+          currentPlan.prices.monthly = price;
+        } else {
+          currentPlan.prices.base = price;
+        }
+      }
+    }
+    // Extract features and perks
+    else if (currentPlan && cleanLine.length > 0) {
+      if (cleanLine.toLowerCase().includes('perk') || cleanLine.toLowerCase().includes('benefit')) {
+        currentPlan.perks.push(cleanLine);
+      } else {
+        currentPlan.features.push(cleanLine);
+      }
+    }
   }
+
+  // Add the last plan
+  if (currentPlan) {
+    plans.push(currentPlan);
+  }
+
+  return plans;
 }
 
-async function webpage_to_markdown(html) {
-  try {
-    // Use webpage-to-markdown tool from markdownify-mcp server
-    const result = await use_mcp_tool({
-      serverName: "github.com/zcaceres/markdownify-mcp",
-      toolName: "webpage-to-markdown",
-      arguments: { url: html },
-    });
-
-    if (result.error) {
-      return { error: result.error };
-    }
-    return { markdown: result.markdown };
-  } catch (error) {
-    console.error("Error calling webpage_to_markdown tool:", error);
-    return { error: error.message };
-  }
-}
-
-async function use_mcp_tool({ serverName, toolName, arguments: args }) {
-  try {
-    const result = await fetch(`http://localhost:1337/tool/${toolName}`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        serverName: serverName,
-        toolName: toolName,
-        arguments: args,
-      }),
-    });
-
-    const data = await result.json();
-    if (data.error) {
-      return { error: data.error };
-    }
-    return data;
-  } catch (error) {
-    console.error(`Error calling ${toolName} tool on ${serverName}:`, error);
-    return { error: error.message };
-  }
-}
-
-app.listen(port, () => {
-  console.log(`Verizon MCP Server running on port ${port}`);
-});
-
-// Endpoint for bill analysis
+// Basic bill analysis endpoint
 app.post('/analyze-bill', upload.single('file'), async (req, res) => {
   try {
     if (!req.file) {
@@ -161,4 +295,29 @@ app.post('/analyze-bill', upload.single('file'), async (req, res) => {
     console.error('Error analyzing bill:', error);
     res.status(500).json({ error: 'Failed to analyze bill' });
   }
+});
+
+// Enhanced bill analysis endpoint
+app.post('/analyze-bill/enhanced', express.json(), async (req, res) => {
+  try {
+    const { billText } = req.body;
+    
+    if (!billText) {
+      return res.status(400).json({ error: 'No bill text provided' });
+    }
+
+    // Parse the bill text back into structured data
+    const billData = JSON.parse(billText);
+
+    // Perform enhanced analysis
+    const analysis = enhancedAnalysis(billData);
+    res.json(analysis);
+  } catch (error) {
+    console.error('Error in enhanced analysis:', error);
+    res.status(500).json({ error: 'Failed to perform enhanced analysis' });
+  }
+});
+
+app.listen(port, () => {
+  console.log(`Verizon MCP Server running on port ${port}`);
 });
