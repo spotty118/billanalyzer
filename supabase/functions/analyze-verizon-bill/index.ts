@@ -1,3 +1,4 @@
+
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.8';
 
@@ -16,24 +17,7 @@ const billFormatVersions = {
       total: /Total:\s*\$\s*([0-9,]+\.\d{2})/i,
       alternativeTotal: /(?:total|amount due|pay this amount):?\s*\$?([0-9,]+\.\d{2})/i,
       billingPeriod: /billing\s*period:?\s*([^$\n]+)/i,
-      // Add more patterns as needed
-    }
-  },
-  v2: {
-    dateRange: { start: "2023-01-01", end: "2025-01-01" },
-    pagesToParse: [0, 1, 2],
-    contentMarkers: {
-      billSummaryByLine: "Bill summary by line",
-      accountWideCharges: "Account-wide charges & credits",
-      lineItemStart: /([A-Za-z\s]+)\s+([A-Za-z\s\d\.]+\([^)]*(\d{3}[-\s]?\d{3}[-\s]?\d{4})[^)]*\))\s*\$?([0-9\.]+)/g,
-    },
-    patterns: {
-      accountNumber: /Account(?:\s*#|\s*number|\s*:)?\s*(?::|-)?\s*(\d[\d-]{5,15})/i,
-      total: /Total:\s*\$\s*([0-9,]+\.\d{2})/i,
-      alternativeTotal: /(?:total|amount due|pay this amount):?\s*\$?([0-9,]+\.\d{2})/i,
-      billingPeriod: /billing\s*period:?\s*([^$\n]+)/i,
-      phoneSection: /(\d{3}[-\s]?\d{3}[-\s]?\d{4})[\\s\\S]*?(Plan[\\s\\S]*?(?=\\n\\n|\\n[A-Z][a-z]+|$))/i,
-      // Add more patterns as needed
+      phoneSection: /(\d{3}[-\s]?\d{3}[-\s]?\d{4})[\\s\\S]*?(Plan[\\s\\S]*?(?=\\n\\n|\\n[A-Z][a-z]+|$))/i
     },
     skippableContent: [
       "am a test",
@@ -52,122 +36,47 @@ const billFormatVersions = {
       "Service added",
       "Service removed",
     ]
+  },
+  v2: {
+    dateRange: { start: "2023-01-01", end: "2025-01-01" },
+    pagesToParse: [0, 1, 2],
+    contentMarkers: {
+      billSummaryByLine: "Bill summary by line",
+      accountWideCharges: "Account-wide charges & credits",
+      lineItemStart: /([A-Za-z\s]+)\s+([A-Za-z\s\d\.]+\([^)]*(\d{3}[-\s]?\d{3}[-\s]?\d{4})[^)]*\))\s*\$?([0-9\.]+)/g,
+    },
+    patterns: {
+      accountNumber: /Account(?:\s*#|\s*number|\s*:)?\s*(?::|-)?\s*(\d[\d-]{5,15})/i,
+      total: /Total:\s*\$\s*([0-9,]+\.\d{2})/i,
+      alternativeTotal: /(?:total|amount due|pay this amount):?\s*\$?([0-9,]+\.\d{2})/i,
+      billingPeriod: /billing\s*period:?\s*([^$\n]+)/i
+    }
   }
 };
 
-serve(async (req) => {
-  // Handle CORS preflight requests
-  if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+// Function to determine bill version based on content patterns
+function detectBillVersion(fileContent: string): string {
+  console.log("Detecting bill version...");
+  
+  // Look for v2 specific content markers
+  if (fileContent.includes("Bill summary by line") || 
+      fileContent.includes("Account-wide charges & credits")) {
+    console.log("Detected version v2 based on content markers");
+    return "v2";
   }
-
-  try {
-    // Extract API key from request in multiple formats
-    const apiKey = req.headers.get('apikey') || 
-                  req.headers.get('Authorization')?.replace('Bearer ', '') || 
-                  '';
-    
-    console.log("Auth headers received:", {
-      apikey: req.headers.get('apikey') ? 'Present' : 'Missing',
-      authorization: req.headers.get('Authorization') ? 'Present' : 'Missing'
-    });
-    
-    // Validate the API key exists
-    if (!apiKey) {
-      console.error("Missing authorization header - no apikey or Authorization header found");
-      return new Response(
-        JSON.stringify({ error: 'Missing authorization header' }),
-        { 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }, 
-          status: 401 
-        }
-      );
-    }
-
-    // Handle different content types
-    const contentType = req.headers.get('content-type') || '';
-    let fileContent = '';
-    
-    if (contentType.includes('multipart/form-data')) {
-      // Process form data with file
-      try {
-        const formData = await req.formData();
-        const file = formData.get('file');
-
-        if (!file || !(file instanceof File)) {
-          return new Response(
-            JSON.stringify({ error: 'No valid file uploaded' }),
-            { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
-          );
-        }
-
-        // Read the file content
-        fileContent = await file.text();
-        console.log("Received file with size:", fileContent.length);
-        
-      } catch (error) {
-        console.error('Error processing form data:', error);
-        return new Response(
-          JSON.stringify({ error: `Error processing form data: ${error.message}` }),
-          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
-        );
-      }
-    } else if (contentType.includes('application/json')) {
-      // Process JSON data (for testing or alternate input)
-      try {
-        const jsonData = await req.json();
-        // Allow sample text to be passed for testing
-        fileContent = jsonData.sampleText || jsonData.text || 'Sample Verizon bill content for testing';
-        console.log('Using sample text for analysis:', fileContent.substring(0, 50) + '...');
-      } catch (error) {
-        console.error('Error processing JSON data:', error);
-        return new Response(
-          JSON.stringify({ error: `Error processing JSON data: ${error.message}` }),
-          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
-        );
-      }
-    } else {
-      return new Response(
-        JSON.stringify({ error: 'Unsupported content type' }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
-      );
-    }
-    
-    // Basic validation of file content
-    if (!fileContent || fileContent.length < 10) {
-      return new Response(
-        JSON.stringify({ error: 'File content is too small or empty' }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
-      );
-    }
-
-    // Clean the bill content before processing
-    fileContent = cleanBillContent(fileContent);
-
-    // Process the file content
-    const analysisResult = await analyzeVerizonBill(fileContent);
-    console.log("Analysis completed successfully");
-
-    // Return the analysis result
-    return new Response(
-      JSON.stringify(analysisResult),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
-
-  } catch (error) {
-    console.error('Error processing request:', error);
-    
-    return new Response(
-      JSON.stringify({ error: `Error processing request: ${error.message}` }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
-    );
-  }
-});
+  
+  // Default to v1 if we can't determine a specific version
+  console.log("Defaulting to version v1");
+  return "v1";
+}
 
 // Function to clean bill content by removing problematic sections
 function cleanBillContent(fileContent: string): string {
   try {
     console.log("Cleaning bill content...");
+    
+    // Apply skip patterns from configuration
+    let cleanedContent = fileContent;
     
     // 1. Remove all Talk Activity, Call Details, and Usage sections
     const sectionPatterns = [
@@ -180,7 +89,6 @@ function cleanBillContent(fileContent: string): string {
     ];
     
     // Apply section removal
-    let cleanedContent = fileContent;
     for (const pattern of sectionPatterns) {
       try {
         cleanedContent = cleanedContent.replace(pattern, '');
@@ -203,12 +111,16 @@ function cleanBillContent(fileContent: string): string {
 }
 
 async function analyzeVerizonBill(fileContent: string) {
-  console.log("Analyzing Verizon bill...");
+  console.log("Analyzing Verizon bill with improved phone number detection...");
+  
+  // Detect bill version to use appropriate parsing strategy
+  const billVersion = detectBillVersion(fileContent);
+  console.log(`Using parsing strategy for bill version: ${billVersion}`);
   
   // Extract account number
   let accountNumber = "Unknown";
   try {
-    const accountNumberPattern = /Account(?:\s*#|\s*number|\s*:)?\s*(?::|-)?\s*(\d[\d-]{5,15})/i;
+    const accountNumberPattern = billFormatVersions[billVersion].patterns.accountNumber;
     const accountNumberMatch = fileContent.match(accountNumberPattern);
     if (accountNumberMatch && accountNumberMatch[1]) {
       accountNumber = accountNumberMatch[1];
@@ -232,7 +144,7 @@ async function analyzeVerizonBill(fileContent: string) {
   // Extract billing period
   let billingPeriod = "Current Billing Period";
   try {
-    const billingPeriodPattern = /billing\s*period:?\s*([^$\n]+)/i;
+    const billingPeriodPattern = billFormatVersions[billVersion].patterns.billingPeriod;
     const billingPeriodMatch = fileContent.match(billingPeriodPattern);
     if (billingPeriodMatch && billingPeriodMatch[1]) {
       billingPeriod = billingPeriodMatch[1].trim();
@@ -245,13 +157,13 @@ async function analyzeVerizonBill(fileContent: string) {
   let totalAmount = 0;
   try {
     // Look for "Total: $X.XX" pattern first
-    const totalPattern = /Total:\s*\$\s*([0-9,]+\.\d{2})/i;
+    const totalPattern = billFormatVersions[billVersion].patterns.total;
     const totalMatch = fileContent.match(totalPattern);
     if (totalMatch && totalMatch[1]) {
       totalAmount = parseFloat(totalMatch[1].replace(/,/g, ''));
     } else {
       // Fallback to other patterns
-      const amountDuePattern = /(?:total|amount due|pay this amount):?\s*\$?([0-9,]+\.\d{2})/i;
+      const amountDuePattern = billFormatVersions[billVersion].patterns.alternativeTotal;
       const amountDueMatch = fileContent.match(amountDuePattern);
       if (amountDueMatch && amountDueMatch[1]) {
         totalAmount = parseFloat(amountDueMatch[1].replace(/,/g, ''));
@@ -261,159 +173,185 @@ async function analyzeVerizonBill(fileContent: string) {
     console.error("Error extracting total amount:", error);
   }
   
-  // Extract phone lines with a focused pattern for the specific format in the bill
-  const phoneLines: any[] = [];
+  // Extract phone lines with enhanced pattern detection
+  const phoneLines = [];
   
   try {
-    // Pattern to match line items in "Bill summary by line" section or "Charges by line details" section
-    // This pattern looks for lines like "Christopher Adams - Apple iPhone 15 Pro Max (251-747-0017)"
-    // or variations of that format
-    const lineItemPatterns = [
-      // Pattern for lines like "Christopher Adams Apple iPhone 15 Pro Max (251-747-0017)"
+    console.log("Starting phone number extraction with enhanced patterns");
+    
+    // Set of patterns for finding phone numbers in various contexts
+    const phonePatterns = [
+      // Direct phone number pattern
+      /\b(\d{3})[-\s.]?(\d{3})[-\s.]?(\d{4})\b/g,
+      
+      // Parentheses pattern
+      /\((\d{3})\)\s*(\d{3})[-\s.]?(\d{4})/g,
+      
+      // Line item patterns
       /([A-Za-z\s]+)\s+([A-Za-z\s\d\.]+\([^)]*(\d{3}[-\s]?\d{3}[-\s]?\d{4})[^)]*\))\s*\$?([0-9\.]+)/g,
-      
-      // Pattern for lines like "Apple iPhone 15-2 (251-747-0238)"
-      /([A-Za-z\s\d\-\.]+)\s*\((\d{3}[-\s]?\d{3}[-\s]?\d{4})\)\s*\$?([0-9\.]+)/g,
-      
-      // Pattern for detailed sections
-      /(\d{3}[-\s]?\d{3}[-\s]?\d{4})\s*[^\$]+([A-Za-z\s\d\-\.]+)/g
+      /([A-Za-z\s\d\-\.]+)\s*\((\d{3}[-\s]?\d{3}[-\s]?\d{4})\)\s*\$?([0-9\.]+)/g
     ];
     
-    const processedNumbers = new Set<string>();
+    // First pass: collect all phone numbers from the document
+    const allPhoneNumbers = new Set<string>();
+    const phoneNumberContexts = new Map<string, string>();
     
-    for (const pattern of lineItemPatterns) {
+    for (const pattern of phonePatterns) {
       const matches = Array.from(fileContent.matchAll(pattern));
       
       for (const match of matches) {
         let phoneNumber = '';
-        let deviceName = '';
-        let ownerName = '';
-        let monthlyTotal = 0;
+        let context = '';
         
-        // Process based on which pattern matched
-        if (match[3] && match[3].match(/\d{3}[-\s]?\d{3}[-\s]?\d{4}/)) {
-          // First pattern match
-          ownerName = match[1].trim();
-          deviceName = match[2].split('(')[0].trim();
-          phoneNumber = match[3].replace(/[^0-9]/g, '');
-          monthlyTotal = parseFloat(match[4]) || 0;
-        } else if (match[2] && match[2].match(/\d{3}[-\s]?\d{3}[-\s]?\d{4}/)) {
-          // Second pattern match
-          deviceName = match[1].trim();
-          phoneNumber = match[2].replace(/[^0-9]/g, '');
-          monthlyTotal = parseFloat(match[3]) || 0;
-        } else if (match[1] && match[1].match(/\d{3}[-\s]?\d{3}[-\s]?\d{4}/)) {
-          // Third pattern match
-          phoneNumber = match[1].replace(/[^0-9]/g, '');
-          deviceName = match[2].trim();
-          
-          // Try to find the monthly total nearby
-          const amountPattern = new RegExp(`${phoneNumber.replace(/(\d{3})(\d{3})(\d{4})/, '$1-$2-$3')}[^$]*\\$(\\d+\\.\\d{2})`, 'i');
-          const amountMatch = fileContent.match(amountPattern);
-          if (amountMatch && amountMatch[1]) {
-            monthlyTotal = parseFloat(amountMatch[1]) || 0;
+        // Extract phone number based on which pattern matched
+        if (match[0].includes('(') && match[0].includes(')')) {
+          // Handle parentheses format
+          const parenthesesMatch = match[0].match(/\((\d{3})\)[- ]?(\d{3})[- ]?(\d{4})/);
+          if (parenthesesMatch) {
+            phoneNumber = `${parenthesesMatch[1]}${parenthesesMatch[2]}${parenthesesMatch[3]}`;
+            context = match[0];
           }
+        } else if (match[3] && match[3].match(/\d{3}[-\s]?\d{3}[-\s]?\d{4}/)) {
+          // First complex pattern match
+          phoneNumber = match[3].replace(/[^0-9]/g, '');
+          context = match[0];
+        } else if (match[2] && match[2].match(/\d{3}[-\s]?\d{3}[-\s]?\d{4}/)) {
+          // Second complex pattern match
+          phoneNumber = match[2].replace(/[^0-9]/g, '');
+          context = match[0];
+        } else if (match[1] && match[1].length >= 3 && match[2] && match[2].length >= 3 && match[3] && match[3].length >= 4) {
+          // Direct pattern match
+          phoneNumber = `${match[1]}${match[2]}${match[3]}`;
+          context = match[0];
         }
         
-        // Only process if we found a phone number and it's not a duplicate
-        if (phoneNumber && phoneNumber.length === 10 && !processedNumbers.has(phoneNumber)) {
-          processedNumbers.add(phoneNumber);
-          
-          // Extract plan details
-          let planName = "Unknown plan";
-          let planDetails = {};
-          
-          try {
-            // Find plan section for this number
-            const phoneFormatted = phoneNumber.replace(/(\d{3})(\d{3})(\d{4})/, '$1-$2-$3');
-            const planSectionRegex = new RegExp(`${phoneFormatted}[\\s\\S]*?Plan\\s*([^\\$]+)`, 'i');
-            const planSection = fileContent.match(planSectionRegex);
-            
-            if (planSection) {
-              const planNameRegex = /(?:Unlimited\s+(?:Plus|Welcome|plan))/i;
-              const planNameMatch = planSection[1].match(planNameRegex);
-              if (planNameMatch) {
-                planName = planNameMatch[0].trim();
-              }
-            }
-            
-            // Extract detailed charges
-            const detailsSection = new RegExp(`${phoneFormatted}[\\s\\S]*?(Plan[\\s\\S]*?(?=\\n\\n|\\n[A-Z][a-z]+|$))`, 'i');
-            const detailsMatch = fileContent.match(detailsSection);
-            
-            if (detailsMatch) {
-              const section = detailsMatch[1];
-              
-              // Plan cost
-              const planCostMatch = section.match(/\$(\d+\.\d{2})\s*(?:Dec|Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov)/i);
-              const planCost = planCostMatch ? parseFloat(planCostMatch[1]) : 0;
-              
-              // Plan discount
-              const discountMatch = section.match(/access\s+discount\s*-\$(\d+\.\d{2})/i);
-              const planDiscount = discountMatch ? parseFloat(discountMatch[1]) : 0;
-              
-              // Device payment
-              const devicePaymentMatch = section.match(/Payment\s+\d+\s+of\s+\d+\s+\([^)]+\)\s*\$(\d+\.\d{2})/i);
-              const devicePayment = devicePaymentMatch ? parseFloat(devicePaymentMatch[1]) : 0;
-              
-              // Device credit
-              const deviceCreditMatch = section.match(/(?:Device\s+(?:Promo|Promotional)\s+Credit|Credit\s+\d+\s+of\s+\d+)\s*-\$(\d+\.\d{2})/i);
-              const deviceCredit = deviceCreditMatch ? parseFloat(deviceCreditMatch[1]) : 0;
-              
-              // Protection
-              const protectionMatch = section.match(/(?:Wireless\s+Phone\s+Protection|Total\s+Equipment\s+Coverage)\s*\$(\d+\.\d{2})/i);
-              const protection = protectionMatch ? parseFloat(protectionMatch[1]) : 0;
-              
-              // Surcharges
-              const surchargesMatch = section.match(/Surcharges\s*\$(\d+\.\d{2})/i);
-              const surcharges = surchargesMatch ? parseFloat(surchargesMatch[1]) : 0;
-              
-              // Taxes
-              const taxesMatch = section.match(/Taxes\s*&\s*gov\s*fees\s*\$(\d+\.\d{2})/i);
-              const taxes = taxesMatch ? parseFloat(taxesMatch[1]) : 0;
-              
-              planDetails = {
-                planCost,
-                planDiscount,
-                devicePayment,
-                deviceCredit,
-                protection,
-                surcharges,
-                taxes
-              };
-            }
-          } catch (error) {
-            console.error(`Error extracting plan details for ${phoneNumber}:`, error);
+        // Only add valid phone numbers
+        if (phoneNumber && phoneNumber.length === 10) {
+          allPhoneNumbers.add(phoneNumber);
+          if (!phoneNumberContexts.has(phoneNumber) || context.length > phoneNumberContexts.get(phoneNumber).length) {
+            phoneNumberContexts.set(phoneNumber, context);
           }
-          
-          // Create phone line object with all the info we've gathered
-          phoneLines.push({
-            phoneNumber: phoneNumber.replace(/(\d{3})(\d{3})(\d{4})/, '$1-$2-$3'),
-            deviceName: deviceName || (ownerName ? `${ownerName}'s device` : "Unknown device"),
-            ownerName: ownerName || "",
-            planName,
-            monthlyTotal,
-            details: planDetails
-          });
         }
       }
     }
     
-    // Limit to maximum 8 phone lines to avoid excessive data
+    console.log(`Found ${allPhoneNumbers.size} unique phone numbers`);
+    
+    // Second pass: extract details for each phone number
+    for (const phoneNumber of allPhoneNumbers) {
+      const phoneFormatted = phoneNumber.replace(/(\d{3})(\d{3})(\d{4})/, '$1-$2-$3');
+      const context = phoneNumberContexts.get(phoneNumber) || '';
+      
+      // Extract device name and owner
+      let deviceName = "Unknown device";
+      let ownerName = "";
+      let monthlyTotal = 0;
+      
+      // Find device name
+      const deviceMatches = [
+        context.match(/Apple iPhone [\d\w\s]+/i),
+        context.match(/Samsung Galaxy [\d\w\s]+/i),
+        context.match(/Google Pixel [\d\w\s]+/i)
+      ].filter(Boolean);
+      
+      if (deviceMatches.length > 0) {
+        deviceName = deviceMatches[0][0].trim();
+      }
+      
+      // Find owner name (typically comes before device)
+      const nameMatch = context.match(/^([A-Za-z\s]+?)\s+(?:Apple|Samsung|Google|iPhone|Galaxy|Pixel)/i);
+      if (nameMatch) {
+        ownerName = nameMatch[1].trim();
+      }
+      
+      // Try to find monthly charges
+      const chargeMatch = context.match(/\$(\d+\.\d{2})/);
+      if (chargeMatch) {
+        monthlyTotal = parseFloat(chargeMatch[1]);
+      } else {
+        // Look for charges in surrounding text
+        const chargeSection = fileContent.match(new RegExp(`${phoneFormatted}[^$]*\\$(\\d+\\.\\d{2})`, 'i'));
+        if (chargeSection && chargeSection[1]) {
+          monthlyTotal = parseFloat(chargeSection[1]);
+        }
+      }
+      
+      // Extract plan info
+      let planName = "Unknown plan";
+      const planNameMatches = [
+        fileContent.match(new RegExp(`${phoneFormatted}[\\s\\S]*?Unlimited Plus`, 'i')),
+        fileContent.match(new RegExp(`${phoneFormatted}[\\s\\S]*?Unlimited Welcome`, 'i')),
+        fileContent.match(new RegExp(`${phoneFormatted}[\\s\\S]*?plan:\\s*([^\\n]+)`, 'i'))
+      ].filter(Boolean);
+      
+      if (planNameMatches.length > 0) {
+        if (planNameMatches[0][0].includes("Unlimited Plus")) {
+          planName = "Unlimited Plus";
+        } else if (planNameMatches[0][0].includes("Unlimited Welcome")) {
+          planName = "Unlimited Welcome";
+        } else if (planNameMatches[0][1]) {
+          planName = planNameMatches[0][1].trim();
+        }
+      }
+      
+      // Extract detailed charges
+      const planCostMatch = fileContent.match(new RegExp(`${phoneFormatted}[\\s\\S]*?Plan[^$]*\\$(\\d+\\.\\d{2})`, 'i'));
+      const planCost = planCostMatch ? parseFloat(planCostMatch[1]) : 45;
+      
+      const discountMatch = fileContent.match(new RegExp(`${phoneFormatted}[\\s\\S]*?discount[^$]*-\\$(\\d+\\.\\d{2})`, 'i'));
+      const planDiscount = discountMatch ? parseFloat(discountMatch[1]) : 0;
+      
+      const devicePaymentMatch = fileContent.match(new RegExp(`${phoneFormatted}[\\s\\S]*?[Dd]evice\\s+[Pp]ayment[^$]*\\$(\\d+\\.\\d{2})`, 'i'));
+      const devicePayment = devicePaymentMatch ? parseFloat(devicePaymentMatch[1]) : 0;
+      
+      const deviceCreditMatch = fileContent.match(new RegExp(`${phoneFormatted}[\\s\\S]*?[Dd]evice\\s+[Cc]redit[^$]*-\\$(\\d+\\.\\d{2})`, 'i'));
+      const deviceCredit = deviceCreditMatch ? parseFloat(deviceCreditMatch[1]) : 0;
+      
+      const protectionMatch = fileContent.match(new RegExp(`${phoneFormatted}[\\s\\S]*?[Pp]rotection[^$]*\\$(\\d+\\.\\d{2})`, 'i'));
+      const protection = protectionMatch ? parseFloat(protectionMatch[1]) : 0;
+      
+      const surchargesMatch = fileContent.match(new RegExp(`${phoneFormatted}[\\s\\S]*?[Ss]urcharges[^$]*\\$(\\d+\\.\\d{2})`, 'i'));
+      const surcharges = surchargesMatch ? parseFloat(surchargesMatch[1]) : 0;
+      
+      const taxesMatch = fileContent.match(new RegExp(`${phoneFormatted}[\\s\\S]*?[Tt]axes[^$]*\\$(\\d+\\.\\d{2})`, 'i'));
+      const taxes = taxesMatch ? parseFloat(taxesMatch[1]) : 0;
+      
+      // Add to phone lines array
+      phoneLines.push({
+        phoneNumber: phoneFormatted,
+        deviceName,
+        ownerName,
+        planName,
+        monthlyTotal: monthlyTotal || planCost - planDiscount + devicePayment - deviceCredit + protection + surcharges + taxes,
+        details: {
+          planCost,
+          planDiscount,
+          devicePayment,
+          deviceCredit,
+          protection,
+          surcharges,
+          taxes
+        }
+      });
+    }
+    
+    // Limit to 8 phone lines to avoid excessive data
     if (phoneLines.length > 8) {
       phoneLines.length = 8;
     }
     
-    // If no lines were found with the pattern, try a simpler approach
+    // If no phone lines detected, create a fallback
     if (phoneLines.length === 0) {
-      // Simple pattern to extract any phone numbers in the bill
-      const simplePhonePattern = /(\d{3}[-\s]?\d{3}[-\s]?\d{4})/g;
+      console.log("No phone lines detected, creating fallback data");
+      
+      // Extract any number that looks like a phone number
+      const simplePhonePattern = /(\d{3})[-\s]?(\d{3})[-\s]?(\d{4})/g;
       const phoneMatches = Array.from(fileContent.matchAll(simplePhonePattern));
       
-      // Filter unique numbers and limit to first 5
+      // Use up to 5 phone numbers
       const uniqueNumbers = new Set();
       for (const match of phoneMatches) {
-        const phoneNumber = match[1].replace(/[^0-9]/g, '');
+        const phoneNumber = `${match[1]}${match[2]}${match[3]}`;
         if (phoneNumber.length === 10 && !uniqueNumbers.has(phoneNumber)) {
           uniqueNumbers.add(phoneNumber);
           
@@ -421,6 +359,7 @@ async function analyzeVerizonBill(fileContent: string) {
             phoneLines.push({
               phoneNumber: phoneNumber.replace(/(\d{3})(\d{3})(\d{4})/, '$1-$2-$3'),
               deviceName: "Unknown device",
+              ownerName: "",
               planName: "Unknown plan",
               monthlyTotal: 35 + (uniqueNumbers.size * 7),
               details: {
@@ -441,7 +380,7 @@ async function analyzeVerizonBill(fileContent: string) {
     console.error("Error extracting phone lines:", error);
   }
   
-  // Extract account-wide charges if possible
+  // Extract account-wide charges
   let accountCharges = 0;
   try {
     const accountChargesPattern = /Account-wide\s+charges\s+&\s+credits\s*\$(\d+\.\d{2})/i;
@@ -504,6 +443,117 @@ async function analyzeVerizonBill(fileContent: string) {
       taxes: taxesTotal,
       other: otherCharges
     },
-    accountCharges
+    accountCharges,
+    billVersion
   };
 }
+
+// Main server handler
+serve(async (req) => {
+  // Handle CORS preflight requests
+  if (req.method === 'OPTIONS') {
+    return new Response(null, { headers: CORS_HEADERS });
+  }
+
+  try {
+    // Extract API key from request in multiple formats
+    const apiKey = req.headers.get('apikey') || 
+                  req.headers.get('Authorization')?.replace('Bearer ', '') || 
+                  '';
+    
+    console.log("Auth headers received:", {
+      apikey: req.headers.get('apikey') ? 'Present' : 'Missing',
+      authorization: req.headers.get('Authorization') ? 'Present' : 'Missing'
+    });
+    
+    // Validate the API key exists
+    if (!apiKey) {
+      console.error("Missing authorization header - no apikey or Authorization header found");
+      return new Response(
+        JSON.stringify({ error: 'Missing authorization header' }),
+        { 
+          headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' }, 
+          status: 401 
+        }
+      );
+    }
+
+    // Handle different content types
+    const contentType = req.headers.get('content-type') || '';
+    let fileContent = '';
+    
+    if (contentType.includes('multipart/form-data')) {
+      // Process form data with file
+      try {
+        const formData = await req.formData();
+        const file = formData.get('file');
+
+        if (!file || !(file instanceof File)) {
+          return new Response(
+            JSON.stringify({ error: 'No valid file uploaded' }),
+            { headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' }, status: 400 }
+          );
+        }
+
+        // Read the file content
+        fileContent = await file.text();
+        console.log("Received file with size:", fileContent.length);
+        
+      } catch (error) {
+        console.error('Error processing form data:', error);
+        return new Response(
+          JSON.stringify({ error: `Error processing form data: ${error.message}` }),
+          { headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' }, status: 400 }
+        );
+      }
+    } else if (contentType.includes('application/json')) {
+      // Process JSON data (for testing or alternate input)
+      try {
+        const jsonData = await req.json();
+        // Allow sample text to be passed for testing
+        fileContent = jsonData.sampleText || jsonData.text || 'Sample Verizon bill content for testing';
+        console.log('Using sample text for analysis:', fileContent.substring(0, 50) + '...');
+      } catch (error) {
+        console.error('Error processing JSON data:', error);
+        return new Response(
+          JSON.stringify({ error: `Error processing JSON data: ${error.message}` }),
+          { headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' }, status: 400 }
+        );
+      }
+    } else {
+      return new Response(
+        JSON.stringify({ error: 'Unsupported content type' }),
+        { headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' }, status: 400 }
+      );
+    }
+    
+    // Basic validation of file content
+    if (!fileContent || fileContent.length < 10) {
+      return new Response(
+        JSON.stringify({ error: 'File content is too small or empty' }),
+        { headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' }, status: 400 }
+      );
+    }
+
+    // Clean the bill content before processing
+    fileContent = cleanBillContent(fileContent);
+
+    // Process the file content
+    const analysisResult = await analyzeVerizonBill(fileContent);
+    console.log("Analysis completed successfully");
+
+    // Return the analysis result
+    return new Response(
+      JSON.stringify(analysisResult),
+      { headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' } }
+    );
+
+  } catch (error) {
+    console.error('Error processing request:', error);
+    
+    return new Response(
+      JSON.stringify({ error: `Error processing request: ${error.message}` }),
+      { headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' }, status: 500 }
+    );
+  }
+});
