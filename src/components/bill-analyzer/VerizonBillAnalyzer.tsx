@@ -38,10 +38,22 @@ const VerizonBillAnalyzer = () => {
         }
       });
       
+      console.log('Response status:', response.status);
+      console.log('Response headers:', Object.fromEntries(response.headers.entries()));
+      
       if (!response.ok) {
-        console.error('Response status:', response.status);
-        console.error('Response text:', await response.text());
-        throw new Error(`Failed to analyze bill: ${response.status}`);
+        const responseText = await response.text();
+        console.error('Response text:', responseText);
+        
+        let errorMessage;
+        try {
+          const errorData = JSON.parse(responseText);
+          errorMessage = errorData.error || errorData.message || `Failed to analyze bill: ${response.status}`;
+        } catch {
+          errorMessage = `Failed to analyze bill: ${response.status}`;
+        }
+        
+        throw new Error(errorMessage);
       }
       
       const data = await response.json();

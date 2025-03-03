@@ -1,5 +1,6 @@
 
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.8';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -13,23 +14,72 @@ serve(async (req) => {
   }
 
   try {
-    const formData = await req.formData();
-    const file = formData.get('file');
-
-    if (!file || !(file instanceof File)) {
+    // Extract API key from request
+    const apiKey = req.headers.get('apikey') || 
+                  req.headers.get('Authorization')?.replace('Bearer ', '') || 
+                  '';
+    
+    // Validate the API key exists
+    if (!apiKey) {
       return new Response(
-        JSON.stringify({ error: 'No valid file uploaded' }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+        JSON.stringify({ error: 'Missing API key' }),
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }, 
+          status: 401 
+        }
       );
     }
 
-    console.log(`Processing bill file: ${file.name}, size: ${file.size} bytes, type: ${file.type}`);
+    // Handle different content types
+    const contentType = req.headers.get('content-type') || '';
+    let fileContent = '';
+    
+    if (contentType.includes('multipart/form-data')) {
+      // Process form data with file
+      try {
+        const formData = await req.formData();
+        const file = formData.get('file');
 
-    // Read the file content
-    const fileContent = await file.text();
+        if (!file || !(file instanceof File)) {
+          return new Response(
+            JSON.stringify({ error: 'No valid file uploaded' }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+          );
+        }
+
+        // Read the file content
+        fileContent = await file.text();
+        
+      } catch (error) {
+        console.error('Error processing form data:', error);
+        return new Response(
+          JSON.stringify({ error: `Error processing form data: ${error.message}` }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+        );
+      }
+    } else if (contentType.includes('application/json')) {
+      // Process JSON data (for testing or alternate input)
+      try {
+        const jsonData = await req.json();
+        // Allow sample text to be passed for testing
+        fileContent = jsonData.sampleText || 'Sample Verizon bill content for testing';
+        console.log('Using sample text for analysis');
+      } catch (error) {
+        console.error('Error processing JSON data:', error);
+        return new Response(
+          JSON.stringify({ error: `Error processing JSON data: ${error.message}` }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+        );
+      }
+    } else {
+      return new Response(
+        JSON.stringify({ error: 'Unsupported content type' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+      );
+    }
     
     // Basic validation of file content
-    if (!fileContent || fileContent.length < 100) {
+    if (!fileContent || fileContent.length < 10) {
       return new Response(
         JSON.stringify({ error: 'File content is too small or empty' }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
@@ -46,10 +96,10 @@ serve(async (req) => {
     );
 
   } catch (error) {
-    console.error('Error processing file:', error);
+    console.error('Error processing request:', error);
     
     return new Response(
-      JSON.stringify({ error: `Error processing file: ${error.message}` }),
+      JSON.stringify({ error: `Error processing request: ${error.message}` }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
     );
   }
