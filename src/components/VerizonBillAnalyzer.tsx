@@ -1,4 +1,4 @@
-<lov-code>
+
 import React, { useState } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { 
@@ -203,7 +203,7 @@ const VerizonBillAnalyzer = () => {
 
   const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#A28DFF', '#FF6B6B'];
 
-  // Fix TS error: Add proper type for value
+  // Format currency values
   const formatCurrency = (value: number): string => {
     return `$${value.toFixed(2)}`;
   };
@@ -367,7 +367,7 @@ const VerizonBillAnalyzer = () => {
                               <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                             ))}
                           </Pie>
-                          {/* Fix TS error: Use Number to ensure we have a number before calling toFixed */}
+                          {/* Use Number to ensure we have a number before calling toFixed */}
                           <Tooltip formatter={(value) => [`$${Number(value).toFixed(2)}`, null]} />
                         </PieChart>
                       </ResponsiveContainer>
@@ -706,4 +706,105 @@ const VerizonBillAnalyzer = () => {
                                 <div className="space-y-2 border-t pt-4 mt-2">
                                   <div className="flex justify-between items-center">
                                     <span>Monthly Savings:</span>
-                                    <span className={`font-bold text-lg ${monthlySavings > 0 ? 'text-green-600' : 'text-red
+                                    <span className={`font-bold text-lg ${monthlySavings > 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                      {monthlySavings > 0 ? formatCurrency(monthlySavings) : `-${formatCurrency(Math.abs(monthlySavings))}`}
+                                    </span>
+                                  </div>
+                                  <div className="flex justify-between items-center">
+                                    <span>Annual Savings:</span>
+                                    <span className={`font-bold text-lg ${annualSavings > 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                      {annualSavings > 0 ? formatCurrency(annualSavings) : `-${formatCurrency(Math.abs(annualSavings))}`}
+                                    </span>
+                                  </div>
+                                </div>
+                              </div>
+                              
+                              {carrierPlan && (
+                                <div className="bg-white rounded-lg p-5 shadow-sm border border-gray-100 mt-4">
+                                  <h4 className="font-semibold mb-3">Plan Features</h4>
+                                  <ul className="space-y-2">
+                                    <li className="flex items-start">
+                                      <Check className="w-4 h-4 text-green-500 mr-2 flex-shrink-0 mt-0.5" />
+                                      <span>
+                                        {carrierPlan.dataAllowance.premium === 'unlimited' 
+                                          ? 'Unlimited premium data' 
+                                          : `${carrierPlan.dataAllowance.premium}GB premium data`}
+                                      </span>
+                                    </li>
+                                    {carrierPlan.dataAllowance.hotspot && (
+                                      <li className="flex items-start">
+                                        <Check className="w-4 h-4 text-green-500 mr-2 flex-shrink-0 mt-0.5" />
+                                        <span>{carrierPlan.dataAllowance.hotspot}GB hotspot data</span>
+                                      </li>
+                                    )}
+                                    <li className="flex items-start">
+                                      <Check className="w-4 h-4 text-green-500 mr-2 flex-shrink-0 mt-0.5" />
+                                      <span>{carrierPlan.streamingQuality} streaming quality</span>
+                                    </li>
+                                    <li className="flex items-start">
+                                      <Check className="w-4 h-4 text-green-500 mr-2 flex-shrink-0 mt-0.5" />
+                                      <span>{carrierPlan.network} network</span>
+                                    </li>
+                                  </ul>
+                                </div>
+                              )}
+                            </div>
+                            
+                            <div>
+                              {carrierPlan && (
+                                <div className="bg-white rounded-lg p-5 shadow-sm border border-gray-100">
+                                  <h4 className="font-semibold mb-3">Included Streaming Perks</h4>
+                                  {carrierPlan.streamingPerks.length > 0 ? (
+                                    <ul className="space-y-2">
+                                      {carrierPlan.streamingPerks.map((perk, idx) => (
+                                        <li key={idx} className="flex items-start">
+                                          <Check className="w-4 h-4 text-blue-500 mr-2 flex-shrink-0 mt-0.5" />
+                                          <span>{perk}</span>
+                                        </li>
+                                      ))}
+                                    </ul>
+                                  ) : (
+                                    <p className="text-gray-500 italic">No streaming perks included with this plan</p>
+                                  )}
+                                </div>
+                              )}
+                              
+                              <div className="bg-blue-50 p-4 rounded-lg mt-4 border border-blue-100">
+                                <div className="flex items-start">
+                                  <AlertCircle className="w-5 h-5 text-blue-600 mr-2 flex-shrink-0 mt-0.5" />
+                                  <div>
+                                    <p className="font-medium text-blue-800">Important Notes:</p>
+                                    <ul className="mt-1 space-y-1 text-sm text-blue-700">
+                                      <li>• Savings estimates are based on your current bill total</li>
+                                      <li>• Device payments may not be included in carrier switch</li>
+                                      <li>• Visit carrier website for most current details</li>
+                                      <li>• All US Mobile sub-brands run on Verizon or T-Mobile networks</li>
+                                    </ul>
+                                  </div>
+                                </div>
+                              </div>
+                              
+                              <Button 
+                                variant="outline" 
+                                className="w-full mt-4 bg-gradient-to-r from-blue-500 to-indigo-600 text-white hover:from-blue-600 hover:to-indigo-700 border-0"
+                                onClick={() => window.open('https://www.usmobile.com', '_blank')}
+                              >
+                                Visit US Mobile Website
+                              </Button>
+                            </div>
+                          </div>
+                        </TabsContent>
+                      );
+                    })}
+                  </Tabs>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default VerizonBillAnalyzer;
