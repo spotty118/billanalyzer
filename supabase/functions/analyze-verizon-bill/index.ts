@@ -14,15 +14,21 @@ serve(async (req) => {
   }
 
   try {
-    // Extract API key from request
+    // Extract API key from request in multiple formats
     const apiKey = req.headers.get('apikey') || 
                   req.headers.get('Authorization')?.replace('Bearer ', '') || 
                   '';
     
+    console.log("Auth headers received:", {
+      apikey: req.headers.get('apikey') ? 'Present' : 'Missing',
+      authorization: req.headers.get('Authorization') ? 'Present' : 'Missing'
+    });
+    
     // Validate the API key exists
     if (!apiKey) {
+      console.error("Missing authorization header - no apikey or Authorization header found");
       return new Response(
-        JSON.stringify({ error: 'Missing API key' }),
+        JSON.stringify({ error: 'Missing authorization header' }),
         { 
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }, 
           status: 401 
@@ -49,6 +55,7 @@ serve(async (req) => {
 
         // Read the file content
         fileContent = await file.text();
+        console.log("Received file with size:", fileContent.length);
         
       } catch (error) {
         console.error('Error processing form data:', error);
@@ -62,8 +69,8 @@ serve(async (req) => {
       try {
         const jsonData = await req.json();
         // Allow sample text to be passed for testing
-        fileContent = jsonData.sampleText || 'Sample Verizon bill content for testing';
-        console.log('Using sample text for analysis');
+        fileContent = jsonData.sampleText || jsonData.text || 'Sample Verizon bill content for testing';
+        console.log('Using sample text for analysis:', fileContent.substring(0, 50) + '...');
       } catch (error) {
         console.error('Error processing JSON data:', error);
         return new Response(
@@ -88,6 +95,7 @@ serve(async (req) => {
 
     // Process the file content
     const analysisResult = await analyzeVerizonBill(fileContent);
+    console.log("Analysis completed successfully");
 
     // Return the analysis result
     return new Response(

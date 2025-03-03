@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { BillUploader } from './BillUploader';
 import { BillAnalysisHeader } from './BillAnalysisHeader';
@@ -27,14 +28,20 @@ const VerizonBillAnalyzer = () => {
 
   const processVerizonBill = async (file: File): Promise<any> => {
     try {
+      // Method 1: Direct API call with FormData
       const formData = new FormData();
       formData.append('file', file);
       
+      // Use the anon key from the supabase client
+      const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1nemZpb3VhbWlkYXFjdG5xbnJlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzkyMzE3NjQsImV4cCI6MjA1NDgwNzc2NH0._0hxm1UlSMt3wPx8JwaFDvGmpfjI3p5m0HDm6YfaL6Q';
+      
+      console.log('Sending request to analyze bill...');
       const response = await fetch('https://mgzfiouamidaqctnqnre.supabase.co/functions/v1/analyze-verizon-bill', {
         method: 'POST',
         body: formData,
         headers: {
-          'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1nemZpb3VhbWlkYXFjdG5xbnJlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzkyMzE3NjQsImV4cCI6MjA1NDgwNzc2NH0._0hxm1UlSMt3wPx8JwaFDvGmpfjI3p5m0HDm6YfaL6Q'
+          'apikey': supabaseAnonKey,
+          'Authorization': `Bearer ${supabaseAnonKey}`
         }
       });
       
