@@ -232,10 +232,6 @@ const VerizonBillAnalyzer = () => {
     }
   };
 
-  const getCurrentCarrierSavings = () => {
-    return calculateCarrierSavings(activeCarrierTab);
-  };
-
   return (
     <div className="flex flex-col w-full max-w-6xl mx-auto bg-white rounded-lg shadow">
       {!billData ? (
@@ -681,7 +677,7 @@ const VerizonBillAnalyzer = () => {
                       const carrierPlan = alternativeCarrierPlans.find(p => p.id === matchedPlanId);
                       
                       return (
-                        <TabsContent key={carrier.id} value={carrier.id} forceMount={carrier.id === activeCarrierTab}>
+                        <TabsContent key={carrier.id} value={carrier.id} forceMount>
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div>
                               <div className="bg-white rounded-lg p-5 shadow-sm border border-gray-100">
