@@ -1,5 +1,5 @@
 
-import { ArrowLeftRight, AlertCircle, CheckCircle, XCircle } from "lucide-react";
+import { ArrowLeftRight, AlertCircle, CheckCircle } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { 
