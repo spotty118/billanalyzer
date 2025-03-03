@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { BillAnalysisHeader } from './BillAnalysisHeader';
 import { BillTabs } from './BillTabs';
 import { BillSummary } from './BillSummary';

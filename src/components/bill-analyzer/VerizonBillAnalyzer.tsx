@@ -1,5 +1,3 @@
-
-import React from 'react';
 import { BillUploader } from './BillUploader';
 import { BillAnalyzerContent } from './BillAnalyzerContent';
 import { useVerizonBillAnalyzer } from '@/hooks/use-verizon-bill-analyzer';
