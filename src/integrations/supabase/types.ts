@@ -9,36 +9,6 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      bill_analyses: {
-        Row: {
-          account_number: string
-          analysis_data: Json
-          billing_period: string
-          created_at: string | null
-          id: number
-          total_amount: number
-          updated_at: string | null
-        }
-        Insert: {
-          account_number: string
-          analysis_data: Json
-          billing_period: string
-          created_at?: string | null
-          id?: number
-          total_amount: number
-          updated_at?: string | null
-        }
-        Update: {
-          account_number?: string
-          analysis_data?: Json
-          billing_period?: string
-          created_at?: string | null
-          id?: number
-          total_amount?: number
-          updated_at?: string | null
-        }
-        Relationships: []
-      }
       device_contributions: {
         Row: {
           base_spiff: number | null

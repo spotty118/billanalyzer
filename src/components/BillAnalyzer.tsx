@@ -254,14 +254,13 @@ const AnalysisResults = ({ analysis }: { analysis: BillAnalysis }) => (
         <div className="border-t pt-4 mt-4">
           <h4 className="font-medium mb-3">Line Items</h4>
           <div className="space-y-2">
-            {analysis.lineItems && analysis.lineItems.length > 0 ? (
-              analysis.lineItems.map((item, index) => (
-                <div key={index} className="flex justify-between text-sm">
-                  <span>{item.description}</span>
-                  <span>{formatCurrency(item.amount)}</span>
-                </div>
-              ))
-            ) : (
+            {analysis.lineItems.map((item, index) => (
+              <div key={index} className="flex justify-between text-sm">
+                <span>{item.description}</span>
+                <span>{formatCurrency(item.amount)}</span>
+              </div>
+            ))}
+            {analysis.lineItems.length === 0 && (
               <p className="text-sm text-gray-500">No line items found</p>
             )}
           </div>
@@ -270,14 +269,13 @@ const AnalysisResults = ({ analysis }: { analysis: BillAnalysis }) => (
         <div className="border-t pt-4 mt-4">
           <h4 className="font-medium mb-3">Other Charges</h4>
           <div className="space-y-2">
-            {analysis.charges && analysis.charges.length > 0 ? (
-              analysis.charges.map((charge, index) => (
-                <div key={index} className="flex justify-between text-sm">
-                  <span>{charge.description}</span>
-                  <span>{formatCurrency(charge.amount)}</span>
-                </div>
-              ))
-            ) : (
+            {analysis.charges.map((charge, index) => (
+              <div key={index} className="flex justify-between text-sm">
+                <span>{charge.description}</span>
+                <span>{formatCurrency(charge.amount)}</span>
+              </div>
+            ))}
+            {analysis.charges.length === 0 && (
               <p className="text-sm text-gray-500">No additional charges found</p>
             )}
           </div>
@@ -286,11 +284,11 @@ const AnalysisResults = ({ analysis }: { analysis: BillAnalysis }) => (
         <div className="border-t pt-4 mt-4">
           <div className="flex justify-between text-sm font-medium">
             <span>Subtotal (Line Items)</span>
-            <span>{formatCurrency(analysis.subtotals?.lineItems || 0)}</span>
+            <span>{formatCurrency(analysis.subtotals.lineItems)}</span>
           </div>
           <div className="flex justify-between text-sm font-medium mt-2">
             <span>Subtotal (Other Charges)</span>
-            <span>{formatCurrency(analysis.subtotals?.otherCharges || 0)}</span>
+            <span>{formatCurrency(analysis.subtotals.otherCharges)}</span>
           </div>
           <div className="flex justify-between text-base font-bold mt-4">
             <span>Total</span>
@@ -328,33 +326,32 @@ export function BillAnalyzer() {
       console.log('Analysis result:', result);
       
       if (result.error) {
-        // Error with no fallback data
         console.error('API returned error:', result.error);
         toast({
+          variant: "destructive",
           title: "Error analyzing bill",
-          description: result.error.message || "An unexpected error occurred",
-          variant: "destructive"
+          description: result.error.message || "An unexpected error occurred"
         });
-        throw new Error(result.error.message || "API error");
+        throw new Error(result.error.message);
       }
 
       if (!result.data) {
         console.error('No data in analysis result');
         toast({
+          variant: "destructive",
           title: "Error analyzing bill",
-          description: "No analysis data received",
-          variant: "destructive"
+          description: "No analysis data received"
         });
         throw new Error('No analysis data received');
       }
 
-      // Final validation check
-      if (typeof result.data.totalAmount === 'undefined') {
+      // Validate the response data structure
+      if (!result.data.totalAmount && result.data.totalAmount !== 0) {
         console.error('Invalid analysis data - missing totalAmount');
         toast({
+          variant: "destructive",
           title: "Error analyzing bill",
-          description: "The bill data could not be properly analyzed",
-          variant: "destructive"
+          description: "Failed to properly parse bill data"
         });
         throw new Error('Invalid analysis data structure');
       }

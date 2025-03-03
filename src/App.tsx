@@ -10,7 +10,7 @@ import { ContentArea } from './components/layouts/ContentArea';
 
 // Regular imports for main components
 import { QuoteCalculator } from './components/QuoteCalculator';
-import { BillAnalyzer } from './components/BillAnalyzer';
+import VerizonBillAnalyzer from './components/VerizonBillAnalyzer';
 import { CommissionCalculator } from './components/CommissionCalculator';
 import { PromotionsOverview } from './components/PromotionsOverview';
 
@@ -36,7 +36,7 @@ function Dashboard() {
         description="Welcome to your dashboard. Access all your tools and calculators here."
       />
       <ContentArea>
-        <BillAnalyzer />
+        <VerizonBillAnalyzer />
       </ContentArea>
     </>
   );
