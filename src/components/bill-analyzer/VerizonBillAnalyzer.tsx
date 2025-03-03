@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { BillUploader } from './BillUploader';
 import { BillAnalysisHeader } from './BillAnalysisHeader';
@@ -31,22 +30,11 @@ const VerizonBillAnalyzer = () => {
       const formData = new FormData();
       formData.append('file', file);
       
-      // Use the Supabase client directly from our imported client
-      const { data: functionUrl } = await supabase
-        .storage
-        .from('functions')
-        .getPublicUrl('analyze-verizon-bill');
-      
-      if (!functionUrl) {
-        throw new Error('Could not get URL for the analyze-verizon-bill function');
-      }
-      
-      // Call the bill analyzer function
       const response = await fetch('https://mgzfiouamidaqctnqnre.supabase.co/functions/v1/analyze-verizon-bill', {
         method: 'POST',
         body: formData,
         headers: {
-          'Authorization': `Bearer ${supabase.auth.getSession().then(({data}) => data.session?.access_token)}`
+          'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1nemZpb3VhbWlkYXFjdG5xbnJlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzkyMzE3NjQsImV4cCI6MjA1NDgwNzc2NH0._0hxm1UlSMt3wPx8JwaFDvGmpfjI3p5m0HDm6YfaL6Q'
         }
       });
       
@@ -89,15 +77,12 @@ const VerizonBillAnalyzer = () => {
     setIsLoading(true);
 
     try {
-      // Process the actual file
       const analysisResult = await processVerizonBill(file);
       
-      // Enhance the data with usage analysis, cost analysis, etc.
       const enhancedData = enhanceBillData(analysisResult);
       
       setBillData(enhancedData);
       
-      // Save the analysis to Supabase
       await saveBillAnalysis(enhancedData);
       
       toast.success("Bill analysis completed successfully!");
@@ -110,7 +95,6 @@ const VerizonBillAnalyzer = () => {
   };
   
   const enhanceBillData = (rawData: any) => {
-    // Add missing data that the edge function might not extract
     const enhancedData = {
       ...rawData,
       usageAnalysis: {
@@ -158,7 +142,6 @@ const VerizonBillAnalyzer = () => {
       }
     };
     
-    // Enhance phone lines with additional details if they were extracted
     if (enhancedData.phoneLines && enhancedData.phoneLines.length > 0) {
       enhancedData.phoneLines = enhancedData.phoneLines.map((line: any, index: number) => {
         const baseCost = 40 + (index * 5);
