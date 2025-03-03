@@ -1,16 +1,13 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { Plus, Info, ArrowLeftRight } from "lucide-react";
 import { ErrorBoundary } from "@/components/ui/error-boundary";
-import { LineItem } from "./quote-calculator/LineItem";
-import { QuoteResult } from "./quote-calculator/QuoteResult";
-import { PlanComparison } from "./quote-calculator/PlanComparison";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useQuoteState, MAX_ALLOWED_LINES } from "@/hooks/use-quote-state";
-import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from "@/components/ui/tooltip";
-import { useState } from "react";
+import { QuoteResult } from "./quote-calculator/QuoteResult";
+import { MilitaryDiscountBanner } from "./quote-calculator/MilitaryDiscountBanner";
+import { LineItemsList } from "./quote-calculator/LineItemsList";
+import { StreamingCostInput } from "./quote-calculator/StreamingCostInput";
+import { QuoteComparison } from "./quote-calculator/QuoteComparison";
 
 /**
  * Quote Calculator component for calculating plan prices with perks
@@ -32,9 +29,6 @@ export function QuoteCalculator() {
     setStreamingBill
   } = useQuoteState();
   
-  // Add state for showing/hiding the comparison
-  const [showComparison, setShowComparison] = useState(false);
-
   if (loading) {
     return (
       <Card>
@@ -78,11 +72,8 @@ export function QuoteCalculator() {
     perks: line.perks
   })) || [];
 
-  const handleToggleComparison = () => {
-    setShowComparison(!showComparison);
-  };
-
   const streamingBillValue = parseFloat(streamingBill) || 0;
+  const hasQuoteData = totalCalculation && totalCalculation.linePrices && totalCalculation.linePrices.length > 0;
 
   return (
     <ErrorBoundary>
@@ -92,66 +83,25 @@ export function QuoteCalculator() {
         </CardHeader>
         <CardContent>
           <div className="space-y-6">
-            <div className="flex items-center">
-              <Button 
-                variant="outline" 
-                className="w-full text-gray-400 cursor-not-allowed bg-gray-50"
-                disabled
-              >
-                Military Discount (Coming Soon)
-              </Button>
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Info className="ml-2 h-4 w-4 text-gray-400" />
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>Military discount feature is currently under development</p>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-            </div>
+            <MilitaryDiscountBanner />
 
-            <div className="mt-6 space-y-4">
-              {linePlans.map((linePlan, index) => (
-                <LineItem
-                  key={index}
-                  index={index}
-                  linePlan={linePlan}
-                  plans={availablePlans}
-                  allSelectedPerks={allSelectedPerks}
-                  onRemove={() => removeLine(index)}
-                  onPlanChange={(value) => updateLinePlan(index, value)}
-                  onPerksChange={(perks) => updateLinePerks(index, perks)}
-                  showRemoveButton={linePlans.length > 1}
-                />
-              ))}
+            <LineItemsList 
+              linePlans={linePlans}
+              availablePlans={availablePlans}
+              allSelectedPerks={allSelectedPerks}
+              onAddLine={addLine}
+              onRemoveLine={removeLine}
+              onUpdatePlan={updateLinePlan}
+              onUpdatePerks={updateLinePerks}
+              maxLines={MAX_ALLOWED_LINES}
+            />
 
-              <Button
-                variant="outline"
-                onClick={addLine}
-                className="w-full border-dashed"
-                disabled={linePlans.length >= MAX_ALLOWED_LINES}
-              >
-                <Plus className="h-4 w-4 mr-2" />
-                Add Line {linePlans.length >= MAX_ALLOWED_LINES && `(Maximum ${MAX_ALLOWED_LINES} lines)`}
-              </Button>
-            </div>
+            <StreamingCostInput 
+              value={streamingBill}
+              onChange={setStreamingBill}
+            />
 
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-gray-700">Current Monthly Streaming Cost</label>
-              <Input
-                type="number"
-                value={streamingBill}
-                onChange={(e) => setStreamingBill(e.target.value)}
-                placeholder="Enter monthly streaming cost"
-                min="0"
-                step="0.01"
-                className="mt-1"
-              />
-            </div>
-
-            {totalCalculation && totalCalculation.linePrices && totalCalculation.linePrices.length > 0 && (
+            {hasQuoteData && (
               <>
                 <QuoteResult
                   linePrices={totalCalculation.linePrices}
@@ -161,25 +111,12 @@ export function QuoteCalculator() {
                   breakdown={totalCalculation.breakdown}
                 />
                 
-                {/* Update compare button with alternative carriers */}
-                <Button 
-                  variant="outline" 
-                  className="w-full mt-4 border-blue-200 bg-blue-50 hover:bg-blue-100 text-blue-800"
-                  onClick={handleToggleComparison}
-                >
-                  <ArrowLeftRight className="h-4 w-4 mr-2" />
-                  {showComparison ? "Hide Comparison" : "Compare with Alternative Carriers"}
-                </Button>
-                
-                {/* Show comparison if toggled */}
-                {showComparison && (
-                  <PlanComparison 
-                    verizonPlans={verizonPlansForComparison}
-                    totalVerizonPrice={totalCalculation.total}
-                    streamingCost={streamingBillValue}
-                    onClose={() => setShowComparison(false)}
-                  />
-                )}
+                <QuoteComparison 
+                  hasQuoteData={hasQuoteData}
+                  verizonPlans={verizonPlansForComparison}
+                  totalVerizonPrice={totalCalculation.total}
+                  streamingCost={streamingBillValue}
+                />
               </>
             )}
           </div>
