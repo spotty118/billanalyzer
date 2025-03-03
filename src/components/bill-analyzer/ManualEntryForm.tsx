@@ -179,6 +179,7 @@ export function ManualEntryForm({ onSubmit }: ManualEntryFormProps) {
         details: {
           planCost: accountFees,
           planDiscount: 0,
+          planDiscountType: 'fixed', // Add the missing planDiscountType property
           devicePayment: 0,
           deviceCredit: 0,
           protection: 0,

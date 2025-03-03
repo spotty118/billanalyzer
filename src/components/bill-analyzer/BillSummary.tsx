@@ -1,5 +1,4 @@
-
-import { Wifi, PhoneCall, Clock, Tag, ChevronDown, ChevronRight, ArrowLeftRight, EyeOff } from 'lucide-react';
+import { Tag, ChevronDown, ChevronRight, ArrowLeftRight, EyeOff } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { Button } from "@/components/ui/button";
 
@@ -26,7 +25,6 @@ export function BillSummary({
 
   // Safely get values with fallbacks to prevent undefined errors
   const costAnalysis = billData.costAnalysis || {};
-  const usageAnalysis = billData.usageAnalysis || {};
   
   const averageMonthlyBill = costAnalysis.averageMonthlyBill || billData.totalAmount || 0;
   const projectedNextBill = costAnalysis.projectedNextBill || (billData.totalAmount * 1.05) || 0;
