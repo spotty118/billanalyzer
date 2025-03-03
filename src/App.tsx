@@ -10,7 +10,7 @@ import { ContentArea } from './components/layouts/ContentArea';
 
 // Regular imports for main components
 import { QuoteCalculator } from './components/QuoteCalculator';
-import VerizonBillAnalyzer from './components/VerizonBillAnalyzer';
+import VerizonBillAnalyzer from './components/bill-analyzer/VerizonBillAnalyzer';
 import { CommissionCalculator } from './components/CommissionCalculator';
 import { PromotionsOverview } from './components/PromotionsOverview';
 
