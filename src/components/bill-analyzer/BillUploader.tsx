@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Upload, FileText, AlertCircle } from 'lucide-react';
+import { Upload, FileText, AlertCircle, FilePdf } from 'lucide-react';
 
 interface BillUploaderProps {
   fileSelected: boolean;
@@ -24,6 +24,7 @@ export function BillUploader({
           </div>
           <h3 className="text-lg font-medium text-gray-700 mb-1">Analyzing your Verizon bill</h3>
           <p className="text-sm text-gray-500">This may take a few moments...</p>
+          <p className="text-xs text-gray-400 mt-6">We're extracting account details, phone lines, and charges</p>
         </div>
       ) : (
         <div className="flex flex-col items-center justify-center py-10">
@@ -40,7 +41,7 @@ export function BillUploader({
           
           <div className="mb-5">
             <div className="w-16 h-16 flex items-center justify-center bg-blue-100 rounded-full">
-              <FileText className="w-8 h-8 text-blue-500" />
+              <FilePdf className="w-8 h-8 text-blue-500" />
             </div>
           </div>
           
@@ -58,18 +59,21 @@ export function BillUploader({
             }`}
           >
             <Upload className="w-5 h-5 mr-2" />
-            {fileSelected ? "Bill selected" : "Select bill file"}
+            {fileSelected ? "Bill selected" : "Select Verizon PDF bill"}
             <input
               id="file-upload"
               type="file"
-              accept=".pdf,.txt,.html,.htm"
+              accept=".pdf"
               className="hidden"
               onChange={onFileChange}
             />
           </label>
           
           <p className="text-xs text-gray-400 mt-4">
-            Supported formats: PDF, TXT, HTML
+            For best results, upload the PDF version of your bill
+          </p>
+          <p className="text-xs text-gray-400 mt-1">
+            Your bill data is processed securely and not stored permanently
           </p>
         </div>
       )}

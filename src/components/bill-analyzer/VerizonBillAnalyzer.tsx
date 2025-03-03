@@ -46,7 +46,6 @@ const VerizonBillAnalyzer = () => {
       });
       
       console.log('Response status:', response.status);
-      console.log('Response headers:', Object.fromEntries(response.headers.entries()));
       
       if (!response.ok) {
         const responseText = await response.text();
@@ -64,6 +63,12 @@ const VerizonBillAnalyzer = () => {
       }
       
       const data = await response.json();
+      
+      // Validate the data
+      if (!data || !Array.isArray(data.phoneLines) || data.phoneLines.length === 0) {
+        throw new Error('The bill analysis did not return any valid phone lines data');
+      }
+      
       return data;
     } catch (error) {
       console.error('Error processing file:', error);
@@ -91,6 +96,13 @@ const VerizonBillAnalyzer = () => {
   const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
+    
+    // Verify file is a PDF
+    if (file.type !== 'application/pdf' && !file.name.toLowerCase().endsWith('.pdf')) {
+      setErrorMessage('Please upload a PDF file for best results');
+      toast.error('Please upload a PDF file for best results');
+      return;
+    }
     
     setFileSelected(true);
     setIsLoading(true);
@@ -122,6 +134,7 @@ const VerizonBillAnalyzer = () => {
   };
   
   const enhanceBillData = (rawData: any) => {
+    // Enhance the raw data with additional analysis that the API might not provide
     const enhancedData = {
       ...rawData,
       usageAnalysis: {
@@ -158,17 +171,10 @@ const VerizonBillAnalyzer = () => {
             estimatedSavings: 64.63
           }
         ]
-      },
-      chargesByCategory: {
-        plans: rawData.totalAmount * 0.4,
-        devices: rawData.totalAmount * 0.3,
-        protection: rawData.totalAmount * 0.05,
-        surcharges: rawData.totalAmount * 0.1,
-        taxes: rawData.totalAmount * 0.05,
-        other: rawData.totalAmount * 0.1
       }
     };
     
+    // Ensure the phone lines data is consistent and complete
     if (!enhancedData.phoneLines || !Array.isArray(enhancedData.phoneLines) || enhancedData.phoneLines.length === 0) {
       enhancedData.phoneLines = [
         {
@@ -203,8 +209,13 @@ const VerizonBillAnalyzer = () => {
         }
       ];
     } else {
+      // Ensure all phone lines have complete details
       enhancedData.phoneLines = enhancedData.phoneLines.map((line: any, index: number) => {
-        if (line.details) return line;
+        if (line.details && 
+            line.details.planCost !== undefined && 
+            line.details.planDiscount !== undefined) {
+          return line;
+        }
         
         const baseCost = 40 + (index * 5);
         const discount = index === 0 ? 10 : 5;
@@ -225,8 +236,9 @@ const VerizonBillAnalyzer = () => {
       });
     }
     
-    if (enhancedData.phoneLines.length > 5) {
-      enhancedData.phoneLines = enhancedData.phoneLines.slice(0, 5);
+    // Limit to a maximum of 8 phone lines to avoid excessive data
+    if (enhancedData.phoneLines.length > 8) {
+      enhancedData.phoneLines = enhancedData.phoneLines.slice(0, 8);
     }
     
     return enhancedData;
@@ -270,13 +282,13 @@ const VerizonBillAnalyzer = () => {
     );
   };
 
-  const prepareCurrentLineItemsData = () => {
+  function prepareCurrentLineItemsData() {
     return prepareLineItemsData(billData?.phoneLines);
-  };
+  }
 
-  const prepareCurrentCategoryData = () => {
+  function prepareCurrentCategoryData() {
     return prepareCategoryData(billData?.chargesByCategory);
-  };
+  }
 
   return (
     <div className="flex flex-col w-full max-w-6xl mx-auto bg-white rounded-lg shadow">
