@@ -1,3 +1,4 @@
+
 import { formatCurrency } from "@/data/verizonPlans";
 
 export interface CarrierPlan {
@@ -19,7 +20,7 @@ export interface CarrierPlan {
   };
   features: string[];
   streamingPerks: string[];
-  streamingQuality: '480p' | '720p' | '1080p' | '4K';
+  streamingQuality: '480p' | '720p' | '1080p' | '4K' | 'QHD';
   network: 'Verizon' | 'T-Mobile' | 'Both' | 'AT&T' | 'Proprietary';
   iconName: string;
   discountType?: 'percentage' | 'fixed';
@@ -28,15 +29,15 @@ export interface CarrierPlan {
 
 // Alternative Carrier plans
 export const alternativeCarrierPlans: CarrierPlan[] = [
-  // DarkStar carrier plans (now under US Mobile)
+  // DarkStar carrier plans (AT&T)
   {
-    id: 'darkstar-galactic',
+    id: 'darkstar-premium',
     carrierId: 'darkstar',
     carrierName: 'US Mobile DarkStar',
-    name: 'Galactic Unlimited',
-    basePrice: 50,
+    name: 'Unlimited Premium',
+    basePrice: 44,
     pricePerLine: {
-      line1: 50,
+      line1: 44,
       line2: 35,
       line3: 25,
       line4: 20, 
@@ -44,102 +45,93 @@ export const alternativeCarrierPlans: CarrierPlan[] = [
     },
     dataAllowance: {
       premium: 'unlimited',
-      hotspot: 75,
+      hotspot: 'unlimited',
     },
     features: [
-      "Unlimited priority data",
-      "Global roaming in 150+ countries",
-      "200GB cloud storage",
-      "75GB hotspot data",
-      "Priority network access",
-      "Unlimited talk and text worldwide"
+      "Truly unlimited, never-throttled premium data (QCI-8)",
+      "Unlimited hotspot access",
+      "20GB international roaming (90+ countries)",
+      "Free network transfers (Teleport)",
+      "Annual option: $390/year ($32.50/mo)",
+      "Priority network access"
     ],
     streamingPerks: [
-      "Netflix Premium",
-      "Disney+ Bundle",
-      "Apple Music",
-      "Amazon Prime",
-      "All streaming perks with 2+ lines"
+      "Multi-network add-on (free until March 31)",
+      "Free Maestro 3 smartphone with 3-month subscription"
     ],
-    streamingQuality: '4K',
+    streamingQuality: 'QHD',
     network: 'AT&T',
     iconName: 'Star',
     discountType: 'percentage',
     discountValue: 15
   },
-  // Warp carrier plans (now under US Mobile)
+  // Warp carrier plans (Verizon)
   {
-    id: 'warp-hyperdrive',
+    id: 'warp-premium',
     carrierId: 'warp',
     carrierName: 'US Mobile Warp',
-    name: 'Hyperdrive Plus',
-    basePrice: 40,
+    name: 'Unlimited Premium',
+    basePrice: 44,
     pricePerLine: {
-      line1: 40,
-      line2: 30,
-      line3: 20,
-      line4: 15, 
-      line5Plus: 15,
+      line1: 44,
+      line2: 35,
+      line3: 25,
+      line4: 20, 
+      line5Plus: 18,
     },
     dataAllowance: {
-      premium: 'unlimited',
-      hotspot: 40,
+      premium: 100,
+      hotspot: 50,
     },
     features: [
-      "Unlimited high-speed data",
-      "Regional roaming",
-      "50GB cloud storage",
-      "40GB hotspot data",
-      "Enhanced 5G coverage",
-      "Unlimited talk and text"
+      "100GB of prioritized premium data (5G devices)",
+      "50GB hotspot data",
+      "Automatic data prioritization",
+      "Free network transfers (Teleport)",
+      "Annual option: $390/year ($32.50/mo)",
+      "Optimized speeds during heavy usage"
     ],
     streamingPerks: [
-      "Hulu",
-      "Spotify",
-      "Choose 2 perks with any plan"
+      "Multi-network add-on (free until March 31)",
+      "Free Maestro 3 smartphone with 3-month subscription"
     ],
     streamingQuality: '1080p',
     network: 'Verizon',
     iconName: 'Zap'
   },
-  // Lightspeed carrier plans (now under US Mobile)
+  // Lightspeed carrier plans (T-Mobile)
   {
-    id: 'lightspeed-photon',
+    id: 'lightspeed-premium',
     carrierId: 'lightspeed',
     carrierName: 'US Mobile LightSpeed',
-    name: 'Photon Unlimited',
-    basePrice: 55,
+    name: 'Unlimited Premium',
+    basePrice: 44,
     pricePerLine: {
-      line1: 55,
-      line2: 40,
-      line3: 30,
-      line4: 25, 
-      line5Plus: 22,
+      line1: 44,
+      line2: 35,
+      line3: 25,
+      line4: 20, 
+      line5Plus: 18,
     },
     dataAllowance: {
       premium: 'unlimited',
-      hotspot: 100,
+      hotspot: 50,
     },
     features: [
-      "Unlimited premium data",
-      "Worldwide roaming",
-      "500GB cloud storage",
-      "100GB hotspot data",
-      "Ultra-fast 5G+ access",
-      "Unlimited talk, text and data globally"
+      "High-speed data (deprioritized during congestion)",
+      "50GB hotspot data",
+      "Robust urban coverage",
+      "Free network transfers (Teleport)",
+      "Annual option: $390/year ($32.50/mo)",
+      "Unlimited talk, text and data"
     ],
     streamingPerks: [
-      "HBO Max",
-      "YouTube Premium",
-      "Peacock Premium",
-      "Apple TV+",
-      "All streaming perks included"
+      "Multi-network add-on (free until March 31)",
+      "Free Maestro 3 smartphone with 3-month subscription"
     ],
-    streamingQuality: '4K',
+    streamingQuality: '1080p',
     network: 'T-Mobile',
-    iconName: 'Lightbulb',
-    discountType: 'fixed',
-    discountValue: 8
+    iconName: 'Lightbulb'
   }
 ];
 
@@ -176,17 +168,16 @@ export function formatCarrierPlanPrice(plan: CarrierPlan, numberOfLines: number)
 
 export function findBestCarrierMatch(verizonPlanName: string, carrierId: string): string {
   // Match Verizon plans to their closest equivalent in the specified carrier
-  const planName = verizonPlanName.toLowerCase();
   
   // Filter plans by carrier
   const carrierPlans = alternativeCarrierPlans.filter(plan => plan.carrierId === carrierId);
   
   if (carrierId === 'darkstar') {
-    return 'darkstar-galactic';
+    return 'darkstar-premium';
   } else if (carrierId === 'warp') {
-    return 'warp-hyperdrive';
+    return 'warp-premium';
   } else if (carrierId === 'lightspeed') {
-    return 'lightspeed-photon';
+    return 'lightspeed-premium';
   }
   
   // Default to the first plan of the carrier if no match is found
