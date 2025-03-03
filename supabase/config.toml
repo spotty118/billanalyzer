@@ -4,8 +4,8 @@ project_id = "mgzfiouamidaqctnqnre"
 [functions.analyze-bill]
 verify_jwt = false
 
-[[functions.analyze-bill.domains]]
-domain = "*"
-allowed_methods = ["GET", "POST", "OPTIONS"]
-allowed_headers = ["Content-Type", "Authorization", "x-client-info", "apikey"]
-exposed_headers = []
+# Define CORS configuration using the correct format
+[functions.analyze-bill.headers]
+Access-Control-Allow-Origin = "*"
+Access-Control-Allow-Methods = ["GET", "POST", "OPTIONS"]
+Access-Control-Allow-Headers = ["Content-Type", "Authorization", "x-client-info", "apikey"]
