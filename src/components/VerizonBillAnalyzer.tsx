@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { Check, DollarSign, AlertCircle, PhoneCall, Smartphone, Tablet, Wifi, Clock, Tag, ChevronRight, ChevronDown } from 'lucide-react';
@@ -165,7 +166,8 @@ const VerizonBillAnalyzer = () => {
 
   const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#A28DFF', '#FF6B6B'];
 
-  const formatCurrency = (value) => {
+  // Fix TS error: Add proper type for value
+  const formatCurrency = (value: number): string => {
     return `$${value.toFixed(2)}`;
   };
 
@@ -288,7 +290,8 @@ const VerizonBillAnalyzer = () => {
                               <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                             ))}
                           </Pie>
-                          <Tooltip formatter={(value) => [`$${value.toFixed(2)}`, null]} />
+                          {/* Fix TS error: Use Number to ensure we have a number before calling toFixed */}
+                          <Tooltip formatter={(value) => [`$${Number(value).toFixed(2)}`, null]} />
                         </PieChart>
                       </ResponsiveContainer>
                     </div>
