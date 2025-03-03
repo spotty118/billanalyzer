@@ -121,7 +121,7 @@ export function PlanComparison({
             const hotspotBetter = 
               (carrierHotspot === 'unlimited')
                 ? 'carrier'
-                : (typeof carrierHotspot === 'number' && carrierHotspot > verizonHotspot)
+                : (typeof carrierHotspot === 'number' && typeof verizonHotspot === 'number' && carrierHotspot > verizonHotspot)
                   ? 'carrier'
                   : 'verizon';
             

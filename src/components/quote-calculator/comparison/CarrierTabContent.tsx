@@ -24,6 +24,15 @@ interface CarrierTabContentProps {
       premium: string | number;
       hotspot?: number | 'unlimited';
     };
+    basePrice?: number;
+    pricePerLine?: {
+      line1: number;
+      line2: number;
+      line3: number;
+      line4: number;
+      line5Plus: number;
+    };
+    annualPrice?: number;
   };
   totalVerizonPrice: number;
   carrierTotalPrice: number;
@@ -53,6 +62,14 @@ export function CarrierTabContent({
   perksBetter,
   formatCurrency
 }: CarrierTabContentProps) {
+  // Calculate the price per line for display purposes
+  const pricePerLine = carrierPlan.pricePerLine ? 
+    (numberOfLines <= 1 ? carrierPlan.pricePerLine.line1 : 
+     numberOfLines === 2 ? carrierPlan.pricePerLine.line2 :
+     numberOfLines === 3 ? carrierPlan.pricePerLine.line3 :
+     numberOfLines === 4 ? carrierPlan.pricePerLine.line4 :
+     carrierPlan.pricePerLine.line5Plus) : 0;
+
   return (
     <>
       <div className="grid grid-cols-3 gap-4">
@@ -62,6 +79,8 @@ export function CarrierTabContent({
           carrierPlan={carrierPlan}
           streamingCost={streamingCost}
           formatCurrency={formatCurrency}
+          pricePerLine={pricePerLine}
+          annualPrice={carrierPlan.annualPrice}
         />
         
         <MonthlyCostComparison
