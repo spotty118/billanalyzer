@@ -93,6 +93,9 @@ serve(async (req) => {
       );
     }
 
+    // Remove Talk Activity section before processing
+    fileContent = removeTalkActivitySection(fileContent);
+
     // Process the file content
     const analysisResult = await analyzeVerizonBill(fileContent);
     console.log("Analysis completed successfully");
@@ -112,6 +115,31 @@ serve(async (req) => {
     );
   }
 });
+
+// Function to remove Talk Activity section
+function removeTalkActivitySection(fileContent: string): string {
+  try {
+    // Find and remove Talk Activity section using various patterns
+    const talkActivityPatterns = [
+      /Talk\s+Activity[\s\S]*?(?=(\r?\n\s*\r?\n|$))/gi,
+      /Call\s+Details[\s\S]*?(?=(\r?\n\s*\r?\n|$))/gi,
+      /Call\s+Log[\s\S]*?(?=(\r?\n\s*\r?\n|$))/gi,
+      /Usage\s+Details[\s\S]*?(?=(\r?\n\s*\r?\n|$))/gi
+    ];
+    
+    let cleanedContent = fileContent;
+    for (const pattern of talkActivityPatterns) {
+      cleanedContent = cleanedContent.replace(pattern, '');
+    }
+    
+    console.log("Removed Talk Activity section from content");
+    return cleanedContent;
+  } catch (error) {
+    console.error("Error removing Talk Activity section:", error);
+    // If there's an error, return the original content
+    return fileContent;
+  }
+}
 
 async function analyzeVerizonBill(fileContent: string) {
   console.log("Analyzing Verizon bill...");
