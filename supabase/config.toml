@@ -1,0 +1,4 @@
+
+project_id = "mgzfiouamidaqctnqnre"
+[functions.analyze-bill]
+verify_jwt = false

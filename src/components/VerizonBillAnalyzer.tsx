@@ -228,9 +228,10 @@ export function VerizonBillAnalyzer() {
           title: "Error analyzing bill",
           description: result.error.message || "An unexpected error occurred"
         });
-        throw new Error(result.error.message);
+        throw new Error(result.error.message || "Error analyzing bill");
       }
 
+      // Check if data exists in the response
       if (!result.data) {
         console.error('No data in analysis result');
         toast({
