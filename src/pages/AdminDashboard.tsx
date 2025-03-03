@@ -1,10 +1,14 @@
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useQuery } from "@tanstack/react-query";
 import { getPlans } from "@/data/verizonPlans";
-import { RefreshCw } from "lucide-react";
+import { RefreshCw, FileSpreadsheet, PieChart } from "lucide-react";
 import { useState } from "react";
 import { toast } from "@/components/ui/use-toast";
+import { supabase } from "@/integrations/supabase/client";
+import { BillBreakdownChart } from "@/components/dashboard/BillBreakdownChart";
+import { RecentBillsTable } from "@/components/dashboard/RecentBillsTable";
 
 function Dashboard() {
   const { 
@@ -18,23 +22,42 @@ function Dashboard() {
     staleTime: 5 * 60 * 1000,
   });
 
+  const {
+    data: bills,
+    isLoading: loadingBills,
+    refetch: refetchBills
+  } = useQuery({
+    queryKey: ["bill_analyses"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('bill_analyses')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(5);
+      
+      if (error) throw error;
+      return data;
+    },
+    retry: false,
+    staleTime: 5 * 60 * 1000,
+  });
+
   const [refreshing, setRefreshing] = useState(false);
 
   const handleRefreshData = async () => {
     setRefreshing(true);
     try {
-      await refetchPlans();
+      await Promise.all([refetchPlans(), refetchBills()]);
       toast({
         title: "Data Refreshed",
         description: "The data has been successfully refreshed.",
-        status: "success",
       });
     } catch (error) {
       console.error("Error refreshing data:", error);
       toast({
         title: "Error",
         description: "Failed to refresh data. Please try again later.",
-        status: "error",
+        variant: "destructive",
       });
     } finally {
       setRefreshing(false);
@@ -46,6 +69,11 @@ function Dashboard() {
     acc[plan.type] = (acc[plan.type] || 0) + 1;
     return acc;
   }, {} as Record<string, number>) || {};
+
+  // Calculate average bill amount
+  const averageBillAmount = bills?.length 
+    ? bills.reduce((sum, bill) => sum + Number(bill.total_amount), 0) / bills.length 
+    : 0;
 
   return (
     <div className="space-y-6">
@@ -61,7 +89,7 @@ function Dashboard() {
         </Button>
       </div>
       
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <Card>
           <CardHeader>
             <CardTitle>Available Plans</CardTitle>
@@ -71,6 +99,34 @@ function Dashboard() {
               <p className="text-gray-500">Loading...</p>
             ) : (
               <p className="text-2xl font-bold">{plans?.length || 0}</p>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Recent Bills</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {loadingBills ? (
+              <p className="text-gray-500">Loading...</p>
+            ) : (
+              <p className="text-2xl font-bold">{bills?.length || 0}</p>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Avg. Bill Amount</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {loadingBills ? (
+              <p className="text-gray-500">Loading...</p>
+            ) : (
+              <p className="text-2xl font-bold">
+                ${averageBillAmount.toFixed(2)}
+              </p>
             )}
           </CardContent>
         </Card>
@@ -98,8 +154,8 @@ function Dashboard() {
           </CardContent>
         </Card>
 
-        <Card className="md:col-span-2">
-          <CardHeader>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle>Quick Actions</CardTitle>
           </CardHeader>
           <CardContent>
@@ -113,7 +169,52 @@ function Dashboard() {
                 <RefreshCw className={`h-4 w-4 mr-2 ${refreshing ? "animate-spin" : ""}`} />
                 {refreshing ? "Refreshing..." : "Refresh All Data"}
               </Button>
+              <Button 
+                variant="outline" 
+                className="w-full justify-start" 
+                onClick={() => window.location.href = "/bill-analyzer"}
+              >
+                <FileSpreadsheet className="h-4 w-4 mr-2" />
+                Bill Analyzer
+              </Button>
             </div>
+          </CardContent>
+        </Card>
+        
+        {/* Bill Breakdown Chart Card */}
+        <Card className="md:col-span-3">
+          <CardHeader className="flex flex-row items-center justify-between">
+            <CardTitle>Bill Breakdown by Category</CardTitle>
+            <PieChart className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            {loadingBills ? (
+              <div className="h-[300px] flex items-center justify-center">
+                <p className="text-gray-500">Loading...</p>
+              </div>
+            ) : bills && bills.length > 0 ? (
+              <BillBreakdownChart bills={bills} />
+            ) : (
+              <div className="h-[300px] flex items-center justify-center">
+                <p className="text-gray-500">No bill data available</p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Recent Bills Table */}
+        <Card className="md:col-span-3">
+          <CardHeader>
+            <CardTitle>Recent Bills</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {loadingBills ? (
+              <p className="text-gray-500">Loading...</p>
+            ) : bills && bills.length > 0 ? (
+              <RecentBillsTable bills={bills} />
+            ) : (
+              <p className="text-gray-500">No recent bills available</p>
+            )}
           </CardContent>
         </Card>
       </div>
