@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Plus, Trash, Save } from 'lucide-react';
+import { Plus, Trash, Save, Percent, DollarSign } from 'lucide-react';
 
 interface LineCharge {
   phoneNumber: string;
@@ -12,6 +12,7 @@ interface LineCharge {
   planName: string;
   planCost: number;
   planDiscount: number;
+  planDiscountType: 'fixed' | 'percentage';
   devicePayment: number;
   deviceCredit: number;
   protection: number;
@@ -32,6 +33,7 @@ interface ManualEntryFormProps {
       details: {
         planCost: number;
         planDiscount: number;
+        planDiscountType?: 'fixed' | 'percentage';
         devicePayment: number;
         deviceCredit: number;
         protection: number;
@@ -54,6 +56,7 @@ export function ManualEntryForm({ onSubmit }: ManualEntryFormProps) {
       planName: 'Unlimited Plus',
       planCost: 80,
       planDiscount: 0,
+      planDiscountType: 'fixed',
       devicePayment: 0,
       deviceCredit: 0,
       protection: 0,
@@ -78,6 +81,7 @@ export function ManualEntryForm({ onSubmit }: ManualEntryFormProps) {
       planName: 'Unlimited Plus',
       planCost: 80,
       planDiscount: 0,
+      planDiscountType: 'fixed',
       devicePayment: 0,
       deviceCredit: 0,
       protection: 0,
@@ -92,11 +96,15 @@ export function ManualEntryForm({ onSubmit }: ManualEntryFormProps) {
     setLines(updatedLines);
   };
 
-  const updateLine = (index: number, field: keyof LineCharge, value: string | number) => {
+  const updateLine = (index: number, field: keyof LineCharge, value: string | number | 'fixed' | 'percentage') => {
     const updatedLines = [...lines];
     updatedLines[index] = {
       ...updatedLines[index],
-      [field]: typeof value === 'string' && field !== 'phoneNumber' && field !== 'deviceName' && field !== 'planName' 
+      [field]: typeof value === 'string' && 
+               field !== 'phoneNumber' && 
+               field !== 'deviceName' && 
+               field !== 'planName' &&
+               field !== 'planDiscountType'
         ? parseFloat(value) || 0 
         : value
     };
@@ -104,9 +112,13 @@ export function ManualEntryForm({ onSubmit }: ManualEntryFormProps) {
   };
 
   const calculateLineTotal = (line: LineCharge): number => {
+    const planDiscountAmount = line.planDiscountType === 'percentage' 
+      ? line.planCost * (line.planDiscount / 100)
+      : line.planDiscount;
+      
     return (
       line.planCost - 
-      line.planDiscount + 
+      planDiscountAmount + 
       line.devicePayment - 
       line.deviceCredit + 
       line.protection + 
@@ -120,6 +132,12 @@ export function ManualEntryForm({ onSubmit }: ManualEntryFormProps) {
     return includeAccountFees ? linesTotal + accountFees : linesTotal;
   };
 
+  const toggleDiscountType = (index: number) => {
+    const updatedLines = [...lines];
+    updatedLines[index].planDiscountType = updatedLines[index].planDiscountType === 'fixed' ? 'percentage' : 'fixed';
+    setLines(updatedLines);
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -127,21 +145,28 @@ export function ManualEntryForm({ onSubmit }: ManualEntryFormProps) {
       accountNumber: accountNumber || 'Manual Entry',
       billingPeriod: billingPeriod || new Date().toLocaleDateString(),
       totalAmount: calculateBillTotal(),
-      phoneLines: lines.map(line => ({
-        phoneNumber: line.phoneNumber || 'Unknown',
-        deviceName: line.deviceName || 'Smartphone',
-        planName: line.planName,
-        monthlyTotal: calculateLineTotal(line),
-        details: {
-          planCost: line.planCost,
-          planDiscount: line.planDiscount,
-          devicePayment: line.devicePayment,
-          deviceCredit: line.deviceCredit,
-          protection: line.protection,
-          surcharges: line.surcharges,
-          taxes: line.taxes
-        }
-      }))
+      phoneLines: lines.map(line => {
+        const planDiscountAmount = line.planDiscountType === 'percentage' 
+          ? line.planCost * (line.planDiscount / 100)
+          : line.planDiscount;
+          
+        return {
+          phoneNumber: line.phoneNumber || 'Unknown',
+          deviceName: line.deviceName || 'Smartphone',
+          planName: line.planName,
+          monthlyTotal: calculateLineTotal(line),
+          details: {
+            planCost: line.planCost,
+            planDiscount: planDiscountAmount,
+            planDiscountType: line.planDiscountType,
+            devicePayment: line.devicePayment,
+            deviceCredit: line.deviceCredit,
+            protection: line.protection,
+            surcharges: line.surcharges,
+            taxes: line.taxes
+          }
+        };
+      })
     };
 
     if (includeAccountFees && accountFees > 0) {
@@ -290,14 +315,28 @@ export function ManualEntryForm({ onSubmit }: ManualEntryFormProps) {
                 </div>
                 
                 <div className="space-y-2">
-                  <label className="text-sm font-medium">Plan Discount ($)</label>
-                  <Input 
-                    type="number"
-                    value={line.planDiscount.toString()}
-                    onChange={e => updateLine(index, 'planDiscount', e.target.value)}
-                    placeholder="0.00"
-                    step="0.01"
-                  />
+                  <label className="text-sm font-medium">Plan Discount</label>
+                  <div className="flex">
+                    <Input 
+                      type="number"
+                      value={line.planDiscount.toString()}
+                      onChange={e => updateLine(index, 'planDiscount', e.target.value)}
+                      placeholder="0.00"
+                      step="0.01"
+                      className="rounded-r-none"
+                    />
+                    <Button 
+                      type="button"
+                      variant="outline"
+                      className="rounded-l-none border-l-0"
+                      onClick={() => toggleDiscountType(index)}
+                    >
+                      {line.planDiscountType === 'fixed' ? <DollarSign className="h-4 w-4" /> : <Percent className="h-4 w-4" />}
+                    </Button>
+                  </div>
+                  <p className="text-xs text-gray-500">
+                    {line.planDiscountType === 'fixed' ? 'Fixed $ amount' : 'Percentage %'}
+                  </p>
                 </div>
                 
                 <div className="space-y-2">

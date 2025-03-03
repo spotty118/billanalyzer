@@ -1,5 +1,5 @@
 
-import { Wifi, PhoneCall, Clock, Tag, ChevronDown, ChevronRight, ArrowLeftRight } from 'lucide-react';
+import { Wifi, PhoneCall, Clock, Tag, ChevronDown, ChevronRight, ArrowLeftRight, EyeOff } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { Button } from "@/components/ui/button";
 
@@ -31,11 +31,6 @@ export function BillSummary({
   const averageMonthlyBill = costAnalysis.averageMonthlyBill || billData.totalAmount || 0;
   const projectedNextBill = costAnalysis.projectedNextBill || (billData.totalAmount * 1.05) || 0;
   const potentialSavings = costAnalysis.potentialSavings || [];
-  
-  const usageTrend = usageAnalysis.trend || 'stable';
-  const avgDataUsage = usageAnalysis.avg_data_usage_gb || 0;
-  const avgTalkMinutes = usageAnalysis.avg_talk_minutes || 0;
-  const avgTextMessages = usageAnalysis.avg_text_messages || 0;
 
   return (
     <div className="space-y-8">
@@ -56,7 +51,7 @@ export function BillSummary({
                 <Legend />
                 <Bar dataKey="plan" name="Plan" stackId="a" fill="#0088FE" />
                 <Bar dataKey="device" name="Device" stackId="a" fill="#00C49F" />
-                <Bar dataKey="protection" name="Protection" stackId="a" fill="#FFBB28" />
+                <Bar dataKey="protection" name="Protection" stackId="a" fill="#FF8042" />
                 <Bar dataKey="taxes" name="Taxes & Fees" stackId="a" fill="#FF8042" />
               </BarChart>
             </ResponsiveContainer>
@@ -93,36 +88,30 @@ export function BillSummary({
       <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
         <div className="flex justify-between items-center mb-4">
           <h3 className="font-bold text-lg">Usage Insights</h3>
-          <div className={`px-3 py-1 rounded-full text-sm font-medium ${
-            usageTrend === 'stable' ? 'bg-green-100 text-green-800' :
-            usageTrend === 'increasing' ? 'bg-yellow-100 text-yellow-800' :
-            'bg-blue-100 text-blue-800'
-          }`}>
-            {usageTrend === 'stable' ? 'Stable Usage' :
-             usageTrend === 'increasing' ? 'Increasing Usage' :
-             'Decreasing Usage'}
+          <div className="px-3 py-1 rounded-full text-sm font-medium bg-gray-100 text-gray-500">
+            Coming Soon
           </div>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 opacity-50">
           <div className="flex items-center p-4 bg-gray-50 rounded-lg">
-            <Wifi className="w-10 h-10 text-blue-500 mr-4" />
+            <EyeOff className="w-10 h-10 text-gray-400 mr-4" />
             <div>
-              <p className="text-sm text-gray-500">Avg. Data Usage</p>
-              <p className="text-xl font-semibold">{avgDataUsage} GB</p>
+              <p className="text-sm text-gray-500">Data Usage</p>
+              <p className="text-xl font-semibold">Coming Soon</p>
             </div>
           </div>
           <div className="flex items-center p-4 bg-gray-50 rounded-lg">
-            <PhoneCall className="w-10 h-10 text-blue-500 mr-4" />
+            <EyeOff className="w-10 h-10 text-gray-400 mr-4" />
             <div>
-              <p className="text-sm text-gray-500">Avg. Talk Minutes</p>
-              <p className="text-xl font-semibold">{avgTalkMinutes} mins</p>
+              <p className="text-sm text-gray-500">Talk Minutes</p>
+              <p className="text-xl font-semibold">Coming Soon</p>
             </div>
           </div>
           <div className="flex items-center p-4 bg-gray-50 rounded-lg">
-            <Clock className="w-10 h-10 text-blue-500 mr-4" />
+            <EyeOff className="w-10 h-10 text-gray-400 mr-4" />
             <div>
-              <p className="text-sm text-gray-500">Avg. Text Messages</p>
-              <p className="text-xl font-semibold">{avgTextMessages}</p>
+              <p className="text-sm text-gray-500">Text Messages</p>
+              <p className="text-xl font-semibold">Coming Soon</p>
             </div>
           </div>
         </div>

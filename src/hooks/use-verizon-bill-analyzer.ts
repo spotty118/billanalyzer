@@ -293,7 +293,9 @@ export const useVerizonBillAnalyzer = () => {
     
     phoneLines.forEach(line => {
       if (line.details) {
-        planCharges += (line.details.planCost || 0) - (line.details.planDiscount || 0);
+        let planDiscount = line.details.planDiscount || 0;
+        
+        planCharges += (line.details.planCost || 0) - planDiscount;
         devicePayments += (line.details.devicePayment || 0) - (line.details.deviceCredit || 0);
         protectionCharges += line.details.protection || 0;
         taxes += (line.details.surcharges || 0) + (line.details.taxes || 0);
