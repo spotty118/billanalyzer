@@ -31,20 +31,22 @@ export function QuoteComparison({
     <>
       <Button 
         variant="outline" 
-        className="w-full mt-4 border-blue-200 bg-blue-50 hover:bg-blue-100 text-blue-800"
+        className="w-full mt-6 border-blue-200 bg-gradient-to-r from-blue-50 to-blue-100 hover:from-blue-100 hover:to-blue-200 text-blue-800 py-6 rounded-lg shadow-sm transition-all duration-300"
         onClick={() => setShowComparison(!showComparison)}
       >
-        <ArrowLeftRight className="h-4 w-4 mr-2" />
+        <ArrowLeftRight className="h-5 w-5 mr-2" />
         {showComparison ? "Hide Comparison" : "Compare with Alternative Carriers"}
       </Button>
       
       {showComparison && (
-        <PlanComparison 
-          verizonPlans={verizonPlans}
-          totalVerizonPrice={totalVerizonPrice}
-          streamingCost={streamingCost}
-          onClose={() => setShowComparison(false)}
-        />
+        <div className="mt-4 animate-in fade-in duration-300">
+          <PlanComparison 
+            verizonPlans={verizonPlans}
+            totalVerizonPrice={totalVerizonPrice}
+            streamingCost={streamingCost}
+            onClose={() => setShowComparison(false)}
+          />
+        </div>
       )}
     </>
   );
