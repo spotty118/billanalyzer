@@ -88,8 +88,8 @@ export const useVerizonBillAnalyzer = () => {
         avg_text_messages: 85
       },
       costAnalysis: {
-        averageMonthlyBill: rawData.totalAmount,
-        projectedNextBill: rawData.totalAmount * 1.05,
+        averageMonthlyBill: rawData.totalAmount || 0,
+        projectedNextBill: (rawData.totalAmount || 0) * 1.05,
         unusualCharges: [],
         potentialSavings: [
           { description: "Switch to autopay discount", estimatedSaving: 50.00 },
@@ -227,6 +227,8 @@ export const useVerizonBillAnalyzer = () => {
       setIsLoading(true);
       setErrorMessage(null);
       
+      const chargesByCategory = calculateChargesByCategory(manualData.phoneLines);
+      
       const enhancedData = {
         ...manualData,
         billVersion: 'Manual Entry v1.0',
@@ -236,6 +238,15 @@ export const useVerizonBillAnalyzer = () => {
           avg_data_usage_gb: 15.2,
           avg_talk_minutes: 110,
           avg_text_messages: 75
+        },
+        costAnalysis: {
+          averageMonthlyBill: manualData.totalAmount,
+          projectedNextBill: manualData.totalAmount * 1.05,
+          unusualCharges: [],
+          potentialSavings: [
+            { description: "Switch to autopay discount", estimatedSaving: 10.00 },
+            { description: "Consolidate streaming services", estimatedSaving: 15.00 }
+          ]
         },
         planRecommendation: {
           recommendedPlan: "Unlimited Plus",
@@ -256,7 +267,7 @@ export const useVerizonBillAnalyzer = () => {
             }
           ]
         },
-        chargesByCategory: calculateChargesByCategory(manualData.phoneLines)
+        chargesByCategory
       };
       
       setBillData(enhancedData);

@@ -24,6 +24,15 @@ export function BillSummary({
 }: BillSummaryProps) {
   const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#A28DFF', '#FF6B6B'];
 
+  // Safely get values with fallbacks to prevent undefined errors
+  const averageMonthlyBill = billData.costAnalysis?.averageMonthlyBill || billData.totalAmount || 0;
+  const projectedNextBill = billData.costAnalysis?.projectedNextBill || (billData.totalAmount * 1.05) || 0;
+  const potentialSavings = billData.costAnalysis?.potentialSavings || [];
+  const usageTrend = billData.usageAnalysis?.trend || 'stable';
+  const avgDataUsage = billData.usageAnalysis?.avg_data_usage_gb || 0;
+  const avgTalkMinutes = billData.usageAnalysis?.avg_talk_minutes || 0;
+  const avgTextMessages = billData.usageAnalysis?.avg_text_messages || 0;
+
   return (
     <div className="space-y-8">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -81,12 +90,12 @@ export function BillSummary({
         <div className="flex justify-between items-center mb-4">
           <h3 className="font-bold text-lg">Usage Insights</h3>
           <div className={`px-3 py-1 rounded-full text-sm font-medium ${
-            billData.usageAnalysis.trend === 'stable' ? 'bg-green-100 text-green-800' :
-            billData.usageAnalysis.trend === 'increasing' ? 'bg-yellow-100 text-yellow-800' :
+            usageTrend === 'stable' ? 'bg-green-100 text-green-800' :
+            usageTrend === 'increasing' ? 'bg-yellow-100 text-yellow-800' :
             'bg-blue-100 text-blue-800'
           }`}>
-            {billData.usageAnalysis.trend === 'stable' ? 'Stable Usage' :
-             billData.usageAnalysis.trend === 'increasing' ? 'Increasing Usage' :
+            {usageTrend === 'stable' ? 'Stable Usage' :
+             usageTrend === 'increasing' ? 'Increasing Usage' :
              'Decreasing Usage'}
           </div>
         </div>
@@ -95,21 +104,21 @@ export function BillSummary({
             <Wifi className="w-10 h-10 text-blue-500 mr-4" />
             <div>
               <p className="text-sm text-gray-500">Avg. Data Usage</p>
-              <p className="text-xl font-semibold">{billData.usageAnalysis.avg_data_usage_gb} GB</p>
+              <p className="text-xl font-semibold">{avgDataUsage} GB</p>
             </div>
           </div>
           <div className="flex items-center p-4 bg-gray-50 rounded-lg">
             <PhoneCall className="w-10 h-10 text-blue-500 mr-4" />
             <div>
               <p className="text-sm text-gray-500">Avg. Talk Minutes</p>
-              <p className="text-xl font-semibold">{billData.usageAnalysis.avg_talk_minutes} mins</p>
+              <p className="text-xl font-semibold">{avgTalkMinutes} mins</p>
             </div>
           </div>
           <div className="flex items-center p-4 bg-gray-50 rounded-lg">
             <Clock className="w-10 h-10 text-blue-500 mr-4" />
             <div>
               <p className="text-sm text-gray-500">Avg. Text Messages</p>
-              <p className="text-xl font-semibold">{billData.usageAnalysis.avg_text_messages}</p>
+              <p className="text-xl font-semibold">{avgTextMessages}</p>
             </div>
           </div>
         </div>
@@ -120,11 +129,11 @@ export function BillSummary({
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
           <div className="p-4 bg-gray-50 rounded-lg">
             <p className="text-sm text-gray-500">Average Monthly Bill</p>
-            <p className="text-xl font-semibold">{formatCurrency(billData.costAnalysis.averageMonthlyBill)}</p>
+            <p className="text-xl font-semibold">{formatCurrency(averageMonthlyBill)}</p>
           </div>
           <div className="p-4 bg-gray-50 rounded-lg">
             <p className="text-sm text-gray-500">Projected Next Bill</p>
-            <p className="text-xl font-semibold">{formatCurrency(billData.costAnalysis.projectedNextBill)}</p>
+            <p className="text-xl font-semibold">{formatCurrency(projectedNextBill)}</p>
           </div>
         </div>
         
@@ -145,12 +154,17 @@ export function BillSummary({
         
         {expandedSection === 'savings' && (
           <div className="mt-2 pl-12">
-            {billData.costAnalysis.potentialSavings.map((saving: any, index: number) => (
+            {potentialSavings.map((saving: any, index: number) => (
               <div key={index} className="flex justify-between items-center py-2 border-b border-gray-100">
                 <span>{saving.description}</span>
                 <span className="font-semibold text-green-600">{formatCurrency(saving.estimatedSaving)}</span>
               </div>
             ))}
+            {potentialSavings.length === 0 && (
+              <div className="py-2 text-gray-500">
+                No potential savings identified at this time.
+              </div>
+            )}
           </div>
         )}
       </div>
