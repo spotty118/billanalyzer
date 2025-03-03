@@ -116,69 +116,122 @@ serve(async (req) => {
 async function analyzeVerizonBill(fileContent: string) {
   console.log("Analyzing Verizon bill...");
   
-  // Extract account number (looking for patterns like "Account #: XXXXXXXXX")
-  const accountNumberMatch = fileContent.match(/Account\s*(?:#|number|\w*)[:\s-]*(\d+[-\d]*)/i);
-  const accountNumber = accountNumberMatch ? accountNumberMatch[1] : "Unknown";
-  
-  // Extract billing period (looking for dates)
-  const billingPeriodMatch = fileContent.match(/(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+\d{1,2}[,\s]+\d{4}\s+(?:to|through|[-])\s+(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+\d{1,2}[,\s]+\d{4}/i);
-  const billingPeriod = billingPeriodMatch ? billingPeriodMatch[0] : "Current Billing Period";
-  
-  // Extract total amount (looking for dollar amounts near "total" or "amount due")
-  const totalAmountMatch = fileContent.match(/(?:total|amount due|pay this amount):?\s*\$?(\d+(?:[,.]\d+)?)/i);
-  const totalAmount = totalAmountMatch ? parseFloat(totalAmountMatch[1].replace(',', '')) : 0;
-  
-  // Extract phone numbers (simplified, just looking for patterns)
-  const phoneNumberRegex = /(?:\()?\d{3}(?:\))?[-.\s]?\d{3}[-.\s]?\d{4}/g;
-  const phoneMatches = fileContent.match(phoneNumberRegex) || [];
-  const phoneNumbers = [...new Set(phoneMatches)];
-  
-  // Try to extract device information
-  const devices = [];
-  const phoneLines = [];
-  
-  // Common device patterns
-  const devicePatterns = [
-    /iPhone\s+\d+(?:\s+Pro)?(?:\s+Max)?/g,
-    /iPad\s+(?:\w+\s+)?(?:Generation|\d+)/g,
-    /Apple\s+Watch\s+(?:Series\s+)?\d+/g,
-    /Samsung\s+Galaxy\s+\w+\d+/g
-  ];
-  
-  // Extract devices
-  for (const pattern of devicePatterns) {
-    const matches = fileContent.matchAll(pattern);
-    for (const match of matches) {
-      devices.push(match[0]);
+  // Extract account number with simpler regex patterns (safer approach)
+  let accountNumber = "Unknown";
+  try {
+    const accountNumberPattern = /Account\s*(?:#|number|\w*)[:\s-]*(\d[\d-]{5,15})/i;
+    const accountNumberMatch = fileContent.match(accountNumberPattern);
+    if (accountNumberMatch && accountNumberMatch[1]) {
+      accountNumber = accountNumberMatch[1];
     }
+  } catch (error) {
+    console.error("Error extracting account number:", error);
+  }
+  
+  // Extract billing period with simplified regex
+  let billingPeriod = "Current Billing Period";
+  try {
+    const monthNames = "(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*";
+    const datePattern = `${monthNames}\\s+\\d{1,2}[,\\s]+\\d{4}`;
+    const billingPeriodPattern = new RegExp(`${datePattern}\\s+(?:to|through|[-])\\s+${datePattern}`, 'i');
+    
+    const billingPeriodMatch = fileContent.match(billingPeriodPattern);
+    if (billingPeriodMatch) {
+      billingPeriod = billingPeriodMatch[0];
+    }
+  } catch (error) {
+    console.error("Error extracting billing period:", error);
+  }
+  
+  // Extract total amount with safer regex
+  let totalAmount = 0;
+  try {
+    const totalAmountPattern = /(?:total|amount due|pay this amount):?\s*\$?(\d+(?:[,.]\d+)?)/i;
+    const totalAmountMatch = fileContent.match(totalAmountPattern);
+    if (totalAmountMatch && totalAmountMatch[1]) {
+      totalAmount = parseFloat(totalAmountMatch[1].replace(',', ''));
+    }
+  } catch (error) {
+    console.error("Error extracting total amount:", error);
+  }
+  
+  // Extract phone numbers with simpler pattern
+  const phoneNumbers: string[] = [];
+  try {
+    // Breaking the phone number regex into smaller chunks for safety
+    const phonePatterns = [
+      /\b\d{3}[-.\s]?\d{3}[-.\s]?\d{4}\b/g,  // Basic format: 555-555-5555
+      /\b\(\d{3}\)[-.\s]?\d{3}[-.\s]?\d{4}\b/g  // Format with parentheses: (555) 555-5555
+    ];
+    
+    let matches: string[] = [];
+    for (const pattern of phonePatterns) {
+      const patternMatches = fileContent.match(pattern) || [];
+      matches = [...matches, ...patternMatches];
+    }
+    
+    // Deduplicate phone numbers
+    if (matches && matches.length > 0) {
+      const uniquePhones = [...new Set(matches)];
+      phoneNumbers.push(...uniquePhones);
+    }
+  } catch (error) {
+    console.error("Error extracting phone numbers:", error);
+  }
+  
+  // Try to extract device information with safer patterns
+  const devices: string[] = [];
+  const phoneLines: any[] = [];
+  
+  try {
+    // Common device patterns - broken into smaller, safer patterns
+    const devicePatterns = [
+      /iPhone\s+\d+/g,
+      /iPhone\s+\d+\s+Pro\b/g,
+      /iPhone\s+\d+\s+Pro\s+Max\b/g,
+      /iPad\s+\w+/g,
+      /iPad\s+\w+\s+Generation/g, 
+      /Apple\s+Watch\s+Series\s+\d+/g,
+      /Samsung\s+Galaxy\s+\w+\d+/g
+    ];
+    
+    // Extract devices with multiple simpler patterns
+    for (const pattern of devicePatterns) {
+      try {
+        const matches = fileContent.match(pattern) || [];
+        devices.push(...matches);
+      } catch (err) {
+        console.error(`Error with device pattern ${pattern}:`, err);
+      }
+    }
+  } catch (error) {
+    console.error("Error extracting devices:", error);
   }
   
   // Match phone numbers with devices (simplified approach)
-  const phoneLineRegex = new RegExp(`(${phoneNumbers.join('|')}).*?(?:device|phone|equipment).*?(${devices.join('|')})`, 'gi');
-  const phoneLineMatches = fileContent.matchAll(phoneLineRegex);
-  
-  for (const match of Array.from(phoneLineMatches)) {
-    const phoneNumber = match[1].replace(/[^\d]/g, '');
-    const deviceName = match[2];
-    
-    phoneLines.push({
-      phoneNumber,
-      deviceName,
-      planName: "Unknown plan",
-      monthlyTotal: 0,
-      charges: []
-    });
-  }
-  
-  // If no specific phone-device matches found, create entries based on extracted numbers
-  if (phoneLines.length === 0) {
+  try {
     for (let i = 0; i < phoneNumbers.length; i++) {
-      const phone = phoneNumbers[i].replace(/[^\d]/g, '');
-      const device = i < devices.length ? devices[i] : "Unknown device";
+      const phoneNumber = phoneNumbers[i].replace(/[^\d]/g, '');
+      const deviceName = i < devices.length ? devices[i] : "Unknown device";
       
       phoneLines.push({
-        phoneNumber: phone,
-        deviceName: device,
+        phoneNumber,
+        deviceName,
+        planName: "Unknown plan",
+        monthlyTotal: 0,
+        charges: []
+      });
+    }
+  } catch (error) {
+    console.error("Error mapping phones to devices:", error);
+  }
+  
+  if (phoneLines.length === 0 && phoneNumbers.length > 0) {
+    // Fallback if no matching was successful
+    for (const phone of phoneNumbers) {
+      phoneLines.push({
+        phoneNumber: phone.replace(/[^\d]/g, ''),
+        deviceName: "Unknown device",
         planName: "Unknown plan",
         monthlyTotal: 0,
         charges: []
