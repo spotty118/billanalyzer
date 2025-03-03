@@ -232,6 +232,10 @@ const VerizonBillAnalyzer = () => {
     }
   };
 
+  const getCurrentCarrierSavings = () => {
+    return calculateCarrierSavings(activeCarrierTab);
+  };
+
   return (
     <div className="flex flex-col w-full max-w-6xl mx-auto bg-white rounded-lg shadow">
       {!billData ? (
@@ -659,7 +663,7 @@ const VerizonBillAnalyzer = () => {
                     US Mobile Alternative Plans
                   </h3>
                   
-                  <Tabs defaultValue="usmobile" onValueChange={setActiveCarrierTab}>
+                  <Tabs defaultValue={activeCarrierTab} value={activeCarrierTab} onValueChange={setActiveCarrierTab}>
                     <TabsList className="grid grid-cols-4 mb-6">
                       {supportedCarriers.map(carrier => (
                         <TabsTrigger key={carrier.id} value={carrier.id} className="flex items-center">
@@ -670,12 +674,14 @@ const VerizonBillAnalyzer = () => {
                     </TabsList>
                     
                     {supportedCarriers.map(carrier => {
+                      if (carrier.id !== activeCarrierTab) return null;
+                      
                       const { monthlySavings, annualSavings, planName, price } = calculateCarrierSavings(carrier.id);
                       const matchedPlanId = findBestCarrierMatch(billData.phoneLines[0]?.planName || 'Unlimited Plus', carrier.id);
                       const carrierPlan = alternativeCarrierPlans.find(p => p.id === matchedPlanId);
                       
                       return (
-                        <TabsContent key={carrier.id} value={carrier.id}>
+                        <TabsContent key={carrier.id} value={carrier.id} forceMount={carrier.id === activeCarrierTab}>
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div>
                               <div className="bg-white rounded-lg p-5 shadow-sm border border-gray-100">
@@ -782,6 +788,10 @@ const VerizonBillAnalyzer = () => {
                               </Button>
                             </div>
                           </div>
+                          
+                          <p className="mt-4 text-sm text-blue-700">
+                            Showing plan details for {carrier.name} {planName} (alternative carrier #{supportedCarriers.findIndex(c => c.id === activeCarrierTab) + 1} of {supportedCarriers.length})
+                          </p>
                         </TabsContent>
                       );
                     })}
