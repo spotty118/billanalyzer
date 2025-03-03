@@ -7,25 +7,8 @@ interface Bill {
   account_number: string;
   billing_period: string;
   total_amount: number;
-  analysis_data: {
-    phoneLines?: Array<{
-      phoneNumber: string;
-      planName?: string;
-      monthlyTotal?: number;
-      details?: {
-        planCost?: number;
-        devicePayment?: number;
-        protection?: number;
-        surcharges?: number;
-        taxes?: number;
-      };
-    }>;
-    accountCharges?: {
-      surcharges?: number;
-      taxes?: number;
-      services?: number;
-    };
-  };
+  created_at: string;
+  analysis_data: any;
 }
 
 interface BillBreakdownChartProps {
@@ -156,7 +139,7 @@ export function BillBreakdownChart({ bills }: BillBreakdownChartProps) {
             dataKey="value"
             label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
           >
-            {data.map((entry, index) => (
+            {data.map((_, index) => (
               <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
             ))}
           </Pie>

@@ -10,6 +10,16 @@ import { supabase } from "@/integrations/supabase/client";
 import { BillBreakdownChart } from "@/components/dashboard/BillBreakdownChart";
 import { RecentBillsTable } from "@/components/dashboard/RecentBillsTable";
 
+// Define the Bill interface that matches what both components expect
+interface Bill {
+  id: number;
+  account_number: string;
+  billing_period: string;
+  total_amount: number;
+  created_at: string;
+  analysis_data: any;
+}
+
 function Dashboard() {
   const { 
     data: plans,
@@ -36,7 +46,16 @@ function Dashboard() {
         .limit(5);
       
       if (error) throw error;
-      return data;
+      
+      // Convert Supabase results to our Bill interface
+      return (data || []).map((bill): Bill => ({
+        id: bill.id,
+        account_number: bill.account_number,
+        billing_period: bill.billing_period,
+        total_amount: bill.total_amount,
+        created_at: bill.created_at || new Date().toISOString(), // Use current time as fallback
+        analysis_data: bill.analysis_data || {} // Ensure we have at least an empty object
+      }));
     },
     retry: false,
     staleTime: 5 * 60 * 1000,
