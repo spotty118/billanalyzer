@@ -1,5 +1,3 @@
-import React from 'react';
-
 interface BillAnalysisHeaderProps {
   accountNumber: string;
   billingPeriod: string;

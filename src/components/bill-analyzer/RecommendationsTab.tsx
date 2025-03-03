@@ -1,4 +1,4 @@
-import React from 'react';
+
 import { Check, AlertCircle } from 'lucide-react';
 
 interface RecommendationsTabProps {
