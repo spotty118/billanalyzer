@@ -345,13 +345,13 @@ export function BillAnalyzer() {
         throw new Error('No analysis data received');
       }
 
-      // Validate the response data structure
-      if (!result.data.totalAmount && result.data.totalAmount !== 0) {
+      // Check if we have valid data with the required fields
+      if (typeof result.data.totalAmount === 'undefined' && result.data.totalAmount !== 0) {
         console.error('Invalid analysis data - missing totalAmount');
         toast({
           variant: "destructive",
           title: "Error analyzing bill",
-          description: "Failed to properly parse bill data"
+          description: "The bill data could not be properly analyzed"
         });
         throw new Error('Invalid analysis data structure');
       }
