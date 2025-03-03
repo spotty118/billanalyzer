@@ -1,3 +1,4 @@
+
 import { ArrowLeftRight, AlertCircle, Check, Star, Zap, Lightbulb } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { 
@@ -9,7 +10,8 @@ import {
 import { 
   supportedCarriers, 
   findBestCarrierMatch, 
-  alternativeCarrierPlans 
+  alternativeCarrierPlans,
+  getCarrierPlanPrice
 } from "@/config/alternativeCarriers";
 
 interface CarrierComparisonProps {
@@ -72,17 +74,34 @@ export function CarrierComparison({
             const matchedPlanId = findBestCarrierMatch(carrier.id);
             const carrierPlan = alternativeCarrierPlans.find(p => p.id === matchedPlanId);
             
+            if (!carrierPlan) return null;
+            
+            // Calculate the monthly equivalent of annual price
+            const annualMonthlyEquivalent = carrierPlan.annualPrice ? carrierPlan.annualPrice / 12 : 0;
+            const numberOfLines = billData?.phoneLines?.length || 1;
+            
             return (
               <TabsContent key={carrier.id} value={carrier.id} forceMount>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
                     <div className="bg-white rounded-lg p-5 shadow-sm border border-gray-100">
-                      <h4 className="text-lg font-semibold mb-4">{carrier.name} {planName}</h4>
+                      <h4 className="text-lg font-semibold mb-4">{carrier.name} {carrierPlan.name}</h4>
                       
                       <div className="grid grid-cols-2 gap-4 mb-4">
                         <div>
                           <p className="text-sm text-gray-500">Monthly Cost</p>
-                          <p className="text-xl font-bold">{formatCurrency(price)}</p>
+                          <p className="text-xl font-bold">{formatCurrency(getCarrierPlanPrice(carrierPlan, numberOfLines))}</p>
+                          {carrierPlan.annualPrice && (
+                            <>
+                              <p className="text-sm text-gray-500 mt-2">Annual Option</p>
+                              <p className="text-md">
+                                {formatCurrency(carrierPlan.annualPrice)}/yr
+                                <span className="text-sm text-gray-500 ml-1">
+                                  (≈{formatCurrency(annualMonthlyEquivalent)}/mo)
+                                </span>
+                              </p>
+                            </>
+                          )}
                         </div>
                         <div>
                           <p className="text-sm text-gray-500">Your Current Bill</p>
@@ -121,7 +140,11 @@ export function CarrierComparison({
                           {carrierPlan.dataAllowance.hotspot && (
                             <li className="flex items-start">
                               <Check className="w-4 h-4 text-green-500 mr-2 flex-shrink-0 mt-0.5" />
-                              <span>{carrierPlan.dataAllowance.hotspot}GB hotspot data</span>
+                              <span>
+                                {typeof carrierPlan.dataAllowance.hotspot === 'string' 
+                                  ? carrierPlan.dataAllowance.hotspot 
+                                  : `${carrierPlan.dataAllowance.hotspot}GB hotspot data`}
+                              </span>
                             </li>
                           )}
                           <li className="flex items-start">
@@ -132,6 +155,12 @@ export function CarrierComparison({
                             <Check className="w-4 h-4 text-green-500 mr-2 flex-shrink-0 mt-0.5" />
                             <span>{carrierPlan.network} network</span>
                           </li>
+                          {carrierPlan.dataPriorityLevel && (
+                            <li className="flex items-start">
+                              <Check className="w-4 h-4 text-green-500 mr-2 flex-shrink-0 mt-0.5" />
+                              <span>Data Priority: {carrierPlan.dataPriorityLevel}</span>
+                            </li>
+                          )}
                         </ul>
                       </div>
                     )}
@@ -140,7 +169,21 @@ export function CarrierComparison({
                   <div>
                     {carrierPlan && (
                       <div className="bg-white rounded-lg p-5 shadow-sm border border-gray-100">
-                        <h4 className="font-semibold mb-3">Included Streaming Perks</h4>
+                        <h4 className="font-semibold mb-3">Included Features</h4>
+                        {carrierPlan.features.length > 0 ? (
+                          <ul className="space-y-2">
+                            {carrierPlan.features.map((feature, idx) => (
+                              <li key={idx} className="flex items-start">
+                                <Check className="w-4 h-4 text-green-500 mr-2 flex-shrink-0 mt-0.5" />
+                                <span>{feature}</span>
+                              </li>
+                            ))}
+                          </ul>
+                        ) : (
+                          <p className="text-gray-500 italic">No additional features listed for this plan</p>
+                        )}
+                        
+                        <h4 className="font-semibold mb-3 mt-4">Streaming Perks</h4>
                         {carrierPlan.streamingPerks.length > 0 ? (
                           <ul className="space-y-2">
                             {carrierPlan.streamingPerks.map((perk, idx) => (
@@ -182,7 +225,7 @@ export function CarrierComparison({
                 </div>
                 
                 <p className="mt-4 text-sm text-blue-700">
-                  Showing plan details for {carrier.name} {planName} (alternative carrier #{supportedCarriers.findIndex(c => c.id === activeCarrierTab) + 1} of {supportedCarriers.length})
+                  Showing plan details for {carrier.name} {carrierPlan.name} (alternative carrier #{supportedCarriers.findIndex(c => c.id === activeCarrierTab) + 1} of {supportedCarriers.length})
                 </p>
               </TabsContent>
             );
