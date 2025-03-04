@@ -1,3 +1,4 @@
+
 import { verizonPlansData, getPlanPrice } from "@/data/verizonPlans";
 
 // Format currency with $ symbol and 2 decimal places
@@ -35,6 +36,31 @@ export const prepareLineItemsData = (phoneLines: any[] = []) => {
     const perksTotal = Array.isArray(details.perks) 
       ? details.perks.reduce((sum: number, perk: any) => sum + (perk.cost || 0), 0)
       : 0;
+    
+    // Check if there are any specific charges breakdown
+    const hasDetailedBreakdown = 
+      planPrice > 0 || 
+      details.devicePayment > 0 || 
+      details.deviceCredit > 0 || 
+      details.protection > 0 || 
+      perksTotal > 0 || 
+      details.surcharges > 0 || 
+      details.taxes > 0;
+    
+    // If there's a total but no breakdown, we should just use the total value
+    // and not try to calculate components that don't exist
+    if (!hasDetailedBreakdown && line.monthlyTotal && line.monthlyTotal > 0) {
+      return {
+        name: line.phoneNumber || 'Unknown',
+        plan: 0, // No detailed breakdown available
+        device: 0,
+        protection: 0,
+        perks: 0,
+        taxes: 0,
+        // Use the total directly from the line
+        total: line.monthlyTotal || 0
+      };
+    }
     
     // For each line item, ensure we pull the values from the correct places
     // First check if there are line-specific charges, then fall back to general details

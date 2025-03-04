@@ -1,3 +1,4 @@
+
 import {
   BarChart,
   Bar,
@@ -21,7 +22,7 @@ export function LineItemsTab({ billData, formatCurrency }: LineItemsTabProps) {
   // Use the prepareLineItemsData utility to get data properly formatted
   const lineItemsData = prepareLineItemsData(billData.phoneLines);
   
-  // Calculate total for each line if not already present
+  // Make sure each line has the correct total, either directly from the data or calculated
   const lineItemsWithTotal = lineItemsData.map(item => {
     // If total already exists from prepareLineItemsData and is valid, use it
     if (item.total && typeof item.total === 'number' && item.total > 0) {
@@ -129,6 +130,7 @@ export function LineItemsTab({ billData, formatCurrency }: LineItemsTabProps) {
               <Bar dataKey="protection" name="Protection" fill="#8F43EE" radius={[4, 4, 0, 0]} />
               <Bar dataKey="perks" name="Perks" fill="#2B9348" radius={[4, 4, 0, 0]} />
               <Bar dataKey="taxes" name="Taxes & Fees" fill="#F9A620" radius={[4, 4, 0, 0]} />
+              <Bar dataKey="total" name="Total" fill="#000000" radius={[4, 4, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </div>
