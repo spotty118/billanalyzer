@@ -351,10 +351,7 @@ function calculateCarrierSavingsHelper(
   
   const numberOfLines = billData.phoneLines?.length || 1;
   
-  const matchingPlanId = findBestCarrierMatch(
-    billData.phoneLines[0]?.planName || 'Unlimited Plus',
-    carrierId
-  );
+  const matchingPlanId = findBestCarrierMatch(carrierId);
   
   const carrierPlan = alternativeCarrierPlans.find(plan => plan.id === matchingPlanId);
   

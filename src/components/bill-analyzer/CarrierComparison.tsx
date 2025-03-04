@@ -1,3 +1,4 @@
+
 import { ArrowLeftRight, AlertCircle, Check, Star, Zap, Lightbulb } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { 
@@ -69,7 +70,8 @@ export function CarrierComparison({
           {supportedCarriers.map(carrier => {
             if (carrier.id !== activeCarrierTab) return null;
             
-            const { monthlySavings, annualSavings } = calculateCarrierSavings(carrier.id);
+            const carrierSavings = calculateCarrierSavings(carrier.id);
+            const { monthlySavings, annualSavings, price: carrierPrice } = carrierSavings;
             const matchedPlanId = findBestCarrierMatch(carrier.id);
             const carrierPlan = alternativeCarrierPlans.find(p => p.id === matchedPlanId);
             
@@ -88,7 +90,7 @@ export function CarrierComparison({
                       <div className="grid grid-cols-2 gap-4 mb-4">
                         <div>
                           <p className="text-sm text-gray-500">Monthly Cost</p>
-                          <p className="text-xl font-bold">{formatCurrency(getCarrierPlanPrice(carrierPlan, numberOfLines))}</p>
+                          <p className="text-xl font-bold">{formatCurrency(carrierPrice)}</p>
                           {carrierPlan.annualPrice && (
                             <>
                               <p className="text-sm text-gray-500 mt-2">Annual Option</p>
