@@ -1,6 +1,6 @@
+
 import { useState, useCallback } from 'react';
 import { BillTabs } from "@/components/bill-analyzer/BillTabs";
-import { calculateCarrierSavings } from "@/components/bill-analyzer/utils/dataUtils";
 
 interface BillAnalyzerContentProps {
   billData: any;
@@ -15,19 +15,13 @@ interface BillAnalyzerContentProps {
   };
 }
 
-const CustomBillTabs = ({ billData, calculateCarrierSavings }: any) => {
-  const [activeTab, setActiveTab] = useState("overview");
-  
-  const handleTabChange = (tab: string) => {
-    setActiveTab(tab);
-  };
-  
+const CustomBillTabs = ({ billData, calculateCarrierSavings, activeTab, onTabChange }: any) => {
   return (
     <BillTabs 
       billData={billData}
       calculateCarrierSavings={calculateCarrierSavings}
       activeTab={activeTab}
-      onTabChange={handleTabChange}
+      onTabChange={onTabChange}
     />
   );
 };
@@ -39,6 +33,11 @@ export function BillAnalyzerContent({
   findBestCarrierMatch,
   calculateCarrierSavings,
 }: BillAnalyzerContentProps) {
+  const [activeTab, setActiveTab] = useState("overview");
+
+  const handleTabChange = (tab: string) => {
+    setActiveTab(tab);
+  };
 
   const memoizedCalculateCarrierSavings = useCallback(
     (carrierId: string) => {
@@ -61,7 +60,9 @@ export function BillAnalyzerContent({
       <h1 className="text-2xl font-bold mb-4">Bill Analysis</h1>
       <CustomBillTabs 
         billData={billData} 
-        calculateCarrierSavings={memoizedCalculateCarrierSavings} 
+        calculateCarrierSavings={memoizedCalculateCarrierSavings}
+        activeTab={activeTab}
+        onTabChange={handleTabChange}
       />
     </div>
   );

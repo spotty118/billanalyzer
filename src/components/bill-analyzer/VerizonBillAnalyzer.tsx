@@ -1,11 +1,11 @@
-
 import { useState } from 'react';
 import { BillUploader } from './BillUploader';
 import { BillAnalyzerContent } from './BillAnalyzerContent';
 import { ManualEntryForm } from './ManualEntryForm';
 import { useVerizonBillAnalyzer } from '@/hooks/use-verizon-bill-analyzer';
 import { Button } from '@/components/ui/button';
-import { Upload, PencilLine } from 'lucide-react';
+import { Upload, PencilLine, RefreshCw } from 'lucide-react';
+import { toast } from "sonner";
 
 const VerizonBillAnalyzer = () => {
   const { 
@@ -15,14 +15,32 @@ const VerizonBillAnalyzer = () => {
     errorMessage,
     handleFileChange,
     calculateCarrierSavings,
-    addManualLineCharges
+    addManualLineCharges,
+    resetBillData
   } = useVerizonBillAnalyzer();
 
   const [inputMethod, setInputMethod] = useState<'upload' | 'manual' | null>(null);
 
+  const handleStartOver = () => {
+    resetBillData();
+    setInputMethod(null);
+    toast.success("Analysis reset. You can start over.");
+  };
+
   if (billData) {
     return (
       <div className="flex flex-col w-full max-w-6xl mx-auto bg-white rounded-lg shadow">
+        <div className="flex justify-between items-center px-6 pt-6">
+          <h1 className="text-2xl font-bold">Bill Analysis</h1>
+          <Button 
+            onClick={handleStartOver}
+            variant="outline"
+            className="flex items-center gap-2"
+          >
+            <RefreshCw size={16} />
+            Start Over
+          </Button>
+        </div>
         <BillAnalyzerContent 
           billData={billData}
           calculateCarrierSavings={calculateCarrierSavings}

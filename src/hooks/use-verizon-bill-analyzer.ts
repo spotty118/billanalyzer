@@ -13,6 +13,12 @@ export const useVerizonBillAnalyzer = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
+  const resetBillData = () => {
+    setBillData(null);
+    setFileSelected(false);
+    setErrorMessage(null);
+  };
+
   const processVerizonBill = async (file: File): Promise<any> => {
     try {
       const formData = new FormData();
@@ -313,13 +319,44 @@ export const useVerizonBillAnalyzer = () => {
   };
 
   const calculateCarrierSavings = (carrierId: string) => {
-    return calculateCarrierSavingsHelper(
-      carrierId, 
-      billData, 
-      getCarrierPlanPrice, 
-      findBestCarrierMatch, 
-      alternativeCarrierPlans
+    if (!billData) {
+      return {
+        monthlySavings: 0,
+        annualSavings: 0,
+        planName: "N/A",
+        price: 0
+      };
+    }
+    
+    const numberOfLines = billData.phoneLines?.length || 1;
+    
+    const matchingPlanId = findBestCarrierMatch(
+      billData.phoneLines[0]?.planName || 'Unlimited Plus',
+      carrierId
     );
+    
+    const carrierPlan = alternativeCarrierPlans.find(plan => plan.id === matchingPlanId);
+    
+    if (!carrierPlan) {
+      return {
+        monthlySavings: 0,
+        annualSavings: 0,
+        planName: "No matching plan",
+        price: 0
+      };
+    }
+    
+    const alternativePrice = getCarrierPlanPrice(carrierPlan, numberOfLines);
+    
+    const monthlySavings = billData.totalAmount - alternativePrice;
+    const annualSavings = monthlySavings * 12;
+    
+    return {
+      monthlySavings,
+      annualSavings,
+      planName: carrierPlan.name,
+      price: alternativePrice
+    };
   };
 
   return {
@@ -329,7 +366,8 @@ export const useVerizonBillAnalyzer = () => {
     errorMessage,
     handleFileChange,
     calculateCarrierSavings,
-    addManualLineCharges
+    addManualLineCharges,
+    resetBillData
   };
 };
 
@@ -351,7 +389,10 @@ function calculateCarrierSavingsHelper(
   
   const numberOfLines = billData.phoneLines?.length || 1;
   
-  const matchingPlanId = findBestCarrierMatch(carrierId);
+  const matchingPlanId = findBestCarrierMatch(
+    billData.phoneLines[0]?.planName || 'Unlimited Plus',
+    carrierId
+  );
   
   const carrierPlan = alternativeCarrierPlans.find(plan => plan.id === matchingPlanId);
   
