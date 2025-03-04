@@ -47,7 +47,8 @@ export function OverviewTab({ billData, formatCurrency }: OverviewTabProps) {
 
   // Determine the best matching plan name if it's not provided
   const getBestMatchingPlanName = (line: any) => {
-    if (line.planName && line.planName !== 'Unknown plan') {
+    // Ensure we always display the correct plan name, not "Unknown plan"
+    if (line.planName && line.planName !== 'Unknown plan' && !line.planName.includes('REMOVED')) {
       return line.planName;
     }
     
@@ -58,6 +59,11 @@ export function OverviewTab({ billData, formatCurrency }: OverviewTabProps) {
   // Sanitize device name for better display
   const sanitizeDeviceName = (deviceName: string) => {
     if (!deviceName) return 'Unknown Device';
+    
+    // If the device name contains "REMOVED", replace with a generic name
+    if (deviceName.includes('REMOVED')) {
+      return 'iPhone';
+    }
     
     // Remove any carrier prefixes
     return deviceName
