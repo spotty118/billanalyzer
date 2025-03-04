@@ -32,6 +32,9 @@ const networkToCarrierMap = {
   att: "darkstar"
 };
 
+// Define a type for the features array
+type FeaturesList = string[];
+
 export function RecommendationsTab({ 
   billData, 
   formatCurrency, 
@@ -58,16 +61,17 @@ export function RecommendationsTab({
       const allRecommendations = carriersForRecommendation.map(carrier => {
         const savings = calculateCarrierSavings(carrier.id);
         
-        let reasons = [];
-        let pros = [];
-        let cons = [];
+        let reasons: string[] = [];
+        let pros: string[] = [];
+        let cons: string[] = [];
         
         // Find the carrier's plans in the alternativeCarrierPlans data
         const carrierPlans = alternativeCarrierPlans.filter(plan => plan.carrierId === carrier.id);
         const premiumPlan = carrierPlans.find(plan => plan.name.includes('Premium'));
         
         // Get features for this carrier from the alternativeCarrierPlans data
-        let features = [];
+        // Explicitly type the features array as FeaturesList (string[])
+        let features: FeaturesList = [];
         if (premiumPlan) {
           features = premiumPlan.features;
         }
@@ -114,7 +118,7 @@ export function RecommendationsTab({
           reasons,
           pros,
           cons,
-          features // Include the features from alternativeCarrierPlans
+          features // Now properly typed
         };
       });
       
@@ -136,7 +140,7 @@ export function RecommendationsTab({
           reasons: ["Your current plan appears to be competitive"],
           pros: ["No need to switch carriers", "Familiar billing"],
           cons: ["You may be missing perks from other carriers"],
-          features: []
+          features: [] // Empty array of features for current plan
         }
       ]);
     }
