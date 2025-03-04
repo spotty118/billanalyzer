@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -9,7 +8,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { NetworkPreference } from './VerizonBillAnalyzer';
 import { alternativeCarrierPlans } from '@/config/alternativeCarriers';
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
 
 interface RecommendationsTabProps {
   billData: any;
