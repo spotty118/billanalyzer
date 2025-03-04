@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 
 const CORS_HEADERS = {
@@ -87,7 +86,8 @@ Your task is to analyze a customer's bill data and recommend the best carriers a
 
 IMPORTANT NOTES ABOUT CURRENT MARKET CONDITIONS (OCTOBER 2024):
 - US Mobile offers Warp 5G (on Verizon), Lightspeed 5G (on T-Mobile), and DarkStar 5G (on AT&T)
-- US Mobile's Premium Unlimited plan costs $44/month for one line, with multiline discounts
+- US Mobile has flat pricing with NO multi-line discounts: $44/month for Premium, $25/month for Starter
+- Visible Basic costs $25/mo and Visible+ costs $45/mo with NO multi-line discounts
 - Verizon's latest plans are Unlimited Welcome, Unlimited Plus, and Unlimited Ultimate
 - T-Mobile offers Go5G, Go5G Plus, and Go5G Next plans
 - AT&T offers Value Plus, Unlimited Starter, Unlimited Extra, and Unlimited Premium
@@ -108,7 +108,7 @@ IMPORTANT: Your response must be a valid JSON object that can be parsed with JSO
   ],
   "marketInsights": {
     "currentPromos": ["US Mobile offering $10 off for 3 months", "Verizon offering BOGO iPhone deals"],
-    "trendingPlans": ["US Mobile Premium Unlimited", "T-Mobile Go5G Plus"],
+    "trendingPlans": ["US Mobile Premium Unlimited", "Visible+"],
     "networkPerformance": {
       "verizon": "Strong coverage but congested in urban areas",
       "tmobile": "Fast 5G speeds, improving rural coverage",
@@ -117,6 +117,12 @@ IMPORTANT: Your response must be a valid JSON object that can be parsed with JSO
   },
   "personalizedAdvice": "Based on your usage pattern with multiple lines and high data usage, you would benefit most from a premium unlimited plan with proper hotspot allocation."
 }
+
+Include Visible and Visible+ in your recommendations if they would be a good fit for the customer. Remember that:
+- US Mobile has NO multi-line discounts - price is the same for each line
+- Visible has NO multi-line discounts - price is the same for each line
+- Visible Basic is $25/mo for unlimited data but deprioritized
+- Visible+ is $45/mo with 50GB of premium data
 
 Base your recommendations on:
 1. The number of lines they have

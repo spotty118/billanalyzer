@@ -1,5 +1,4 @@
-
-import { ArrowLeftRight, AlertCircle, Check, Star, Zap, Lightbulb } from 'lucide-react';
+import { ArrowLeftRight, AlertCircle, Check, Star, Zap, Lightbulb, Eye } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { 
   Tabs, 
@@ -39,11 +38,10 @@ interface CarrierComparisonProps {
   formatCurrency: (value: number) => string;
 }
 
-// Define types for the chart data to avoid type errors
 interface ComparisonDataPoint {
   lines: number;
   current: number;
-  [key: string]: number; // This allows dynamic carrier IDs and saving properties
+  [key: string]: number;
 }
 
 export function CarrierComparison({
@@ -58,21 +56,18 @@ export function CarrierComparison({
       case 'Star': return <Star className="h-5 w-5 inline-block mr-2" />;
       case 'Zap': return <Zap className="h-5 w-5 inline-block mr-2" />;
       case 'Lightbulb': return <Lightbulb className="h-5 w-5 inline-block mr-2" />;
+      case 'Eye': return <Eye className="h-5 w-5 inline-block mr-2" />;
       default: return <ArrowLeftRight className="h-5 w-5 inline-block mr-2" />;
     }
   };
 
-  // Generate price comparison data for charts
   const generateComparisonData = (): ComparisonDataPoint[] => {
     const data: ComparisonDataPoint[] = [];
     const lineCount = billData.phoneLines?.length || 1;
     
-    // Generate data for 1-5 lines regardless of user's actual line count
-    // to show potential savings for different family sizes
     for (let i = 1; i <= 5; i++) {
       const carriers = supportedCarriers.map(carrier => {
         const savings = calculateCarrierSavings(carrier.id);
-        // Scale prices based on line count
         const scaleFactor = i / lineCount;
         const price = savings.price * scaleFactor;
         const currentPrice = billData.totalAmount * scaleFactor;
@@ -100,7 +95,7 @@ export function CarrierComparison({
     
     return data;
   };
-  
+
   const carrierSavingsData = supportedCarriers.map(carrier => {
     const savings = calculateCarrierSavings(carrier.id);
     return {
@@ -111,18 +106,15 @@ export function CarrierComparison({
       price: savings.price
     };
   }).sort((a, b) => b.annual - a.annual);
-  
+
   const priceComparisonData = generateComparisonData();
 
-  // Make sure all US Mobile plans have the same price
-  const standardizeUSMobilePricing = (carrierId: string) => {
-    // First, find the standard US Mobile pricing from the first carrier
+  const standardizeCarrierPricing = (carrierId: string) => {
     const matchedPlanId = findBestCarrierMatch(carrierId);
     const carrierPlan = alternativeCarrierPlans.find(p => p.id === matchedPlanId);
     
     if (!carrierPlan) return null;
     
-    // Return a standardized plan with the same price structure
     return {
       basePrice: carrierPlan.basePrice,
       annualPrice: carrierPlan.annualPrice || 0,
@@ -141,17 +133,16 @@ export function CarrierComparison({
       <div className="bg-gradient-to-r from-sky-50 to-indigo-50 border-2 border-blue-100 rounded-lg p-6">
         <h3 className="text-xl font-bold text-blue-800 mb-4">
           <ArrowLeftRight className="h-5 w-5 inline-block mr-2" />
-          US Mobile Alternative Plans
+          Alternative Carrier Plans
         </h3>
         
-        {/* Using verizonPlansData here to provide context for plan comparisons */}
         <div className="mb-4 text-sm text-gray-600">
           <p>Comparison based on current Verizon plans: {Object.keys(verizonPlansData).length} plans available</p>
         </div>
         
         <Tabs defaultValue={activeCarrierTab} value={activeCarrierTab} onValueChange={setActiveCarrierTab}>
           <TabsList className="mb-6 w-full">
-            <div className="grid grid-cols-3 gap-2 w-full">
+            <div className="grid grid-cols-4 gap-2 w-full">
               {supportedCarriers.map(carrier => (
                 <TabsTrigger 
                   key={carrier.id} 
@@ -171,13 +162,11 @@ export function CarrierComparison({
             const carrierSavings = calculateCarrierSavings(carrier.id);
             const { monthlySavings, annualSavings, price: carrierPrice } = carrierSavings;
             
-            // Use the standardized pricing for all US Mobile plans
-            const standardPlan = standardizeUSMobilePricing(carrier.id);
+            const standardPlan = standardizeCarrierPricing(carrier.id);
             if (!standardPlan) return null;
             
-            // Ensure we're using a number for calculations
             const annualPrice = standardPlan.annualPrice || 0;
-            const annualMonthlyEquivalent = annualPrice / 12;
+            const annualMonthlyEquivalent = annualPrice > 0 ? annualPrice / 12 : 0;
             
             return (
               <TabsContent key={carrier.id} value={carrier.id} forceMount>
@@ -188,9 +177,9 @@ export function CarrierComparison({
                       
                       <div className="grid grid-cols-2 gap-4 mb-4">
                         <div>
-                          <p className="text-sm text-gray-500">Monthly Cost</p>
-                          <p className="text-xl font-bold">{formatCurrency(carrierPrice)}</p>
-                          {standardPlan.annualPrice && (
+                          <p className="text-sm text-gray-500">Monthly Cost (per line)</p>
+                          <p className="text-xl font-bold">{formatCurrency(standardPlan.basePrice)}</p>
+                          {standardPlan.annualPrice > 0 && carrier.id !== 'visible' && (
                             <>
                               <p className="text-sm text-gray-500 mt-2">Annual Option</p>
                               <p className="text-md">
@@ -201,10 +190,14 @@ export function CarrierComparison({
                               </p>
                             </>
                           )}
+                          <p className="text-sm text-gray-500 mt-2">No multi-line discounts</p>
                         </div>
                         <div>
                           <p className="text-sm text-gray-500">Your Current Bill</p>
                           <p className="text-xl font-bold">{formatCurrency(billData.totalAmount)}</p>
+                          <p className="text-sm text-gray-500 mt-2">
+                            {billData.phoneLines?.length || 1} {(billData.phoneLines?.length || 1) === 1 ? 'line' : 'lines'}
+                          </p>
                         </div>
                       </div>
                       
@@ -307,7 +300,8 @@ export function CarrierComparison({
                             <li>• Savings estimates are based on your current bill total</li>
                             <li>• Device payments may not be included in carrier switch</li>
                             <li>• Visit carrier website for most current details</li>
-                            <li>• All US Mobile sub-brands offer the same pricing</li>
+                            <li>• No multi-line discounts available on these plans</li>
+                            {carrier.id === 'visible' && <li>• Visible offers Party Pay for multi-line households</li>}
                           </ul>
                         </div>
                       </div>
@@ -316,9 +310,9 @@ export function CarrierComparison({
                     <Button 
                       variant="outline" 
                       className="w-full mt-4 bg-gradient-to-r from-blue-500 to-indigo-600 text-white hover:from-blue-600 hover:to-indigo-700 border-0"
-                      onClick={() => window.open('https://www.usmobile.com', '_blank')}
+                      onClick={() => window.open(carrier.id === 'visible' ? 'https://www.visible.com' : 'https://www.usmobile.com', '_blank')}
                     >
-                      Visit US Mobile Website
+                      Visit {carrier.name} Website
                     </Button>
                   </div>
                 </div>

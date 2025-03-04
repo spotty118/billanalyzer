@@ -353,13 +353,84 @@ export const alternativeCarrierPlans: CarrierPlan[] = [
     iconName: 'Lightbulb',
     dataPriorityLevel: 'QCI 7',
     annualPrice: 210
+  },
+  
+  // Visible Carrier Plans (Verizon)
+  {
+    id: 'visible-basic',
+    carrierId: 'visible',
+    carrierName: 'Visible',
+    name: 'Visible Basic',
+    basePrice: 25,
+    pricePerLine: {
+      line1: 25,
+      line2: 25,
+      line3: 25,
+      line4: 25,
+      line5Plus: 25,
+    },
+    dataAllowance: {
+      premium: 'unlimited',
+      hotspot: 5,
+    },
+    features: [
+      "Unlimited data, talk & text",
+      "5GB mobile hotspot",
+      "No contract",
+      "Taxes & fees included",
+      "Verizon network",
+      "Deprioritized data (QCI 9)",
+      "eSIM/physical SIM support"
+    ],
+    streamingPerks: [
+      "480p video streaming"
+    ],
+    streamingQuality: '480p',
+    network: 'Verizon',
+    iconName: 'Eye',
+    dataPriorityLevel: 'QCI 9',
+  },
+  {
+    id: 'visible-plus',
+    carrierId: 'visible',
+    carrierName: 'Visible',
+    name: 'Visible+',
+    basePrice: 45,
+    pricePerLine: {
+      line1: 45,
+      line2: 45,
+      line3: 45,
+      line4: 45,
+      line5Plus: 45,
+    },
+    dataAllowance: {
+      premium: 50,
+      hotspot: 'unlimited',
+    },
+    features: [
+      "50GB premium data (QCI 8)",
+      "Unlimited mobile hotspot (5 Mbps)",
+      "No contract",
+      "Taxes & fees included",
+      "Verizon 5G Ultra Wideband access",
+      "International calling to 30+ countries",
+      "Roaming in Canada & Mexico"
+    ],
+    streamingPerks: [
+      "Full HD streaming (1080p)",
+      "Global calling from US to 30+ countries"
+    ],
+    streamingQuality: '1080p',
+    network: 'Verizon',
+    iconName: 'Eye',
+    dataPriorityLevel: 'QCI 8 (50GB), then QCI 9',
   }
 ];
 
 export function getCarrierPlanPrice(plan: CarrierPlan, numberOfLines: number): number {
   if (numberOfLines <= 0) return 0;
   
-  // For US Mobile plans, simply multiply the base price by the number of lines
+  // For US Mobile and Visible plans, simply multiply the base price by the number of lines
   // as they don't offer multi-line discounts
   return plan.basePrice * numberOfLines;
 }
@@ -377,6 +448,8 @@ export function findBestCarrierMatch(carrierId: string): string {
     return 'warp-premium';
   } else if (carrierId === 'lightspeed') {
     return 'lightspeed-premium';
+  } else if (carrierId === 'visible') {
+    return 'visible-plus';
   }
   
   // Default to the first plan of the carrier if no match is found
@@ -384,14 +457,20 @@ export function findBestCarrierMatch(carrierId: string): string {
   return carrierPlans.length > 0 ? carrierPlans[0].id : '';
 }
 
-// Updated to show only these three US Mobile sub-brands
+// Updated to include Visible and the three US Mobile sub-brands
 export const supportedCarriers = [
   { id: 'darkstar', name: 'US Mobile DarkStar', icon: 'Star', isPrimary: false },
   { id: 'warp', name: 'US Mobile Warp', icon: 'Zap', isPrimary: false },
-  { id: 'lightspeed', name: 'US Mobile LightSpeed', icon: 'Lightbulb', isPrimary: false }
+  { id: 'lightspeed', name: 'US Mobile LightSpeed', icon: 'Lightbulb', isPrimary: false },
+  { id: 'visible', name: 'Visible', icon: 'Eye', isPrimary: false }
 ];
 
 // Helper function to get all US Mobile carriers and sub-brands
 export function getUSMobileCarriers() {
-  return supportedCarriers;
+  return supportedCarriers.filter(carrier => carrier.id !== 'visible');
+}
+
+// Helper function to get all Visible carriers
+export function getVisibleCarriers() {
+  return supportedCarriers.filter(carrier => carrier.id === 'visible');
 }

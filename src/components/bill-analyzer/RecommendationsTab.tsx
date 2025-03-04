@@ -21,11 +21,12 @@ interface RecommendationsTabProps {
   networkPreference?: NetworkPreference;
 }
 
-// Only include US Mobile sub-brands
+// Updated to include Visible plans
 const carriers = [
   { id: "warp", name: "US Mobile Warp", logo: "🌀", network: "verizon" },
   { id: "lightspeed", name: "US Mobile LightSpeed", logo: "⚡", network: "tmobile" },
   { id: "darkstar", name: "US Mobile DarkStar", logo: "★", network: "att" },
+  { id: "visible", name: "Visible", logo: "👁️", network: "verizon" },
 ];
 
 const networkToCarrierMap = {
@@ -145,15 +146,11 @@ export function RecommendationsTab({
         }
       }
       
-      // Find all premium plans to ensure price consistency
+      // Find all premium plans to ensure price consistency for each carrier
       const premiumPlans = alternativeCarrierPlans.filter(plan => plan.name.includes('Premium'));
-      // Ensure all Premium plans have the same base price
-      const consistentBasePrice = premiumPlans[0]?.basePrice || 44;
-
-      // Calculate consistent savings amount for all carriers
+      
+      // Calculate savings amounts for all carriers
       const currentBillAmount = billData.totalAmount || 0;
-      const consistentSavings = currentBillAmount - consistentBasePrice;
-      const consistentAnnualSavings = consistentSavings * 12;
       
       const allRecommendations = carriersForRecommendation.map(carrier => {
         // Get the carrier's savings (we'll only use this for the plan name)
@@ -165,12 +162,28 @@ export function RecommendationsTab({
         
         // Find the carrier's plans in the alternativeCarrierPlans data
         const carrierPlans = alternativeCarrierPlans.filter(plan => plan.carrierId === carrier.id);
-        const premiumPlan = carrierPlans.find(plan => plan.name.includes('Premium'));
+        
+        // For Visible, select Visible+ as default, for others select Premium plans
+        let selectedPlan;
+        if (carrier.id === "visible") {
+          selectedPlan = carrierPlans.find(plan => plan.id === "visible-plus") || carrierPlans[0];
+        } else {
+          selectedPlan = carrierPlans.find(plan => plan.name.includes('Premium')) || carrierPlans[0];
+        }
+        
+        if (!selectedPlan) return null;
+        
+        // Calculate savings based on selected plan's base price
+        const planBasePrice = selectedPlan.basePrice;
+        const lineCount = billData.phoneLines?.length || 1;
+        const totalPlanPrice = planBasePrice * lineCount; // No multi-line discounts
+        const monthlySavings = currentBillAmount - totalPlanPrice;
+        const annualSavings = monthlySavings * 12;
         
         // Get features for this carrier from the alternativeCarrierPlans data
         let features: FeaturesList = [];
-        if (premiumPlan) {
-          features = premiumPlan.features;
+        if (selectedPlan) {
+          features = selectedPlan.features;
         }
         
         if (carrier.id === "warp") {
@@ -197,6 +210,15 @@ export function RecommendationsTab({
             pros.push("Optimized for your preferred network coverage");
           }
           cons.push("Limited international roaming compared to other options");
+        } else if (carrier.id === "visible") {
+          reasons.push("Simple, all-inclusive pricing on Verizon's network");
+          pros.push("No contracts, taxes and fees included");
+          pros.push("Party Pay available for multi-line discounts");
+          if (networkPreference === 'verizon') {
+            pros.push("Uses your preferred Verizon network");
+          }
+          cons.push("Customer service is app/chat based");
+          cons.push("Deprioritized during network congestion");
         }
         
         if (networkPreference && carrier.network === networkPreference) {
@@ -207,17 +229,17 @@ export function RecommendationsTab({
           carrier: carrier.name,
           carrierId: carrier.id,
           logo: carrier.logo,
-          planName: carrierData.planName,
-          monthlySavings: consistentSavings,
-          annualSavings: consistentAnnualSavings,
-          monthlyPrice: consistentBasePrice,
+          planName: selectedPlan.name,
+          monthlySavings,
+          annualSavings,
+          monthlyPrice: totalPlanPrice / lineCount, // Price per line
           preferred: networkPreference && carrier.network === networkPreference,
           reasons,
           pros,
           cons,
           features
         };
-      });
+      }).filter(rec => rec !== null);
       
       const sortedRecommendations = allRecommendations.sort((a, b) => {
         if (a.preferred && !b.preferred) return -1;
@@ -246,7 +268,7 @@ export function RecommendationsTab({
         fetchAIRecommendations();
       }
     }
-  }, [billData, calculateCarrierSavings, networkPreference]);
+  }, [billData, calculateCarrierSavings, networkPreference, aiRecommendations, isLoadingAI]);
 
   const renderStandardRecommendations = () => (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
