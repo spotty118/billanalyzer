@@ -168,6 +168,10 @@ export function CarrierComparison({
             const annualPrice = standardPlan.annualPrice || 0;
             const annualMonthlyEquivalent = annualPrice > 0 ? annualPrice / 12 : 0;
             
+            const lineCount = billData.phoneLines?.length || 1;
+            const perLinePrice = standardPlan.basePrice;
+            const totalMonthlyPrice = perLinePrice * lineCount;
+            
             return (
               <TabsContent key={carrier.id} value={carrier.id} forceMount>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -177,8 +181,16 @@ export function CarrierComparison({
                       
                       <div className="grid grid-cols-2 gap-4 mb-4">
                         <div>
-                          <p className="text-sm text-gray-500">Monthly Cost (per line)</p>
+                          <p className="text-sm text-gray-500">Cost Per Line</p>
                           <p className="text-xl font-bold">{formatCurrency(standardPlan.basePrice)}</p>
+                          
+                          {lineCount > 1 && (
+                            <>
+                              <p className="text-sm text-gray-500 mt-2">Total for {lineCount} Lines</p>
+                              <p className="text-lg font-bold text-blue-700">{formatCurrency(totalMonthlyPrice)}</p>
+                            </>
+                          )}
+                          
                           {standardPlan.annualPrice > 0 && carrier.id !== 'visible' && (
                             <>
                               <p className="text-sm text-gray-500 mt-2">Annual Option</p>
@@ -196,8 +208,13 @@ export function CarrierComparison({
                           <p className="text-sm text-gray-500">Your Current Bill</p>
                           <p className="text-xl font-bold">{formatCurrency(billData.totalAmount)}</p>
                           <p className="text-sm text-gray-500 mt-2">
-                            {billData.phoneLines?.length || 1} {(billData.phoneLines?.length || 1) === 1 ? 'line' : 'lines'}
+                            {lineCount} {lineCount === 1 ? 'line' : 'lines'}
                           </p>
+                          {lineCount > 1 && (
+                            <p className="text-sm text-gray-500">
+                              (≈{formatCurrency(billData.totalAmount / lineCount)}/line)
+                            </p>
+                          )}
                         </div>
                       </div>
                       
@@ -352,7 +369,10 @@ export function CarrierComparison({
                         <CartesianGrid strokeDasharray="3 3" />
                         <XAxis dataKey="lines" label={{ value: 'Number of Lines', position: 'insideBottom', offset: -5 }} />
                         <YAxis label={{ value: 'Monthly Cost ($)', angle: -90, position: 'insideLeft' }} />
-                        <Tooltip formatter={(value) => [`$${Math.round(Number(value) * 100) / 100}`, '']} />
+                        <Tooltip 
+                          formatter={(value) => [`$${Math.round(Number(value) * 100) / 100}`, '']}
+                          labelFormatter={(value) => `${value} ${value === 1 ? 'Line' : 'Lines'} - Total Cost`}
+                        />
                         <Legend />
                         <Line type="monotone" dataKey="current" stroke="#0052CC" name="Your Current Plan" />
                         <Line type="monotone" dataKey={carrier.id} stroke="#00A36C" name={carrier.name} />
