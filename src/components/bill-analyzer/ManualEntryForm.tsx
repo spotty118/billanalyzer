@@ -13,7 +13,6 @@ interface LineCharge {
   planCost: number;
   planDiscount: number;
   planDiscountType: 'fixed' | 'percentage';
-  protection: number;
 }
 
 interface ManualEntryFormProps {
@@ -28,7 +27,6 @@ interface ManualEntryFormProps {
         planCost: number;
         planDiscount: number;
         planDiscountType?: 'fixed' | 'percentage';
-        protection: number;
       }
     }>
   }) => void;
@@ -42,8 +40,7 @@ export function ManualEntryForm({ onSubmit }: ManualEntryFormProps) {
       planName: 'Unlimited Plus',
       planCost: verizonPlansData['unlimited-plus'].prices[1],
       planDiscount: 0,
-      planDiscountType: 'fixed',
-      protection: 0
+      planDiscountType: 'fixed'
     }
   ]);
 
@@ -61,8 +58,7 @@ export function ManualEntryForm({ onSubmit }: ManualEntryFormProps) {
       planName: defaultPlanName,
       planCost: planCost,
       planDiscount: 0,
-      planDiscountType: 'fixed',
-      protection: 0
+      planDiscountType: 'fixed'
     }]);
   };
 
@@ -92,21 +88,11 @@ export function ManualEntryForm({ onSubmit }: ManualEntryFormProps) {
       ? line.planCost * (line.planDiscount / 100)
       : line.planDiscount;
       
-    return (
-      line.planCost - 
-      planDiscountAmount + 
-      line.protection
-    );
+    return line.planCost - planDiscountAmount;
   };
 
   const calculateBillTotal = (): number => {
     return lines.reduce((sum, line) => sum + calculateLineTotal(line), 0);
-  };
-
-  const toggleDiscountType = (index: number) => {
-    const updatedLines = [...lines];
-    updatedLines[index].planDiscountType = updatedLines[index].planDiscountType === 'fixed' ? 'percentage' : 'fixed';
-    setLines(updatedLines);
   };
 
   const updatePlanName = (index: number, planName: string) => {
@@ -147,12 +133,7 @@ export function ManualEntryForm({ onSubmit }: ManualEntryFormProps) {
           details: {
             planCost: line.planCost,
             planDiscount: planDiscountAmount,
-            planDiscountType: line.planDiscountType,
-            protection: line.protection,
-            devicePayment: 0,
-            deviceCredit: 0,
-            surcharges: 0,
-            taxes: 0
+            planDiscountType: line.planDiscountType
           }
         };
       })
@@ -223,7 +204,7 @@ export function ManualEntryForm({ onSubmit }: ManualEntryFormProps) {
                 </Select>
               </div>
               
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Plan Cost ($)</label>
                   <Input 
@@ -246,18 +227,7 @@ export function ManualEntryForm({ onSubmit }: ManualEntryFormProps) {
                   />
                 </div>
                 
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Protection ($)</label>
-                  <Input 
-                    type="number"
-                    value={line.protection.toString()}
-                    onChange={e => updateLine(index, 'protection', e.target.value)}
-                    placeholder="0.00"
-                    step="0.01"
-                  />
-                </div>
-                
-                <div className="space-y-2 md:col-span-3">
+                <div className="space-y-2 md:col-span-2">
                   <label className="text-sm font-medium">Line Total</label>
                   <div className="h-10 px-3 py-2 rounded-md border bg-gray-100 flex items-center">
                     ${calculateLineTotal(line).toFixed(2)}

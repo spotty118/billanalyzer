@@ -42,8 +42,7 @@ export function LineItemsTab({ billData, formatCurrency }: LineItemsTabProps) {
       
       return {
         name: line.phoneNumber || 'Unknown',
-        plan: planPrice - (details.planDiscount || 0),
-        protection: details.protection || 0
+        plan: planPrice - (details.planDiscount || 0)
       };
     });
   };
@@ -53,18 +52,17 @@ export function LineItemsTab({ billData, formatCurrency }: LineItemsTabProps) {
   // Calculate total for each line
   const lineItemsWithTotal = lineItemsData.map(item => ({
     ...item,
-    total: item.plan + item.protection
+    total: item.plan
   }));
   
   // Calculate totals for each category
   const totalsByCategory = lineItemsWithTotal.reduce(
     (acc, curr) => {
       acc.plan += curr.plan;
-      acc.protection += curr.protection;
       acc.total += curr.total;
       return acc;
     },
-    { name: 'Total', plan: 0, protection: 0, total: 0 }
+    { name: 'Total', plan: 0, total: 0 }
   );
   
   // Add total row
@@ -81,7 +79,6 @@ export function LineItemsTab({ billData, formatCurrency }: LineItemsTabProps) {
               <tr>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Phone Number</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Plan</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Protection</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total</th>
               </tr>
             </thead>
@@ -93,7 +90,6 @@ export function LineItemsTab({ billData, formatCurrency }: LineItemsTabProps) {
                 >
                   <td className="px-6 py-4 whitespace-nowrap">{item.name}</td>
                   <td className="px-6 py-4 whitespace-nowrap">{formatCurrency(item.plan)}</td>
-                  <td className="px-6 py-4 whitespace-nowrap">{formatCurrency(item.protection)}</td>
                   <td className="px-6 py-4 whitespace-nowrap font-medium">{formatCurrency(item.total)}</td>
                 </tr>
               ))}
@@ -121,7 +117,6 @@ export function LineItemsTab({ billData, formatCurrency }: LineItemsTabProps) {
               <Tooltip formatter={(value) => [`$${value}`, '']} />
               <Legend />
               <Bar dataKey="plan" name="Plan" fill="#3b82f6" />
-              <Bar dataKey="protection" name="Protection" fill="#8b5cf6" />
             </BarChart>
           </ResponsiveContainer>
         </div>

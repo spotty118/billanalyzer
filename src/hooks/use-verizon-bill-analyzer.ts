@@ -134,11 +134,6 @@ export const useVerizonBillAnalyzer = () => {
           details: {
             planCost: 90,
             planDiscount: 10,
-            devicePayment: 0,
-            deviceCredit: 0,
-            protection: 7,
-            surcharges: 5,
-            taxes: 3
           }
         },
         {
@@ -149,11 +144,6 @@ export const useVerizonBillAnalyzer = () => {
           details: {
             planCost: 80,
             planDiscount: 10,
-            devicePayment: 0,
-            deviceCredit: 0,
-            protection: 0,
-            surcharges: 3,
-            taxes: 2
           }
         }
       ];
@@ -162,7 +152,13 @@ export const useVerizonBillAnalyzer = () => {
         if (line.details && 
             line.details.planCost !== undefined && 
             line.details.planDiscount !== undefined) {
-          return line;
+          return {
+            ...line,
+            details: {
+              planCost: line.details.planCost,
+              planDiscount: line.details.planDiscount,
+            }
+          };
         }
         
         const baseCost = 40 + (index * 5);
@@ -170,15 +166,10 @@ export const useVerizonBillAnalyzer = () => {
         
         return {
           ...line,
-          monthlyTotal: line.monthlyTotal || (baseCost - discount + (index * 2)),
+          monthlyTotal: baseCost - discount,
           details: {
             planCost: baseCost,
             planDiscount: discount,
-            devicePayment: index === 1 ? 10 : 0,
-            deviceCredit: index === 1 ? 5 : 0,
-            protection: index < 2 ? 7 + index : 0,
-            surcharges: 2 + (index * 0.5),
-            taxes: 1 + (index * 0.25)
           }
         };
       });
@@ -297,20 +288,16 @@ export const useVerizonBillAnalyzer = () => {
 
   const calculateChargesByCategory = (phoneLines: any[]) => {
     let planCharges = 0;
-    let protectionCharges = 0;
     
     phoneLines.forEach(line => {
       if (line.details) {
         let planDiscount = line.details.planDiscount || 0;
-        
         planCharges += (line.details.planCost || 0) - planDiscount;
-        protectionCharges += line.details.protection || 0;
       }
     });
     
     return {
-      "Plan Charges": planCharges,
-      "Protection & Services": protectionCharges
+      "Plan Charges": planCharges
     };
   };
 
