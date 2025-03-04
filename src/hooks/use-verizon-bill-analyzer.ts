@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -56,14 +55,16 @@ export const useVerizonBillAnalyzer = () => {
       }
       
       const data = await response.json();
-      
-      if (!data || !Array.isArray(data.phoneLines) || data.phoneLines.length === 0) {
-        throw new Error('The bill analysis did not return any valid phone lines data');
+
+      if (!data || !Array.isArray(data.phoneLines)) {
+        throw new Error('The bill analysis response format is invalid');
       }
       
-      // Store the OCR provider information
+      console.log(`Received ${data.phoneLines.length} phone lines from analysis`);
+      
       if (data.ocrProvider) {
         setOcrProvider(data.ocrProvider);
+        console.log('OCR provider:', data.ocrProvider);
       }
       
       return data;
@@ -91,11 +92,9 @@ export const useVerizonBillAnalyzer = () => {
   };
 
   const enhanceBillData = (rawData: any) => {
-    // Check if data is already in the enhanced format from Claude
     if (rawData.billVersion?.includes("claude-parser") && rawData.phoneLines?.length > 0) {
       console.log("Data is already in enhanced format from Claude, minimal processing needed");
       
-      // Ensure all required fields exist
       const enhancedData = {
         ...rawData,
         totalAmount: rawData.totalAmount || 0,
@@ -137,7 +136,6 @@ export const useVerizonBillAnalyzer = () => {
         ocrProvider: rawData.ocrProvider || "claude"
       };
       
-      // Ensure charges by category is in the expected format
       if (!enhancedData.chargesByCategory || typeof enhancedData.chargesByCategory !== 'object') {
         enhancedData.chargesByCategory = {
           "Plan Charges": 0,
@@ -146,7 +144,6 @@ export const useVerizonBillAnalyzer = () => {
           "Taxes & Fees": 0
         };
       } else if (rawData.chargesByCategory) {
-        // Transform if in different format
         enhancedData.chargesByCategory = {
           "Plan Charges": rawData.chargesByCategory.plans || 0,
           "Device Payments": rawData.chargesByCategory.devices || 0,
@@ -155,7 +152,6 @@ export const useVerizonBillAnalyzer = () => {
         };
       }
       
-      // Limit to maximum 8 lines for UI display
       if (enhancedData.phoneLines.length > 8) {
         enhancedData.phoneLines = enhancedData.phoneLines.slice(0, 8);
       }
@@ -163,7 +159,24 @@ export const useVerizonBillAnalyzer = () => {
       return enhancedData;
     }
     
-    // Original enhancement logic for non-Claude format
+    if (!rawData.phoneLines || rawData.phoneLines.length === 0) {
+      console.log("No phone lines detected in analysis, adding placeholder");
+      rawData.phoneLines = [{
+        phoneNumber: "Primary Line",
+        deviceName: "Smartphone",
+        ownerName: rawData.accountInfo?.customerName || "Primary Owner",
+        planName: "Verizon Plan",
+        monthlyTotal: rawData.totalAmount || 99.99,
+        details: {
+          planCost: (rawData.totalAmount || 99.99) * 0.7,
+          planDiscount: 0,
+          devicePayment: (rawData.totalAmount || 99.99) * 0.2,
+          deviceCredit: 0,
+          protection: (rawData.totalAmount || 99.99) * 0.1
+        }
+      }];
+    }
+    
     const enhancedData = {
       ...rawData,
       usageAnalysis: {
@@ -204,11 +217,9 @@ export const useVerizonBillAnalyzer = () => {
       ocrProvider: rawData.ocrProvider || ocrProvider || "standard"
     };
     
-    // Add owner names to phoneLines if present in accountInfo
     if (rawData.accountInfo?.customerName && enhancedData.phoneLines) {
       enhancedData.customerName = rawData.accountInfo.customerName;
       
-      // If there's an owner name field, prioritize using that
       enhancedData.phoneLines = enhancedData.phoneLines.map((line: any, index: number) => {
         if (!line.ownerName && index === 0 && rawData.accountInfo?.customerName) {
           return {
@@ -220,12 +231,10 @@ export const useVerizonBillAnalyzer = () => {
       });
     }
     
-    // Add any upcoming changes from bill
     if (rawData.upcomingChanges && rawData.upcomingChanges.length > 0) {
       enhancedData.upcomingChanges = rawData.upcomingChanges;
     }
     
-    // Process category data for charts using the improved parser data
     if (rawData.chargesByCategory) {
       enhancedData.chargesByCategory = {
         "Plan Charges": rawData.chargesByCategory.plans || 0,
@@ -235,7 +244,6 @@ export const useVerizonBillAnalyzer = () => {
       };
     }
     
-    // Ensure we have detailed phone lines
     if (!enhancedData.phoneLines || !Array.isArray(enhancedData.phoneLines) || enhancedData.phoneLines.length === 0) {
       enhancedData.phoneLines = [
         {
@@ -261,7 +269,6 @@ export const useVerizonBillAnalyzer = () => {
       ];
     }
     
-    // Limit to maximum 8 lines for UI display
     if (enhancedData.phoneLines.length > 8) {
       enhancedData.phoneLines = enhancedData.phoneLines.slice(0, 8);
     }
@@ -297,8 +304,7 @@ export const useVerizonBillAnalyzer = () => {
       
       await saveBillAnalysis(enhancedData);
       
-      // Display which OCR provider was used
-      const ocrMethod = enhancedData.ocrProvider === "claude" 
+      const ocrMethod = enhancedData.ocrProvider?.includes("claude") 
         ? "using Claude AI" 
         : "using standard extraction";
       
@@ -318,10 +324,8 @@ export const useVerizonBillAnalyzer = () => {
       setIsLoading(true);
       setErrorMessage(null);
       
-      // Calculate charges by category from manual inputs
       const chargesByCategory = calculateChargesByCategory(manualData.phoneLines);
       
-      // Build a structure compatible with the enhanced bill parser
       const enhancedData = {
         ...manualData,
         accountNumber: 'Manual Entry',
@@ -405,7 +409,7 @@ export const useVerizonBillAnalyzer = () => {
       "Plan Charges": planCharges,
       "Device Payments": devicePayments,
       "Services & Add-ons": services,
-      "Taxes & Fees": (planCharges + devicePayments + services) * 0.08 // Estimate taxes at 8%
+      "Taxes & Fees": (planCharges + devicePayments + services) * 0.08
     };
   };
 
@@ -440,7 +444,7 @@ export const useVerizonBillAnalyzer = () => {
       };
     }
     
-    const basePricePerLine = 44; // Standard pricing for all premium plans
+    const basePricePerLine = 44;
     const finalPrice = basePricePerLine * numberOfLines;
     
     const monthlySavings = billData.totalAmount - finalPrice;
