@@ -42,7 +42,7 @@ async function sendToClaude(fileContent: ArrayBuffer) {
     console.log(`Content converted to base64, length: ${base64Content.length}`);
     console.log(`Using Claude API with key length: ${ANTHROPIC_API_KEY.length}`);
     
-    // Send to Claude using the text-only approach since PDF isn't supported directly
+    // Send to Claude using the text-only approach
     const response = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
       headers: {
@@ -51,7 +51,7 @@ async function sendToClaude(fileContent: ArrayBuffer) {
         "anthropic-version": "2023-06-01"
       },
       body: JSON.stringify({
-        model: "claude-3-opus-20240229",
+        model: "claude-3-7-sonnet-20250219", // Using the requested model
         max_tokens: 4000,
         system: `You are an expert Verizon bill analyzer. Extract and organize the key information from the bill, including account info, billing period, total amount due, and details for each phone line (number, plan, device, charges). Format your response as a clean JSON object that can be directly parsed.`,
         messages: [
@@ -118,71 +118,26 @@ serve(async (req) => {
   try {
     console.log("Received bill analysis request");
     
-    // Generate mock data instead of trying to process the PDF
-    const mockBillData = {
-      accountNumber: "123456789-00001",
-      customerName: "John Smith",
-      billingPeriod: "Jul 1 - Jul 31, 2023",
-      billDate: "Jul 15, 2023",
-      dueDate: "Aug 7, 2023",
-      totalAmount: 154.87,
-      phoneLines: [
-        {
-          phoneNumber: "(555) 123-4567",
-          ownerName: "John Smith",
-          deviceName: "iPhone 13",
-          planName: "5G Play More",
-          monthlyTotal: 85.99,
-          details: {
-            planCost: 65.99,
-            planDiscount: 0,
-            devicePayment: 15.00,
-            deviceCredit: 0,
-            protection: 5.00
-          }
-        },
-        {
-          phoneNumber: "(555) 987-6543",
-          ownerName: "Jane Smith",
-          deviceName: "Samsung Galaxy S22",
-          planName: "5G Start",
-          monthlyTotal: 68.88,
-          details: {
-            planCost: 55.99,
-            planDiscount: -5.00,
-            devicePayment: 12.89,
-            deviceCredit: 0,
-            protection: 5.00
-          }
-        }
-      ],
-      chargesByCategory: {
-        "Plan Charges": 121.98,
-        "Device Payments": 27.89,
-        "Services & Add-ons": 10.00,
-        "Taxes & Fees": 12.74
-      }
-    };
+    // Get the form data from the request
+    const formData = await req.formData();
+    const file = formData.get('file');
     
-    // Create a faux Claude response with our mock data
-    const mockClaudeResponse = {
-      id: "msg_" + Math.random().toString(36).substring(2, 15),
-      type: "message",
-      role: "assistant",
-      content: [
-        {
-          type: "text",
-          text: JSON.stringify(mockBillData, null, 2)
-        }
-      ],
-      model: "claude-3-opus-20240229",
-      stop_reason: "end_turn"
-    };
+    if (!file || !(file instanceof File)) {
+      throw new Error('No file provided or invalid file format');
+    }
     
-    console.log("Generated mock bill data");
+    console.log(`Processing file: ${file.name}, type: ${file.type}, size: ${file.size} bytes`);
     
-    // Return mock Claude response
-    return new Response(JSON.stringify(mockClaudeResponse), {
+    // Read the file content as an ArrayBuffer
+    const fileContent = await file.arrayBuffer();
+    console.log(`File read as ArrayBuffer, length: ${fileContent.byteLength}`);
+    
+    // Send the file content to Claude for analysis
+    const analysisResult = await sendToClaude(fileContent);
+    console.log("Analysis complete, returning result");
+    
+    // Return the Claude analysis result
+    return new Response(JSON.stringify(analysisResult), {
       status: 200,
       headers: {
         ...CORS_HEADERS,
