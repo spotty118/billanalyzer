@@ -9,6 +9,7 @@ interface NavItem {
   name: string;
   url: string;
   icon: LucideIcon;
+  onClick?: () => void;
 }
 
 interface NavBarProps {
@@ -18,8 +19,6 @@ interface NavBarProps {
 
 export function NavBar({ items, className }: NavBarProps) {
   const [activeTab, setActiveTab] = useState(items[0].name);
-  // We're tracking mobile state but not using it directly in the rendering logic
-  // The responsive behavior is handled through CSS (md: classes)
 
   return (
     <div
@@ -37,7 +36,13 @@ export function NavBar({ items, className }: NavBarProps) {
             <NavLink
               key={item.name}
               to={item.url}
-              onClick={() => setActiveTab(item.name)}
+              onClick={(e) => {
+                if (item.onClick) {
+                  e.preventDefault();
+                  item.onClick();
+                }
+                setActiveTab(item.name);
+              }}
               className={({ isActive: routeActive }) => cn(
                 "relative cursor-pointer text-sm font-semibold px-6 py-2 rounded-full transition-colors",
                 "text-foreground/80 hover:text-primary",
