@@ -5,6 +5,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Badge } from "@/components/ui/badge";
 import { CheckIcon, XIcon } from "lucide-react";
 import { NetworkPreference } from './VerizonBillAnalyzer';
+import { alternativeCarrierPlans } from '@/config/alternativeCarriers';
 
 interface RecommendationsTabProps {
   billData: any;
@@ -61,6 +62,16 @@ export function RecommendationsTab({
         let pros = [];
         let cons = [];
         
+        // Find the carrier's plans in the alternativeCarrierPlans data
+        const carrierPlans = alternativeCarrierPlans.filter(plan => plan.carrierId === carrier.id);
+        const premiumPlan = carrierPlans.find(plan => plan.name.includes('Premium'));
+        
+        // Get features for this carrier from the alternativeCarrierPlans data
+        let features = [];
+        if (premiumPlan) {
+          features = premiumPlan.features;
+        }
+        
         if (carrier.id === "warp") {
           reasons.push("Unlimited data with no speed caps on Verizon's network");
           pros.push("No contracts or hidden fees");
@@ -102,7 +113,8 @@ export function RecommendationsTab({
           preferred: networkPreference && carrier.network === networkPreference,
           reasons,
           pros,
-          cons
+          cons,
+          features // Include the features from alternativeCarrierPlans
         };
       });
       
@@ -123,7 +135,8 @@ export function RecommendationsTab({
           monthlyPrice: billData.totalAmount || 0,
           reasons: ["Your current plan appears to be competitive"],
           pros: ["No need to switch carriers", "Familiar billing"],
-          cons: ["You may be missing perks from other carriers"]
+          cons: ["You may be missing perks from other carriers"],
+          features: []
         }
       ]);
     }
@@ -186,6 +199,21 @@ export function RecommendationsTab({
                       ))}
                     </ul>
                   </div>
+                  
+                  {/* Added section to display included features */}
+                  {rec.features && rec.features.length > 0 && (
+                    <div>
+                      <p className="text-sm font-medium text-blue-600">Included Features</p>
+                      <ul className="mt-1 space-y-1 text-sm">
+                        {rec.features.map((feature: string, i: number) => (
+                          <li key={i} className="flex items-start">
+                            <span className="mr-1.5 text-blue-500">→</span>
+                            <span>{feature}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
                   
                   <div className="grid grid-cols-2 gap-4">
                     <div>
