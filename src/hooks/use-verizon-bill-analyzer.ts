@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -56,11 +57,29 @@ export const useVerizonBillAnalyzer = () => {
       
       const data = await response.json();
 
-      if (!data || !Array.isArray(data.phoneLines)) {
+      if (!data || (!Array.isArray(data.phoneLines) && !Array.isArray(data.lines))) {
         throw new Error('The bill analysis response format is invalid');
       }
       
-      console.log(`Received ${data.phoneLines.length} phone lines from analysis`);
+      // Normalize data format
+      if (Array.isArray(data.lines) && !Array.isArray(data.phoneLines)) {
+        data.phoneLines = data.lines.map((line: any) => ({
+          phoneNumber: line.phoneNumber,
+          deviceName: line.device,
+          ownerName: line.owner,
+          planName: line.plan?.name || "Unknown plan",
+          monthlyTotal: line.totalAmount || 0,
+          details: {
+            planCost: line.plan?.basePrice || line.plan?.actualCost || 0,
+            planDiscount: line.plan?.discount?.amount || 0,
+            devicePayment: line.devicePayment?.amount || 0,
+            deviceCredit: line.devicePayment?.promotionalCredit || 0,
+            protection: line.services?.find((s: any) => s.name?.toLowerCase().includes("protect"))?.cost || 0
+          }
+        }));
+      }
+      
+      console.log(`Received ${data.phoneLines?.length || 0} phone lines from analysis`);
       
       if (data.ocrProvider) {
         setOcrProvider(data.ocrProvider);

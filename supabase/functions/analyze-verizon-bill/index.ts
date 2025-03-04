@@ -1,3 +1,4 @@
+
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 
 const CORS_HEADERS = {
@@ -778,6 +779,19 @@ async function extractTextWithClaude(fileContent: ArrayBuffer): Promise<string> 
   }
 }
 
+function cleanBillContent(text: string): string {
+  // Remove excessive whitespace
+  let cleaned = text.replace(/\s{3,}/g, '\n');
+  
+  // Remove page headers and footers (common in PDFs)
+  cleaned = cleaned.replace(/Page \d+ of \d+/g, '');
+  
+  // Remove copyright notices or standard footers
+  cleaned = cleaned.replace(/©\s*\d{4}\s*Verizon\s*Wireless/gi, '');
+  
+  return cleaned;
+}
+
 async function analyzeVerizonBill(fileContent: ArrayBuffer) {
   console.log("Analyzing Verizon bill with Claude as primary parser...");
   
@@ -833,4 +847,79 @@ async function analyzeVerizonBill(fileContent: ArrayBuffer) {
         
         // Add additional information from parsing
         billSummary.upcomingChanges = parsedData.upcomingChanges;
-        billSummary.paymentOptions = parsed
+        billSummary.paymentOptions = parsedData.paymentOptions;
+        billSummary.accountInfo = parsedData.accountInfo;
+        billSummary.rawBillSummary = parsedData.billSummary;
+        billSummary.ocrProvider = "standard";
+        
+        console.log("Bill analysis completed using standard text extraction (last resort)");
+        return billSummary;
+      } catch (finalError) {
+        console.error("All extraction methods failed:", finalError);
+        throw new Error("Unable to analyze bill with any available method");
+      }
+    }
+  }
+}
+
+serve(async (req) => {
+  // Handle CORS preflight request
+  if (req.method === 'OPTIONS') {
+    return new Response(null, {
+      status: 204,
+      headers: CORS_HEADERS
+    });
+  }
+  
+  // Check that request is POST
+  if (req.method !== 'POST') {
+    return new Response(JSON.stringify({ error: 'Method not allowed' }), {
+      status: 405,
+      headers: {
+        ...CORS_HEADERS,
+        'Content-Type': 'application/json'
+      }
+    });
+  }
+  
+  try {
+    const formData = await req.formData();
+    const file = formData.get('file');
+    
+    if (!file || !(file instanceof File)) {
+      return new Response(JSON.stringify({ error: 'No file provided' }), {
+        status: 400,
+        headers: {
+          ...CORS_HEADERS,
+          'Content-Type': 'application/json'
+        }
+      });
+    }
+    
+    // Read the file content as ArrayBuffer
+    const fileContent = await file.arrayBuffer();
+    
+    // Process the bill and get the analysis
+    const analysis = await analyzeVerizonBill(fileContent);
+    
+    // Return the analysis result
+    return new Response(JSON.stringify(analysis), {
+      status: 200,
+      headers: {
+        ...CORS_HEADERS,
+        'Content-Type': 'application/json'
+      }
+    });
+  } catch (error) {
+    console.error('Error processing file:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    
+    return new Response(JSON.stringify({ error: errorMessage }), {
+      status: 500,
+      headers: {
+        ...CORS_HEADERS,
+        'Content-Type': 'application/json'
+      }
+    });
+  }
+});
