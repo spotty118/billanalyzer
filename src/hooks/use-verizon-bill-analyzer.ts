@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -5,6 +6,7 @@ import {
   findBestCarrierMatch, 
   alternativeCarrierPlans 
 } from "@/config/alternativeCarriers";
+import type { NetworkPreference } from '@/components/bill-analyzer/VerizonBillAnalyzer';
 
 export const useVerizonBillAnalyzer = () => {
   const [billData, setBillData] = useState<any>(null);
@@ -92,6 +94,73 @@ export const useVerizonBillAnalyzer = () => {
       return data;
     } catch (error) {
       console.error('Error processing file:', error);
+      throw error;
+    }
+  };
+
+  const processBillText = async (text: string): Promise<any> => {
+    try {
+      const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1nemZpb3VhbWlkYXFjdG5xbnJlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzkyMzE3NjQsImV4cCI6MjA1NDgwNzc2NH0._0hxm1UlSMt3wPx8JwaFDvGmpfjI3p5m0HDm6YfaL6Q';
+      
+      console.log('Sending text to analyze with Claude...');
+      const response = await fetch('https://mgzfiouamidaqctnqnre.supabase.co/functions/v1/analyze-verizon-bill', {
+        method: 'POST',
+        body: JSON.stringify({ text }),
+        headers: {
+          'apikey': supabaseAnonKey,
+          'Authorization': `Bearer ${supabaseAnonKey}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      console.log('Response status:', response.status);
+      
+      if (!response.ok) {
+        const responseText = await response.text();
+        console.error('Response text:', responseText);
+        
+        let errorMessage;
+        try {
+          const errorData = JSON.parse(responseText);
+          errorMessage = errorData.error || errorData.message || `Failed to analyze bill: ${response.status}`;
+        } catch {
+          errorMessage = `Failed to analyze bill: ${response.status}`;
+        }
+        
+        throw new Error(errorMessage);
+      }
+      
+      // Get analysis response
+      const analysisResponse = await response.json();
+      console.log('Analysis response received');
+      
+      if (analysisResponse.status === "processing") {
+        // This is just a processing notification from Edge Runtime
+        console.log("Bill is being processed asynchronously");
+        return {
+          status: "processing",
+          message: "Your bill is being analyzed. This may take a moment.",
+          timestamp: new Date().toISOString(),
+          accountNumber: `PROC-${Date.now().toString().substring(0, 6)}`,
+          totalAmount: 0,
+          phoneLines: []
+        };
+      }
+      
+      // The response should already be the parsed data
+      const data = analysisResponse;
+      
+      // If there's an error property, something went wrong
+      if (data.error) {
+        throw new Error(data.error);
+      }
+      
+      // Save the OCR provider info
+      setOcrProvider(data.analysisSource || 'claude');
+      
+      return data;
+    } catch (error) {
+      console.error('Error processing bill text:', error);
       throw error;
     }
   };
@@ -283,6 +352,72 @@ export const useVerizonBillAnalyzer = () => {
     }
   };
 
+  const analyzeBillText = async (text: string, networkPref: NetworkPreference) => {
+    setIsLoading(true);
+    setErrorMessage(null);
+
+    try {
+      toast.info("Analyzing bill text with Claude AI...", { duration: 5000 });
+      const analysisResult = await processBillText(text);
+      
+      if (!analysisResult || typeof analysisResult !== 'object') {
+        throw new Error('Invalid analysis result received');
+      }
+      
+      // Add network preference to the data
+      analysisResult.networkPreference = networkPref;
+      
+      const enhancedData = enhanceBillData(analysisResult);
+      
+      setBillData(enhancedData);
+      
+      try {
+        await saveBillAnalysis(enhancedData);
+        console.log("Bill text analysis saved to database");
+      } catch (dbError) {
+        console.error("Error saving to database, but analysis completed:", dbError);
+      }
+      
+      toast.success(`Bill analysis completed successfully using Claude AI!`);
+      return enhancedData;
+    } catch (error) {
+      console.error('Error processing bill text:', error);
+      const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+      setErrorMessage(errorMsg);
+      toast.error(`Failed to analyze bill text: ${errorMsg}`);
+      
+      // Create fallback data if analysis fails completely
+      const fallbackData = {
+        accountNumber: 'Text Analysis Failed',
+        billingPeriod: new Date().toLocaleDateString(),
+        totalAmount: 0,
+        phoneLines: [{
+          phoneNumber: "Unknown",
+          deviceName: "Smartphone",
+          ownerName: "Verizon Customer",
+          planName: "Unknown Plan",
+          monthlyTotal: 0,
+          details: {
+            planCost: 0,
+            planDiscount: 0,
+            devicePayment: 0,
+            deviceCredit: 0,
+            protection: 0
+          }
+        }],
+        networkPreference: networkPref,
+        ocrProvider: "failed",
+        processingMethod: "direct-text-input"
+      };
+      
+      const enhancedFallback = enhanceBillData(fallbackData);
+      setBillData(enhancedFallback);
+      return enhancedFallback;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const addManualLineCharges = async (manualData: any) => {
     try {
       setIsLoading(true);
@@ -429,6 +564,7 @@ export const useVerizonBillAnalyzer = () => {
     errorMessage,
     ocrProvider,
     handleFileChange,
+    analyzeBillText,
     calculateCarrierSavings,
     addManualLineCharges,
     resetBillData

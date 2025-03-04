@@ -4,13 +4,14 @@ import { BillAnalyzerContent } from './BillAnalyzerContent';
 import { ManualEntryForm } from './ManualEntryForm';
 import { useVerizonBillAnalyzer } from '@/hooks/use-verizon-bill-analyzer';
 import { Button } from '@/components/ui/button';
-import { Upload, PencilLine, RefreshCw, Signal, AlertTriangle } from 'lucide-react';
+import { Upload, PencilLine, RefreshCw, Signal, AlertTriangle, FileText } from 'lucide-react';
 import { toast } from "sonner";
 import { Card, CardContent } from '@/components/ui/card';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
+import { Textarea } from '@/components/ui/textarea';
 
 export type NetworkPreference = 'verizon' | 'tmobile' | 'att' | null;
 
@@ -21,21 +22,24 @@ const VerizonBillAnalyzer = () => {
     calculateCarrierSavings,
     addManualLineCharges,
     handleFileChange,
+    analyzeBillText,
     isLoading,
     errorMessage,
     ocrProvider
   } = useVerizonBillAnalyzer();
 
-  const [inputMethod, setInputMethod] = useState<'upload' | 'manual' | null>(null);
+  const [inputMethod, setInputMethod] = useState<'upload' | 'manual' | 'text' | null>(null);
   const [networkPreference, setNetworkPreference] = useState<NetworkPreference>(null);
   const [showNetworkError, setShowNetworkError] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
+  const [billText, setBillText] = useState('');
 
   const handleStartOver = () => {
     resetBillData();
     setInputMethod(null);
     setNetworkPreference(null);
     setShowNetworkError(false);
+    setBillText('');
     toast.success("Analysis reset. You can start over.");
   };
 
@@ -85,6 +89,21 @@ const VerizonBillAnalyzer = () => {
     }
   };
 
+  const handleTextAnalysis = async () => {
+    if (!networkPreference) {
+      setShowNetworkError(true);
+      toast.error("Please select which carrier works best in your area");
+      return;
+    }
+
+    if (!billText || billText.trim().length < 100) {
+      toast.error("Please paste your Verizon bill text. Make sure to include sufficient content for accurate analysis.");
+      return;
+    }
+
+    await analyzeBillText(billText, networkPreference);
+  };
+
   if (billData) {
     return (
       <div className="flex flex-col w-full max-w-6xl mx-auto bg-white rounded-lg shadow">
@@ -129,7 +148,7 @@ const VerizonBillAnalyzer = () => {
         <div className="flex flex-col items-center justify-center p-10 space-y-8">
           <h2 className="text-2xl font-semibold text-gray-800">Choose Input Method</h2>
           <p className="text-gray-600 text-center max-w-md">
-            You can either upload your Verizon bill PDF or manually enter your line charges.
+            You can upload a Verizon bill PDF, paste the bill text, or manually enter your line charges.
           </p>
           
           <div className="flex flex-col sm:flex-row gap-4 w-full max-w-md">
@@ -143,6 +162,15 @@ const VerizonBillAnalyzer = () => {
             </Button>
             
             <Button 
+              onClick={() => setInputMethod('text')}
+              className="flex-1 h-32 flex-col space-y-3 p-6"
+              variant="outline"
+            >
+              <FileText className="h-10 w-10 text-purple-500" />
+              <span className="font-medium">Paste Bill Text</span>
+            </Button>
+            
+            <Button 
               onClick={() => setInputMethod('manual')}
               className="flex-1 h-32 flex-col space-y-3 p-6"
               variant="outline"
@@ -153,7 +181,7 @@ const VerizonBillAnalyzer = () => {
           </div>
           
           <p className="text-xs text-gray-400 mt-6">
-            Both methods will provide you with a detailed analysis and potential savings
+            All methods will provide you with a detailed analysis and potential savings
           </p>
         </div>
       ) : inputMethod === 'upload' ? (
@@ -243,6 +271,102 @@ const VerizonBillAnalyzer = () => {
                         <Progress value={uploadProgress} />
                       </div>
                     )}
+                    
+                    {errorMessage && (
+                      <div className="text-red-500 bg-red-50 p-4 rounded-md border border-red-200 mt-4">
+                        <h4 className="font-medium flex items-center gap-2">
+                          <AlertTriangle size={16} />
+                          Error processing bill
+                        </h4>
+                        <p className="text-sm mt-1">{errorMessage}</p>
+                      </div>
+                    )}
+                    
+                    {isLoading && (
+                      <div className="text-blue-500 bg-blue-50 p-4 rounded-md border border-blue-200 mt-4">
+                        <p className="text-sm">Processing your bill. This may take a few moments...</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      ) : inputMethod === 'text' ? (
+        <div>
+          <Button 
+            onClick={() => setInputMethod(null)} 
+            variant="ghost" 
+            className="m-4"
+          >
+            ← Back to selection
+          </Button>
+          <div className="flex flex-col items-center justify-center p-10 space-y-8">
+            <Card className="w-full max-w-2xl">
+              <CardContent className="pt-6">
+                <div className="space-y-6">
+                  <div className="flex items-center gap-2">
+                    <Signal className="h-5 w-5 text-blue-500" />
+                    <h3 className="text-lg font-medium">Select your network preference</h3>
+                    <span className="text-red-500">*</span>
+                  </div>
+                  
+                  {showNetworkError && (
+                    <div className="flex items-center gap-2 text-red-500 text-sm bg-red-50 p-2 rounded border border-red-200">
+                      <AlertTriangle size={16} />
+                      <span>Please select a network preference to continue</span>
+                    </div>
+                  )}
+                  
+                  <RadioGroup 
+                    value={networkPreference || ''} 
+                    onValueChange={handleNetworkPreferenceChange}
+                    className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2"
+                  >
+                    <div className="flex items-center space-x-2 border rounded-md p-4 hover:bg-gray-50">
+                      <RadioGroupItem value="verizon" id="verizon-text" />
+                      <Label htmlFor="verizon-text" className="font-medium cursor-pointer">
+                        Verizon
+                      </Label>
+                    </div>
+                    
+                    <div className="flex items-center space-x-2 border rounded-md p-4 hover:bg-gray-50">
+                      <RadioGroupItem value="tmobile" id="tmobile-text" />
+                      <Label htmlFor="tmobile-text" className="font-medium cursor-pointer">
+                        T-Mobile
+                      </Label>
+                    </div>
+                    
+                    <div className="flex items-center space-x-2 border rounded-md p-4 hover:bg-gray-50">
+                      <RadioGroupItem value="att" id="att-text" />
+                      <Label htmlFor="att-text" className="font-medium cursor-pointer">
+                        AT&T
+                      </Label>
+                    </div>
+                  </RadioGroup>
+                  
+                  <div className="space-y-4 pt-4">
+                    <h3 className="text-lg font-medium">Paste your Verizon bill text</h3>
+                    <p className="text-sm text-gray-500">
+                      Copy and paste the text from your Verizon bill to analyze your current charges and potential savings.
+                    </p>
+                    
+                    <Textarea
+                      placeholder="Paste your Verizon bill text here..."
+                      className="min-h-[300px] font-mono text-sm"
+                      value={billText}
+                      onChange={(e) => setBillText(e.target.value)}
+                      disabled={isLoading}
+                    />
+                    
+                    <Button 
+                      onClick={handleTextAnalysis}
+                      className="w-full"
+                      disabled={isLoading || !networkPreference || !billText}
+                    >
+                      Analyze Bill Text
+                    </Button>
                     
                     {errorMessage && (
                       <div className="text-red-500 bg-red-50 p-4 rounded-md border border-red-200 mt-4">

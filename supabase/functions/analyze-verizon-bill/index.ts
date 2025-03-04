@@ -251,30 +251,57 @@ serve(async (req) => {
   try {
     console.log("Received bill analysis request");
     
-    // Get the form data from the request
-    const formData = await req.formData();
-    const file = formData.get('file');
+    let extractedText = "";
+    let isDirectTextInput = false;
     
-    if (!file || !(file instanceof File)) {
-      throw new Error('No file provided or invalid file format');
+    // Check if this is a JSON request or form data
+    const contentType = req.headers.get('content-type') || '';
+    
+    if (contentType.includes('application/json')) {
+      // Handle direct text input case
+      console.log("Processing direct text input");
+      const jsonData = await req.json();
+      
+      if (!jsonData.text) {
+        throw new Error('No text provided in the request');
+      }
+      
+      extractedText = jsonData.text;
+      isDirectTextInput = true;
+      console.log(`Received text input, length: ${extractedText.length} characters`);
+      
+    } else {
+      // Handle file upload case
+      console.log("Processing file upload");
+      const formData = await req.formData();
+      const file = formData.get('file');
+      
+      if (!file || !(file instanceof File)) {
+        throw new Error('No file provided or invalid file format');
+      }
+      
+      console.log(`Processing file: ${file.name}, type: ${file.type}, size: ${file.size} bytes`);
+      
+      // Read the file content as an ArrayBuffer
+      const fileContent = await file.arrayBuffer();
+      console.log(`File read as ArrayBuffer, length: ${fileContent.byteLength}`);
+      
+      // Extract text from the PDF
+      extractedText = await extractTextFromPdf(fileContent);
+      console.log("Text extracted successfully from PDF");
     }
-    
-    console.log(`Processing file: ${file.name}, type: ${file.type}, size: ${file.size} bytes`);
-    
-    // Read the file content as an ArrayBuffer
-    const fileContent = await file.arrayBuffer();
-    console.log(`File read as ArrayBuffer, length: ${fileContent.byteLength}`);
     
     // Define an async function for bill analysis
     const analyzeBill = async () => {
       try {
-        // First extract text from the PDF
-        const extractedText = await extractTextFromPdf(fileContent);
-        console.log("Text extracted successfully");
-        
-        // Then send the extracted text to Claude for analysis
+        // Send the extracted text to Claude for analysis
         const analysisResult = await analyzeBillText(extractedText);
         console.log("Analysis complete");
+        
+        // Include the processing method in the result
+        if (isDirectTextInput) {
+          analysisResult.processingMethod = "direct-text-input";
+        }
         
         return analysisResult;
       } catch (error) {
@@ -314,7 +341,7 @@ serve(async (req) => {
       });
     }
   } catch (error) {
-    console.error('Error processing file:', error);
+    console.error('Error processing request:', error);
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     
     return new Response(JSON.stringify({ 
