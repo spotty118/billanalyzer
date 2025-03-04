@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -17,14 +18,11 @@ interface RecommendationsTabProps {
   networkPreference?: NetworkPreference;
 }
 
+// Only include US Mobile sub-brands
 const carriers = [
-  { id: "warp", name: "Warp", logo: "🌀", network: "verizon" },
-  { id: "usmobile", name: "US Mobile", logo: "🇺🇸", network: null },
-  { id: "verizon", name: "Verizon", logo: "✓", network: "verizon" },
-  { id: "tmobile", name: "T-Mobile", logo: "📱", network: "tmobile" },
-  { id: "att", name: "AT&T", logo: "🔵", network: "att" },
-  { id: "lightspeed", name: "LightSpeed", logo: "⚡", network: "tmobile" },
-  { id: "darkstar", name: "DarkStar", logo: "★", network: "att" },
+  { id: "warp", name: "US Mobile Warp", logo: "🌀", network: "verizon" },
+  { id: "lightspeed", name: "US Mobile LightSpeed", logo: "⚡", network: "tmobile" },
+  { id: "darkstar", name: "US Mobile DarkStar", logo: "★", network: "att" },
 ];
 
 const networkToCarrierMap = {
@@ -71,42 +69,22 @@ export function RecommendationsTab({
             pros.push("Optimized for your preferred network coverage");
           }
           cons.push("Newer carrier option");
-        } else if (carrier.id === "usmobile") {
-          reasons.push("Customizable plans to fit your needs");
-          pros.push("Affordable pricing");
-          pros.push("Works on multiple networks");
-          cons.push("May not have as many perks as major carriers");
-        } else if (carrier.id === "verizon") {
-          reasons.push("Excellent coverage nationwide");
-          pros.push("Premium network quality");
-          pros.push("Many entertainment perks");
-          cons.push("Generally higher pricing");
-        } else if (carrier.id === "tmobile") {
-          reasons.push("Aggressive pricing on family plans");
-          pros.push("Free international data");
-          pros.push("Netflix included in some plans");
-          cons.push("Coverage may vary in rural areas");
-        } else if (carrier.id === "att") {
-          reasons.push("Wide network coverage");
-          pros.push("HBO Max included with elite plans");
-          pros.push("Strong rural coverage");
-          cons.push("Higher prices compared to some alternatives");
         } else if (carrier.id === "lightspeed") {
           reasons.push("Fast 5G speeds on T-Mobile's network");
+          pros.push("Great international options");
           pros.push("Affordable pricing with premium features");
           if (networkPreference === 'tmobile') {
             pros.push("Optimized for your preferred network coverage");
           }
-          pros.push("Great international options");
-          cons.push("Newer service offering");
+          cons.push("Coverage may vary in rural areas");
         } else if (carrier.id === "darkstar") {
           reasons.push("Reliable coverage on AT&T's network");
           pros.push("Premium data priority");
+          pros.push("Extensive hotspot data");
           if (networkPreference === 'att') {
             pros.push("Optimized for your preferred network coverage");
           }
-          pros.push("Extensive hotspot data");
-          cons.push("Limited perks compared to AT&T postpaid");
+          cons.push("Newer service offering");
         }
         
         if (networkPreference && carrier.network === networkPreference) {
