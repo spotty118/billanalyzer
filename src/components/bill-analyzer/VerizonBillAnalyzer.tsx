@@ -276,7 +276,7 @@ const VerizonBillAnalyzer = () => {
                           <span>Analyzing bill...</span>
                           <span>{Math.round(uploadProgress)}%</span>
                         </div>
-                        <Progress value={uploadProgress} />
+                        <Progress value={uploadProgress} className="h-2" />
                       </div>
                     )}
                     
@@ -292,7 +292,12 @@ const VerizonBillAnalyzer = () => {
                     
                     {isLoading && (
                       <div className="text-blue-500 bg-blue-50 p-4 rounded-md border border-blue-200 mt-4">
-                        <p className="text-sm">Processing your bill. This may take a few moments...</p>
+                        <div className="flex justify-between mb-2">
+                          <p className="text-sm font-medium">Processing your bill with Our AI</p>
+                          <span className="text-sm font-bold">75%</span>
+                        </div>
+                        <Progress value={75} className="h-2 mb-2" />
+                        <p className="text-xs text-blue-400 mt-1">This may take a few moments...</p>
                       </div>
                     )}
                   </div>
@@ -399,8 +404,12 @@ const VerizonBillAnalyzer = () => {
                     
                     {isLoading && (
                       <div className="text-blue-500 bg-blue-50 p-4 rounded-md border border-blue-200 mt-4">
-                        <p className="text-sm">Processing your bill with Our AI. This may take a few moments...</p>
-                        <Progress className="mt-2" value={75} />
+                        <div className="flex justify-between mb-2">
+                          <p className="text-sm font-medium">Processing your bill with Our AI</p>
+                          <span className="text-sm font-bold">75%</span>
+                        </div>
+                        <Progress value={75} className="h-2 mb-2" />
+                        <p className="text-xs text-blue-400 mt-1">This may take a few moments...</p>
                       </div>
                     )}
                   </div>
