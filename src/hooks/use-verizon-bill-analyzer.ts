@@ -6,6 +6,7 @@ import {
   getCarrierPlanPrice, 
   alternativeCarrierPlans 
 } from "@/config/alternativeCarriers";
+import { NetworkPreference } from '@/components/bill-analyzer/VerizonBillAnalyzer';
 
 export const useVerizonBillAnalyzer = () => {
   const [billData, setBillData] = useState<any>(null);
@@ -273,7 +274,8 @@ export const useVerizonBillAnalyzer = () => {
             }
           ]
         },
-        chargesByCategory
+        chargesByCategory,
+        networkPreference: manualData.networkPreference || null
       };
       
       setBillData(enhancedData);
@@ -342,8 +344,22 @@ export const useVerizonBillAnalyzer = () => {
         price: 0
       };
     }
+
+    let alternativePrice = getCarrierPlanPrice(carrierPlan, numberOfLines);
     
-    const alternativePrice = getCarrierPlanPrice(carrierPlan, numberOfLines);
+    const networkPreference = billData.networkPreference as NetworkPreference;
+    if (networkPreference) {
+      const networkToCarrierIdMap: Record<string, string[]> = {
+        'verizon': ['warp'],
+        'att': ['darkstar'],
+        'tmobile': ['lightspeed']
+      };
+      
+      const preferredCarrierIds = networkToCarrierIdMap[networkPreference] || [];
+      if (preferredCarrierIds.includes(carrierId)) {
+        alternativePrice *= 0.95;
+      }
+    }
     
     const monthlySavings = billData.totalAmount - alternativePrice;
     const annualSavings = monthlySavings * 12;

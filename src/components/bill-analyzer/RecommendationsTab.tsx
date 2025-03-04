@@ -1,9 +1,9 @@
-
 import { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { CheckIcon, XIcon } from "lucide-react";
+import { NetworkPreference } from './VerizonBillAnalyzer';
 
 interface RecommendationsTabProps {
   billData: any;
@@ -14,39 +14,63 @@ interface RecommendationsTabProps {
     planName: string;
     price: number;
   };
+  networkPreference?: NetworkPreference;
 }
 
 const carriers = [
-  { id: "warp", name: "Warp", logo: "🌀" },
-  { id: "usmobile", name: "US Mobile", logo: "🇺🇸" },
-  { id: "verizon", name: "Verizon", logo: "✓" },
-  { id: "tmobile", name: "T-Mobile", logo: "📱" },
-  { id: "att", name: "AT&T", logo: "🔵" },
+  { id: "warp", name: "Warp", logo: "🌀", network: "verizon" },
+  { id: "usmobile", name: "US Mobile", logo: "🇺🇸", network: null },
+  { id: "verizon", name: "Verizon", logo: "✓", network: "verizon" },
+  { id: "tmobile", name: "T-Mobile", logo: "📱", network: "tmobile" },
+  { id: "att", name: "AT&T", logo: "🔵", network: "att" },
+  { id: "lightspeed", name: "LightSpeed", logo: "⚡", network: "tmobile" },
+  { id: "darkstar", name: "DarkStar", logo: "★", network: "att" },
 ];
+
+const networkToCarrierMap = {
+  verizon: "warp",
+  tmobile: "lightspeed",
+  att: "darkstar"
+};
 
 export function RecommendationsTab({ 
   billData, 
   formatCurrency, 
-  calculateCarrierSavings 
+  calculateCarrierSavings,
+  networkPreference
 }: RecommendationsTabProps) {
   const [recommendations, setRecommendations] = useState<any[]>([]);
 
   useEffect(() => {
     if (billData) {
-      // Calculate recommendations based on savings from each carrier
-      const allRecommendations = carriers.map(carrier => {
+      let carriersForRecommendation = [...carriers];
+      
+      if (networkPreference && networkToCarrierMap[networkPreference]) {
+        const preferredCarrierId = networkToCarrierMap[networkPreference];
+        const preferredCarrierIndex = carriersForRecommendation.findIndex(c => c.id === preferredCarrierId);
+        
+        if (preferredCarrierIndex !== -1) {
+          const preferredCarrier = carriersForRecommendation[preferredCarrierIndex];
+          carriersForRecommendation.splice(preferredCarrierIndex, 1);
+          carriersForRecommendation.unshift(preferredCarrier);
+        }
+      }
+      
+      const allRecommendations = carriersForRecommendation.map(carrier => {
         const savings = calculateCarrierSavings(carrier.id);
         
-        // Generate meaningful reasons and pros/cons for each carrier
         let reasons = [];
         let pros = [];
         let cons = [];
         
         if (carrier.id === "warp") {
-          reasons.push("Unlimited data with no speed caps");
+          reasons.push("Unlimited data with no speed caps on Verizon's network");
           pros.push("No contracts or hidden fees");
-          pros.push("Simple billing structure");
-          cons.push("Newer carrier in the market");
+          pros.push("Uses Verizon's reliable nationwide network");
+          if (networkPreference === 'verizon') {
+            pros.push("Optimized for your preferred network coverage");
+          }
+          cons.push("Newer carrier option");
         } else if (carrier.id === "usmobile") {
           reasons.push("Customizable plans to fit your needs");
           pros.push("Affordable pricing");
@@ -67,6 +91,26 @@ export function RecommendationsTab({
           pros.push("HBO Max included with elite plans");
           pros.push("Strong rural coverage");
           cons.push("Higher prices compared to some alternatives");
+        } else if (carrier.id === "lightspeed") {
+          reasons.push("Fast 5G speeds on T-Mobile's network");
+          pros.push("Affordable pricing with premium features");
+          if (networkPreference === 'tmobile') {
+            pros.push("Optimized for your preferred network coverage");
+          }
+          pros.push("Great international options");
+          cons.push("Newer service offering");
+        } else if (carrier.id === "darkstar") {
+          reasons.push("Reliable coverage on AT&T's network");
+          pros.push("Premium data priority");
+          if (networkPreference === 'att') {
+            pros.push("Optimized for your preferred network coverage");
+          }
+          pros.push("Extensive hotspot data");
+          cons.push("Limited perks compared to AT&T postpaid");
+        }
+        
+        if (networkPreference && carrier.network === networkPreference) {
+          reasons.unshift(`Recommended for ${networkPreference.toUpperCase()} coverage in your area`);
         }
         
         return {
@@ -77,16 +121,18 @@ export function RecommendationsTab({
           monthlySavings: savings.monthlySavings,
           annualSavings: savings.annualSavings,
           monthlyPrice: savings.price,
+          preferred: networkPreference && carrier.network === networkPreference,
           reasons,
           pros,
           cons
         };
       });
       
-      // Sort by savings (highest first) and filter out negative savings
-      const sortedRecommendations = allRecommendations
-        .sort((a, b) => b.annualSavings - a.annualSavings)
-        .filter(rec => rec.annualSavings > 0);
+      const sortedRecommendations = allRecommendations.sort((a, b) => {
+        if (a.preferred && !b.preferred) return -1;
+        if (!a.preferred && b.preferred) return 1;
+        return b.annualSavings - a.annualSavings;
+      }).filter(rec => rec.annualSavings > 0 || rec.preferred);
       
       setRecommendations(sortedRecommendations.length > 0 ? sortedRecommendations : [
         {
@@ -103,7 +149,7 @@ export function RecommendationsTab({
         }
       ]);
     }
-  }, [billData, calculateCarrierSavings]);
+  }, [billData, calculateCarrierSavings, networkPreference]);
 
   if (!billData) return <div>No bill data available</div>;
 
@@ -112,7 +158,7 @@ export function RecommendationsTab({
       <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
         <h3 className="text-lg font-bold mb-4">Personalized Recommendations</h3>
         <p className="text-gray-600 mb-6">
-          Based on your current bill and usage patterns, here are our recommendations to help you save:
+          Based on your current bill, usage patterns, and network preferences, here are our recommendations to help you save:
         </p>
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -124,7 +170,14 @@ export function RecommendationsTab({
                     <span className="text-2xl">{rec.logo}</span>
                     <CardTitle>{rec.carrier}</CardTitle>
                   </div>
-                  {index === 0 && <Badge className="bg-blue-500">Best Match</Badge>}
+                  <div className="flex gap-2">
+                    {rec.preferred && (
+                      <Badge className="bg-green-500">Best Network Match</Badge>
+                    )}
+                    {index === 0 && !rec.preferred && (
+                      <Badge className="bg-blue-500">Best Value</Badge>
+                    )}
+                  </div>
                 </div>
                 <CardDescription>{rec.planName}</CardDescription>
               </CardHeader>

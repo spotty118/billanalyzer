@@ -4,8 +4,13 @@ import { BillAnalyzerContent } from './BillAnalyzerContent';
 import { ManualEntryForm } from './ManualEntryForm';
 import { useVerizonBillAnalyzer } from '@/hooks/use-verizon-bill-analyzer';
 import { Button } from '@/components/ui/button';
-import { Upload, PencilLine, RefreshCw, Clock } from 'lucide-react';
+import { Upload, PencilLine, RefreshCw, Clock, Signal } from 'lucide-react';
 import { toast } from "sonner";
+import { Card, CardContent } from '@/components/ui/card';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Label } from '@/components/ui/label';
+
+export type NetworkPreference = 'verizon' | 'tmobile' | 'att' | null;
 
 const VerizonBillAnalyzer = () => {
   const { 
@@ -16,11 +21,17 @@ const VerizonBillAnalyzer = () => {
   } = useVerizonBillAnalyzer();
 
   const [inputMethod, setInputMethod] = useState<'upload' | 'manual' | null>(null);
+  const [networkPreference, setNetworkPreference] = useState<NetworkPreference>(null);
 
   const handleStartOver = () => {
     resetBillData();
     setInputMethod(null);
+    setNetworkPreference(null);
     toast.success("Analysis reset. You can start over.");
+  };
+
+  const handleNetworkPreferenceChange = (value: string) => {
+    setNetworkPreference(value as NetworkPreference);
   };
 
   if (billData) {
@@ -40,6 +51,7 @@ const VerizonBillAnalyzer = () => {
         <BillAnalyzerContent 
           billData={billData}
           calculateCarrierSavings={calculateCarrierSavings}
+          networkPreference={networkPreference}
         />
         
         {billData?.billVersion && (
@@ -125,7 +137,54 @@ const VerizonBillAnalyzer = () => {
           >
             ← Back to selection
           </Button>
-          <ManualEntryForm onSubmit={addManualLineCharges} />
+          
+          <div className="px-6 pt-2 pb-6">
+            <Card className="mb-6">
+              <CardContent className="pt-6">
+                <div className="space-y-4">
+                  <div className="flex items-center gap-2">
+                    <Signal className="h-5 w-5 text-blue-500" />
+                    <h3 className="text-lg font-medium">Which carrier works best in your area?</h3>
+                  </div>
+                  <p className="text-sm text-gray-500">
+                    This helps us recommend the best US Mobile plan for your location. US Mobile offers plans on multiple networks.
+                  </p>
+                  
+                  <RadioGroup 
+                    value={networkPreference || ''} 
+                    onValueChange={handleNetworkPreferenceChange}
+                    className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2"
+                  >
+                    <div className="flex items-center space-x-2 border rounded-md p-4 hover:bg-gray-50">
+                      <RadioGroupItem value="verizon" id="verizon" />
+                      <Label htmlFor="verizon" className="flex flex-col cursor-pointer">
+                        <span className="font-medium">Verizon</span>
+                        <span className="text-xs text-gray-500">We'll recommend Warp</span>
+                      </Label>
+                    </div>
+                    
+                    <div className="flex items-center space-x-2 border rounded-md p-4 hover:bg-gray-50">
+                      <RadioGroupItem value="tmobile" id="tmobile" />
+                      <Label htmlFor="tmobile" className="flex flex-col cursor-pointer">
+                        <span className="font-medium">T-Mobile</span>
+                        <span className="text-xs text-gray-500">We'll recommend Lightspeed</span>
+                      </Label>
+                    </div>
+                    
+                    <div className="flex items-center space-x-2 border rounded-md p-4 hover:bg-gray-50">
+                      <RadioGroupItem value="att" id="att" />
+                      <Label htmlFor="att" className="flex flex-col cursor-pointer">
+                        <span className="font-medium">AT&T</span>
+                        <span className="text-xs text-gray-500">We'll recommend Darkstar</span>
+                      </Label>
+                    </div>
+                  </RadioGroup>
+                </div>
+              </CardContent>
+            </Card>
+            
+            <ManualEntryForm onSubmit={(data) => addManualLineCharges({...data, networkPreference})} />
+          </div>
         </div>
       )}
     </div>

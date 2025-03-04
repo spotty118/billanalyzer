@@ -1,6 +1,7 @@
 
 import { useState, useCallback } from 'react';
 import { BillTabs } from "@/components/bill-analyzer/BillTabs";
+import { NetworkPreference } from './VerizonBillAnalyzer';
 
 interface BillAnalyzerContentProps {
   billData: any;
@@ -13,13 +14,15 @@ interface BillAnalyzerContentProps {
     planName: string;
     price: number;
   };
+  networkPreference?: NetworkPreference;
 }
 
-const CustomBillTabs = ({ billData, calculateCarrierSavings, activeTab, onTabChange }: any) => {
+const CustomBillTabs = ({ billData, calculateCarrierSavings, networkPreference, activeTab, onTabChange }: any) => {
   return (
     <BillTabs 
       billData={billData}
       calculateCarrierSavings={calculateCarrierSavings}
+      networkPreference={networkPreference}
       activeTab={activeTab}
       onTabChange={onTabChange}
     />
@@ -32,6 +35,7 @@ export function BillAnalyzerContent({
   getCarrierPlanPrice,
   findBestCarrierMatch,
   calculateCarrierSavings,
+  networkPreference,
 }: BillAnalyzerContentProps) {
   const [activeTab, setActiveTab] = useState("overview");
 
@@ -61,6 +65,7 @@ export function BillAnalyzerContent({
       <CustomBillTabs 
         billData={billData} 
         calculateCarrierSavings={memoizedCalculateCarrierSavings}
+        networkPreference={networkPreference}
         activeTab={activeTab}
         onTabChange={handleTabChange}
       />
