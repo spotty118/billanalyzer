@@ -22,7 +22,7 @@ async function sendPdfToClaude(fileContent: ArrayBuffer) {
     const buffer = new Uint8Array(fileContent);
     const base64Content = btoa(String.fromCharCode(...buffer));
     
-    console.log("Calling Claude API with model: claude-3-7-sonnet-20250219");
+    console.log(`Calling Claude API with model: claude-3-7-sonnet-20250219 and API key length: ${ANTHROPIC_API_KEY.length} chars`);
     
     const response = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
@@ -59,12 +59,25 @@ async function sendPdfToClaude(fileContent: ArrayBuffer) {
     
     if (!response.ok) {
       const errorText = await response.text();
-      console.error("Claude API error:", errorText);
-      throw new Error(`Claude API error: ${response.status} ${response.statusText}`);
+      console.error("Claude API error response:", errorText);
+      console.error("Claude API status:", response.status, response.statusText);
+      
+      // Parse the error if possible to provide more detail
+      try {
+        const errorData = JSON.parse(errorText);
+        console.error("Claude API error details:", JSON.stringify(errorData));
+        throw new Error(`Claude API error: ${response.status} ${response.statusText} - ${errorData.error?.message || errorData.error || 'Unknown error'}`);
+      } catch (parseError) {
+        throw new Error(`Claude API error: ${response.status} ${response.statusText} - ${errorText.substring(0, 200)}`);
+      }
     }
     
+    // Get the response data
+    const responseData = await response.json();
+    console.log("Claude API response received successfully");
+    
     // Return the raw Claude response
-    return await response.json();
+    return responseData;
   } catch (error) {
     console.error("Error using Claude for analysis:", error);
     throw new Error(`Claude analysis failed: ${error.message}`);
@@ -92,11 +105,14 @@ serve(async (req) => {
   }
   
   try {
+    console.log("Received bill analysis request");
+    
     // Process the form data
     const formData = await req.formData();
     const file = formData.get('file');
     
     if (!file || !(file instanceof File)) {
+      console.error("No file provided in request");
       return new Response(JSON.stringify({ error: 'No file provided' }), {
         status: 400,
         headers: {
@@ -106,9 +122,12 @@ serve(async (req) => {
       });
     }
     
+    console.log(`Received file: ${file.name}, size: ${file.size} bytes, type: ${file.type}`);
+    
     // Read up to 5MB max to prevent memory issues
     const MAX_SIZE = 5 * 1024 * 1024; // 5MB
     if (file.size > MAX_SIZE) {
+      console.error(`File too large: ${file.size} bytes (max 5MB)`);
       return new Response(JSON.stringify({ error: 'File too large (max 5MB)' }), {
         status: 400,
         headers: {
@@ -120,9 +139,12 @@ serve(async (req) => {
     
     // Read the file content as ArrayBuffer
     const fileContent = await file.arrayBuffer();
+    console.log(`File content read successfully, size: ${fileContent.byteLength} bytes`);
     
     // Send directly to Claude and get raw response
+    console.log("Sending to Claude for analysis...");
     const claudeResponse = await sendPdfToClaude(fileContent);
+    console.log("Claude analysis complete");
     
     // Return Claude's raw response
     return new Response(JSON.stringify(claudeResponse), {
@@ -136,7 +158,11 @@ serve(async (req) => {
     console.error('Error processing file:', error);
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     
-    return new Response(JSON.stringify({ error: errorMessage }), {
+    return new Response(JSON.stringify({ 
+      error: errorMessage,
+      timestamp: new Date().toISOString(),
+      service: 'analyze-verizon-bill'
+    }), {
       status: 500,
       headers: {
         ...CORS_HEADERS,
