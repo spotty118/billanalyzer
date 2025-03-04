@@ -12,6 +12,74 @@ const ANTHROPIC_API_KEY = Deno.env.get('ANTHROPIC_API_KEY');
 // In EdgeRuntime, use the waitUntil function to continue processing after response is sent
 const isEdgeRuntime = typeof EdgeRuntime !== 'undefined';
 
+// Function to extract text from PDF
+async function extractTextFromPdf(pdfBuffer: ArrayBuffer): Promise<string> {
+  try {
+    console.log("Extracting text from PDF...");
+    
+    // Convert buffer to base64 for transmission
+    const base64Pdf = arrayBufferToBase64(pdfBuffer);
+    
+    // Use Claude to extract text from the PDF first
+    const textExtractionRequest = {
+      model: "claude-3-7-sonnet-20250219",
+      max_tokens: 4000,
+      system: "You are a document OCR specialist. Extract ALL text from the PDF document. Return ONLY the raw text content, with no commentary, analysis, or formatting. Preserve paragraph breaks with newlines. This is for a bill parsing system, so all text is important.",
+      messages: [
+        {
+          role: "user",
+          content: [
+            {
+              type: "text",
+              text: "Please extract all text from this PDF document. Return only the raw text content with no additional commentary."
+            },
+            {
+              type: "image",
+              source: {
+                type: "base64",
+                media_type: "application/pdf",
+                data: base64Pdf
+              }
+            }
+          ]
+        }
+      ]
+    };
+    
+    console.log("Sending PDF for text extraction to Claude API...");
+    
+    // Send request to Claude API for text extraction
+    const textExtractionResponse = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-api-key": ANTHROPIC_API_KEY,
+        "anthropic-version": "2023-06-01"
+      },
+      body: JSON.stringify(textExtractionRequest)
+    });
+    
+    if (!textExtractionResponse.ok) {
+      const errorText = await textExtractionResponse.text();
+      console.error("Claude API error during text extraction:", errorText);
+      throw new Error(`Text extraction failed: ${textExtractionResponse.status} ${textExtractionResponse.statusText}`);
+    }
+    
+    // Parse the response from Claude
+    const extractionResult = await textExtractionResponse.json();
+    console.log("Text extraction completed successfully");
+    
+    // Get the extracted text from Claude's response
+    const extractedText = extractionResult.content[0].text;
+    console.log(`Extracted text length: ${extractedText.length} characters`);
+    
+    return extractedText;
+  } catch (error) {
+    console.error("Error extracting text from PDF:", error);
+    throw new Error(`PDF text extraction failed: ${error.message}`);
+  }
+}
+
 // Safely convert ArrayBuffer to base64 in chunks to avoid call stack issues
 function arrayBufferToBase64(buffer: ArrayBuffer): string {
   const uint8Array = new Uint8Array(buffer);
@@ -30,20 +98,16 @@ function arrayBufferToBase64(buffer: ArrayBuffer): string {
   return base64;
 }
 
-async function sendToClaude(fileContent: ArrayBuffer) {
+async function analyzeBillText(extractedText: string) {
   if (!ANTHROPIC_API_KEY) {
     console.error("Missing Anthropic API key");
     throw new Error("Claude API key not configured");
   }
   
   try {
-    console.log("Sending content to Claude API...");
+    console.log("Sending extracted text to Claude API for analysis...");
     
-    // Convert the ArrayBuffer to base64 using the chunking function
-    const base64Content = arrayBufferToBase64(fileContent);
-    console.log(`Content converted to base64, length: ${base64Content.length}`);
-    
-    const systemPrompt = `You are an expert Verizon bill analyzer. Extract and organize the key information from the bill, including account info, billing period, total amount due, and details for each phone line (number, plan, device, charges). Format your response as a clean JSON object that can be directly parsed.
+    const systemPrompt = `You are an expert Verizon bill analyzer. Analyze the provided Verizon bill text and extract key information into a structured JSON format.
 
 IMPORTANT: Your response must be a valid JSON object that can be parsed with JSON.parse(). Structure it like this:
 {
@@ -79,7 +143,9 @@ IMPORTANT: Your response must be a valid JSON object that can be parsed with JSO
   }
 }
 
-Extract all values directly from the bill and DO NOT make up or guess ANY information. If you cannot find a specific value in the document, use an empty string or 0 for numbers.`;
+Extract all values directly from the bill and DO NOT make up or guess ANY information. If you cannot find a specific value in the document, use an empty string or 0 for numbers. 
+
+YOU MUST ensure your response contains ONLY valid JSON that can be parsed with JSON.parse(). Do not include any explanatory text, markdown formatting, or code blocks before or after the JSON.`;
 
     // Set up the Claude API request
     const claudeRequest = {
@@ -92,22 +158,14 @@ Extract all values directly from the bill and DO NOT make up or guess ANY inform
           content: [
             {
               type: "text",
-              text: "Here is a Verizon bill I need analyzed. Please extract all relevant information and format it according to the structure specified. Don't guess or make up any information - only extract what you can definitively identify in the document."
-            },
-            {
-              type: "image",
-              source: {
-                type: "base64",
-                media_type: "application/pdf",
-                data: base64Content
-              }
+              text: "Here is the text extracted from a Verizon bill. Please analyze it and extract the structured information according to the format specified:\n\n" + extractedText
             }
           ]
         }
       ]
     };
     
-    console.log("Sending request to Claude API...");
+    console.log("Sending text to Claude API...");
     
     // Send request to Claude API
     const response = await fetch("https://api.anthropic.com/v1/messages", {
@@ -123,23 +181,47 @@ Extract all values directly from the bill and DO NOT make up or guess ANY inform
     if (!response.ok) {
       const errorText = await response.text();
       console.error("Claude API error response:", errorText);
-      console.error("Claude API status:", response.status, response.statusText);
-      
-      // Try to parse the error for more detailed information
-      try {
-        const errorData = JSON.parse(errorText);
-        console.error("Claude API error details:", JSON.stringify(errorData));
-        throw new Error(`Claude API error: ${response.status} ${response.statusText} - ${errorData.error?.message || errorData.error || 'Unknown error'}`);
-      } catch (parseError) {
-        throw new Error(`Claude API error: ${response.status} ${response.statusText} - ${errorText.substring(0, 200)}`);
-      }
+      throw new Error(`Claude API error: ${response.status} ${response.statusText}`);
     }
     
     // Parse the response from Claude
     const claudeResponse = await response.json();
-    console.log("Claude API response received successfully");
+    console.log("Claude API analysis response received successfully");
     
-    return claudeResponse;
+    // Extract the JSON content from Claude's response
+    const analysisText = claudeResponse.content[0].text;
+    console.log("Analysis text length:", analysisText.length);
+    
+    try {
+      // Try to parse the response as JSON directly
+      let jsonData;
+      
+      // First attempt: direct parsing
+      try {
+        jsonData = JSON.parse(analysisText);
+      } catch (parseError) {
+        console.log("Direct JSON parsing failed, attempting to extract JSON from text");
+        
+        // Second attempt: find JSON in the text with regex
+        const jsonMatch = analysisText.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+          jsonData = JSON.parse(jsonMatch[0]);
+        } else {
+          throw new Error("Unable to extract JSON from Claude's response");
+        }
+      }
+      
+      // Add source information
+      jsonData.analysisSource = "claude-3-7-sonnet-20250219";
+      jsonData.processingMethod = "text-extraction";
+      jsonData.extractionDate = new Date().toISOString();
+      
+      return jsonData;
+    } catch (jsonError) {
+      console.error("Error parsing JSON from Claude response:", jsonError);
+      console.error("Claude response content:", analysisText.substring(0, 500) + "...");
+      throw new Error("Failed to parse JSON from Claude's response");
+    }
   } catch (error) {
     console.error("Error using Claude for analysis:", error);
     throw new Error(`Claude analysis failed: ${error.message}`);
@@ -186,12 +268,17 @@ serve(async (req) => {
     // Define an async function for bill analysis
     const analyzeBill = async () => {
       try {
-        // Send the file content to Claude for analysis
-        const analysisResult = await sendToClaude(fileContent);
+        // First extract text from the PDF
+        const extractedText = await extractTextFromPdf(fileContent);
+        console.log("Text extracted successfully");
+        
+        // Then send the extracted text to Claude for analysis
+        const analysisResult = await analyzeBillText(extractedText);
         console.log("Analysis complete");
+        
         return analysisResult;
       } catch (error) {
-        console.error("Error in background task:", error);
+        console.error("Error in analysis process:", error);
         throw error;
       }
     };
