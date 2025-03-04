@@ -42,10 +42,7 @@ async function sendPdfToClaude(fileContent: ArrayBuffer) {
     console.log(`PDF converted to base64, length: ${base64Content.length}`);
     console.log(`Using Claude API with key length: ${ANTHROPIC_API_KEY.length}`);
     
-    // Create a unique file ID for this upload
-    const fileId = `file_${Math.random().toString(36).substring(2, 15)}`;
-    
-    // Send to Claude using the document approach which works better for PDFs
+    // Send to Claude using the document API approach
     const response = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
       headers: {
@@ -69,7 +66,7 @@ async function sendPdfToClaude(fileContent: ArrayBuffer) {
                 type: "image",
                 source: {
                   type: "base64",
-                  media_type: "application/pdf",
+                  media_type: "application/pdf; charset=utf-8",
                   data: base64Content
                 }
               }
