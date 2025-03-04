@@ -1,0 +1,10 @@
+
+project_id = "mgzfiouamidaqctnqnre"
+app_id = "ai-plan-recommendations"
+[serve.parameters]
+PORT = 54322
+SUPABASE_MAX_FUNCTION_TIME_SECONDS = 60
+SUPABASE_FUNCTION_MEMORY_MB = 1024
+
+[secrets]
+ANTHROPIC_API_KEY = ""

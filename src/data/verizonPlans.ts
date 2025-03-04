@@ -63,6 +63,18 @@ export const verizonPlansData: VerizonPlansData = {
     },
     data: 'Unlimited Premium',
     features: ['Unlimited Premium Data', '5G Ultra Wideband', 'Mobile hotspot 60GB', 'Disney+, Hulu, ESPN+, Netflix, Apple Music']
+  },
+  'more-unlimited': {
+    name: 'More Unlimited',
+    prices: {
+      1: 20,
+      2: 20,
+      3: 20,
+      4: 20,
+      5: 20,
+    },
+    data: 'Unlimited',
+    features: ['Number Share', 'For tablets and watches', 'Mobile hotspot included', 'Shared with main line']
   }
 };
 

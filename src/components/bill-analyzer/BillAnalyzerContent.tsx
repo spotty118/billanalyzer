@@ -5,9 +5,6 @@ import { NetworkPreference } from './VerizonBillAnalyzer';
 
 interface BillAnalyzerContentProps {
   billData: any;
-  alternativeCarrierPlans?: any[];
-  getCarrierPlanPrice?: (plan: any, numberOfLines: number) => number;
-  findBestCarrierMatch?: (planName: string, carrierId: string) => string;
   calculateCarrierSavings: (carrierId: string) => {
     monthlySavings: number;
     annualSavings: number;
