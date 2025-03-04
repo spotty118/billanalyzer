@@ -61,7 +61,7 @@ export function BillAnalyzerContent({
 
   return (
     <div className="container mx-auto py-8">
-      <h1 className="text-2xl font-bold mb-4">Bill Analysis</h1>
+      {/* Removed the duplicate "Bill Analysis" heading that was here */}
       <CustomBillTabs 
         billData={billData} 
         calculateCarrierSavings={memoizedCalculateCarrierSavings}
