@@ -293,7 +293,7 @@ const VerizonBillAnalyzer = () => {
                     {isLoading && (
                       <div className="text-blue-500 bg-blue-50 p-4 rounded-md border border-blue-200 mt-4">
                         <div className="flex justify-between mb-2">
-                          <p className="text-sm font-medium">Processing your bill with Our AI</p>
+                          <p className="text-sm font-medium">Analyzing your bill with advanced AI technology</p>
                           <span className="text-sm font-bold">75%</span>
                         </div>
                         <Progress value={75} className="h-2 mb-2" />
@@ -405,7 +405,7 @@ const VerizonBillAnalyzer = () => {
                     {isLoading && (
                       <div className="text-blue-500 bg-blue-50 p-4 rounded-md border border-blue-200 mt-4">
                         <div className="flex justify-between mb-2">
-                          <p className="text-sm font-medium">Processing your bill with Our AI</p>
+                          <p className="text-sm font-medium">Analyzing your bill with advanced AI technology</p>
                           <span className="text-sm font-bold">75%</span>
                         </div>
                         <Progress value={75} className="h-2 mb-2" />
