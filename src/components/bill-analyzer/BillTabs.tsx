@@ -39,49 +39,64 @@ export function BillTabs({
   return (
     <Tabs 
       defaultValue="overview" 
-      className="w-full space-y-4"
+      className="w-full space-y-6"
       value={activeTab}
       onValueChange={handleTabChange}
     >
-      <TabsList>
-        <div className="flex space-x-2">
-          <TabsTrigger value="overview" className="data-[state=active]:bg-blue-100">
+      <div className="bg-white rounded-xl shadow-sm p-1 border border-gray-100">
+        <TabsList className="grid grid-cols-4 w-full h-auto p-1 bg-gray-50 rounded-lg">
+          <TabsTrigger 
+            value="overview" 
+            className="py-3 data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-sm rounded-md transition-all"
+          >
             Overview
           </TabsTrigger>
-          <TabsTrigger value="line-items" className="data-[state=active]:bg-blue-100">
+          <TabsTrigger 
+            value="line-items" 
+            className="py-3 data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-sm rounded-md transition-all"
+          >
             Line Items
           </TabsTrigger>
-          <TabsTrigger value="recommendations" className="data-[state=active]:bg-blue-100">
+          <TabsTrigger 
+            value="recommendations" 
+            className="py-3 data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-sm rounded-md transition-all"
+          >
             Recommendations
           </TabsTrigger>
-          <TabsTrigger value="carrier-comparison" className="data-[state=active]:bg-blue-100">
+          <TabsTrigger 
+            value="carrier-comparison" 
+            className="py-3 data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-sm rounded-md transition-all"
+          >
             Carrier Comparison
           </TabsTrigger>
-        </div>
-      </TabsList>
-      <TabsContent value="overview">
-        <OverviewTab billData={billData} formatCurrency={formatCurrency} />
-      </TabsContent>
-      <TabsContent value="line-items">
-        <LineItemsTab billData={billData} formatCurrency={formatCurrency} />
-      </TabsContent>
-      <TabsContent value="recommendations">
-        <RecommendationsTab 
-          billData={billData} 
-          formatCurrency={formatCurrency}
-          calculateCarrierSavings={calculateCarrierSavings}
-          networkPreference={networkPreference}
-        />
-      </TabsContent>
-      <TabsContent value="carrier-comparison">
-        <CarrierComparison
-          billData={billData}
-          activeCarrierTab={activeCarrierTab}
-          setActiveCarrierTab={setActiveCarrierTab}
-          calculateCarrierSavings={calculateCarrierSavings}
-          formatCurrency={formatCurrency}
-        />
-      </TabsContent>
+        </TabsList>
+      </div>
+      
+      <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+        <TabsContent value="overview" className="mt-0 space-y-6 animate-fade-in">
+          <OverviewTab billData={billData} formatCurrency={formatCurrency} />
+        </TabsContent>
+        <TabsContent value="line-items" className="mt-0 space-y-6 animate-fade-in">
+          <LineItemsTab billData={billData} formatCurrency={formatCurrency} />
+        </TabsContent>
+        <TabsContent value="recommendations" className="mt-0 space-y-6 animate-fade-in">
+          <RecommendationsTab 
+            billData={billData} 
+            formatCurrency={formatCurrency}
+            calculateCarrierSavings={calculateCarrierSavings}
+            networkPreference={networkPreference}
+          />
+        </TabsContent>
+        <TabsContent value="carrier-comparison" className="mt-0 space-y-6 animate-fade-in">
+          <CarrierComparison
+            billData={billData}
+            activeCarrierTab={activeCarrierTab}
+            setActiveCarrierTab={setActiveCarrierTab}
+            calculateCarrierSavings={calculateCarrierSavings}
+            formatCurrency={formatCurrency}
+          />
+        </TabsContent>
+      </div>
     </Tabs>
   );
 }

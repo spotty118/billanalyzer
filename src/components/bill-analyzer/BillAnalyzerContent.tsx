@@ -56,12 +56,16 @@ export function BillAnalyzerContent({
   );
 
   if (!billData) {
-    return <div>No bill data available.</div>;
+    return (
+      <div className="bg-white p-8 rounded-xl shadow-sm border border-gray-100 text-center">
+        <p className="text-gray-500 text-lg">No bill data available.</p>
+        <p className="text-gray-400 mt-2">Please upload a bill to analyze.</p>
+      </div>
+    );
   }
 
   return (
-    <div className="container mx-auto py-8">
-      {/* Removed the duplicate "Bill Analysis" heading that was here */}
+    <div className="container mx-auto py-8 max-w-7xl animate-fade-in">
       <CustomBillTabs 
         billData={billData} 
         calculateCarrierSavings={memoizedCalculateCarrierSavings}

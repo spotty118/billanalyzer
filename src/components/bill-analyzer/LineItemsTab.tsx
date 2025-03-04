@@ -69,28 +69,28 @@ export function LineItemsTab({ billData, formatCurrency }: LineItemsTabProps) {
   const finalData = [...lineItemsWithTotal, totalsByCategory];
 
   return (
-    <div className="space-y-6">
-      <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-        <h3 className="text-lg font-bold mb-4">Detailed Line Items</h3>
+    <div className="space-y-8">
+      <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+        <h3 className="text-xl font-bold mb-5 text-gray-800">Detailed Line Items</h3>
         
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
+        <div className="overflow-x-auto ring-1 ring-gray-200 rounded-lg">
+          <table className="min-w-full divide-y divide-gray-200 modern-table">
             <thead>
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Phone Number</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Plan</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total</th>
+                <th className="px-6 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider bg-gray-50 rounded-tl-lg">Phone Number</th>
+                <th className="px-6 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider bg-gray-50">Plan</th>
+                <th className="px-6 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider bg-gray-50 rounded-tr-lg">Total</th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
               {finalData.map((item, index) => (
                 <tr 
                   key={index}
-                  className={index === finalData.length - 1 ? 'bg-gray-50 font-medium' : ''}
+                  className={index === finalData.length - 1 ? 'bg-gray-50 font-medium' : 'hover:bg-gray-50 transition-colors'}
                 >
-                  <td className="px-6 py-4 whitespace-nowrap">{item.name}</td>
-                  <td className="px-6 py-4 whitespace-nowrap">{formatCurrency(item.plan)}</td>
-                  <td className="px-6 py-4 whitespace-nowrap font-medium">{formatCurrency(item.total)}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm">{item.name}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm">{formatCurrency(item.plan)}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">{formatCurrency(item.total)}</td>
                 </tr>
               ))}
             </tbody>
@@ -98,9 +98,9 @@ export function LineItemsTab({ billData, formatCurrency }: LineItemsTabProps) {
         </div>
       </div>
       
-      <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-        <h3 className="text-lg font-bold mb-4">Line Items Visualization</h3>
-        <div className="h-80">
+      <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+        <h3 className="text-xl font-bold mb-5 text-gray-800">Line Items Visualization</h3>
+        <div className="h-80 mt-6">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart
               data={lineItemsWithTotal}
@@ -111,12 +111,19 @@ export function LineItemsTab({ billData, formatCurrency }: LineItemsTabProps) {
                 bottom: 5,
               }}
             >
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="name" />
-              <YAxis tickFormatter={(value) => `$${value}`} />
-              <Tooltip formatter={(value) => [`$${value}`, '']} />
-              <Legend />
-              <Bar dataKey="plan" name="Plan" fill="#3b82f6" />
+              <CartesianGrid strokeDasharray="3 3" stroke="#eee" />
+              <XAxis dataKey="name" tick={{ fill: '#666' }} />
+              <YAxis tickFormatter={(value) => `$${value}`} tick={{ fill: '#666' }} />
+              <Tooltip 
+                formatter={(value) => [`$${value}`, '']} 
+                contentStyle={{ 
+                  borderRadius: '8px', 
+                  boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)',
+                  border: 'none'
+                }} 
+              />
+              <Legend wrapperStyle={{ paddingTop: '10px' }} />
+              <Bar dataKey="plan" name="Plan" fill="#CD040B" radius={[4, 4, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </div>
