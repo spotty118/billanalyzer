@@ -1,4 +1,3 @@
-
 import {
   BarChart,
   Bar,
@@ -130,7 +129,6 @@ export function LineItemsTab({ billData, formatCurrency }: LineItemsTabProps) {
               <Bar dataKey="protection" name="Protection" fill="#8F43EE" radius={[4, 4, 0, 0]} />
               <Bar dataKey="perks" name="Perks" fill="#2B9348" radius={[4, 4, 0, 0]} />
               <Bar dataKey="taxes" name="Taxes & Fees" fill="#F9A620" radius={[4, 4, 0, 0]} />
-              <Bar dataKey="total" name="Total" fill="#000000" radius={[4, 4, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </div>
