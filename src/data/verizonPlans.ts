@@ -4,8 +4,25 @@ import { verizonData } from './managers/VerizonDataManager';
 export { formatCurrency } from './utils/verizonUtils';
 export * from './types/verizonTypes';
 
+// Define the types for our plan data structure
+interface PlanPrices {
+  1: number;
+  2: number;
+  3: number;
+  4: number;
+  5: number;
+  [key: number]: number; // This allows indexes like 6, 7, etc.
+}
+
+interface VerizonPlan {
+  name: string;
+  prices: PlanPrices;
+  data: string;
+  features: string[];
+}
+
 // Verizon MyPlan pricing (per line)
-export const verizonPlansData = {
+export const verizonPlansData: {[key: string]: VerizonPlan} = {
   'unlimited-welcome': {
     name: 'Unlimited Welcome',
     prices: {

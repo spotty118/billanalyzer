@@ -1,3 +1,4 @@
+
 import { ArrowLeftRight, AlertCircle, Check, Star, Zap, Lightbulb } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { 
@@ -120,6 +121,11 @@ export function CarrierComparison({
           <ArrowLeftRight className="h-5 w-5 inline-block mr-2" />
           US Mobile Alternative Plans
         </h3>
+        
+        {/* Using verizonPlansData here to provide context for plan comparisons */}
+        <div className="mb-4 text-sm text-gray-600">
+          <p>Comparison based on current Verizon plans: {Object.keys(verizonPlansData).length} plans available</p>
+        </div>
         
         <Tabs defaultValue={activeCarrierTab} value={activeCarrierTab} onValueChange={setActiveCarrierTab}>
           <TabsList className="mb-6 w-full">
