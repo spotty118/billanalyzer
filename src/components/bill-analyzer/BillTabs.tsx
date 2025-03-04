@@ -1,9 +1,9 @@
 
-// Update the interface if needed to ensure NetworkPreference type is imported
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { OverviewTab } from "./OverviewTab";
 import { LineItemsTab } from "./LineItemsTab";
 import { RecommendationsTab } from "./RecommendationsTab";
+import type { NetworkPreference } from '@/hooks/use-verizon-bill-analyzer';
 
 interface BillTabsProps {
   billData: any;
@@ -47,7 +47,7 @@ export function BillTabs({
           billData={billData} 
           formatCurrency={formatCurrency} 
           calculateCarrierSavings={calculateCarrierSavings}
-          networkPreference={billData?.networkPreference}
+          networkPreference={billData?.networkPreference || null}
           aiRecommendationsFetched={aiRecommendationsFetched}
           setAiRecommendationsFetched={setAiRecommendationsFetched}
         />

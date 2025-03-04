@@ -1,11 +1,12 @@
 
 import { BillAnalysisHeader } from './BillAnalysisHeader';
 import { BillTabs } from './BillTabs';
+import type { NetworkPreference } from '@/hooks/use-verizon-bill-analyzer';
 
 interface BillAnalyzerContentProps {
   billData: any;
-  ocrProvider: string | null;
-  resetBillData: () => void;
+  ocrProvider?: string | null;
+  resetBillData?: () => void;
   formatCurrency: (value: number) => string;
   calculateCarrierSavings: (carrierId: string) => {
     monthlySavings: number;
@@ -13,24 +14,24 @@ interface BillAnalyzerContentProps {
     planName: string;
     price: number;
   };
+  networkPreference?: NetworkPreference;
   aiRecommendationsFetched: boolean;
   setAiRecommendationsFetched: (fetched: boolean) => void;
 }
 
 export const BillAnalyzerContent = ({ 
   billData, 
-  ocrProvider,
-  resetBillData,
   formatCurrency,
   calculateCarrierSavings,
+  networkPreference,
   aiRecommendationsFetched,
   setAiRecommendationsFetched
 }: BillAnalyzerContentProps) => {
   return (
     <div className="space-y-6">
       <BillAnalysisHeader
-        accountNumber={billData.accountNumber || 'Unknown'}
-        billingPeriod={billData.billingPeriod || 'Current period'}
+        accountNumber={billData.accountNumber || billData.accountInfo?.accountNumber || 'Unknown'}
+        billingPeriod={billData.billingPeriod || billData.accountInfo?.billingPeriod || 'Current period'}
         totalAmount={billData.totalAmount || 0}
         formatCurrency={formatCurrency}
       />

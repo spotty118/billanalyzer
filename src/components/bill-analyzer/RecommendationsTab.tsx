@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -74,14 +75,16 @@ export function RecommendationsTab({
     setError(null);
     
     try {
-      if (!billData?.accountNumber) {
+      if (!billData?.accountNumber && !billData?.accountInfo?.accountNumber) {
         throw new Error("Account number is missing from bill data.");
       }
+      
+      const accountNumber = billData.accountNumber || billData.accountInfo?.accountNumber;
       
       const { data, error } = await supabase
         .from('ai_recommendations')
         .select('*')
-        .eq('account_number', billData.accountNumber)
+        .eq('account_number', accountNumber)
         .single();
       
       if (error) {
@@ -91,7 +94,7 @@ export function RecommendationsTab({
       
       if (data && data.recommendations) {
         setRecommendations(data.recommendations);
-        setPlanDetails(data.planDetails);
+        setPlanDetails(data.plan_details);
         setAiRecommendationsFetched(true);
         toast.success("AI recommendations loaded successfully!");
       } else {
@@ -116,6 +119,11 @@ export function RecommendationsTab({
         throw new Error("Bill data is missing.");
       }
       
+      const accountNumber = billData.accountNumber || billData.accountInfo?.accountNumber;
+      if (!accountNumber) {
+        throw new Error("Account number is missing from bill data.");
+      }
+      
       const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1nemZpb3VhbWlkYXFjdG5xbnJlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzkyMzE3NjQsImV4cCI6MjA1NDgwNzc2NH0._0hxm1UlSMt3wPx8JwaFDvGmpfjI3p5m0HDm6YfaL6Q';
       
       const response = await fetch('https://mgzfiouamidaqctnqnre.supabase.co/functions/v1/generate-recommendations', {
@@ -125,7 +133,10 @@ export function RecommendationsTab({
           'Authorization': `Bearer ${supabaseAnonKey}`,
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify(billData)
+        body: JSON.stringify({
+          ...billData,
+          networkPreference
+        })
       });
       
       if (!response.ok) {
@@ -136,13 +147,17 @@ export function RecommendationsTab({
       
       const result = await response.json();
       
-      if (!result || !result.recommendations || !result.planDetails) {
+      if (!result || !result.recommendations) {
         console.error("Invalid response from function:", result);
         throw new Error("Invalid response format from recommendations service.");
       }
       
       setRecommendations(result.recommendations);
-      setPlanDetails(result.planDetails);
+      
+      if (result.planDetails) {
+        setPlanDetails(result.planDetails);
+      }
+      
       setAiRecommendationsFetched(true);
       
       // Save the recommendations to Supabase
@@ -151,9 +166,9 @@ export function RecommendationsTab({
           .from('ai_recommendations')
           .upsert([
             {
-              account_number: billData.accountNumber,
+              account_number: accountNumber,
               recommendations: result.recommendations,
-              plan_details: result.planDetails
+              plan_details: result.planDetails || null
             }
           ], { onConflict: 'account_number' });
         
