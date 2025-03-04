@@ -1,11 +1,11 @@
 
 import { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { OverviewTab } from "./OverviewTab";
+import { LineItemsTab } from "./LineItemsTab";
 import { RecommendationsTab } from "./RecommendationsTab";
 import { CarrierComparison } from "./CarrierComparison";
 import { formatCurrency } from "./utils/dataUtils";
-import { OverviewTab } from "./OverviewTab";
-import { LineItemsTab } from "./LineItemsTab";
 
 interface BillTabsProps {
   billData: any;
@@ -19,7 +19,12 @@ interface BillTabsProps {
   onTabChange?: (tab: string) => void;
 }
 
-export function BillTabs({ billData, calculateCarrierSavings, activeTab, onTabChange }: BillTabsProps) {
+export function BillTabs({ 
+  billData, 
+  calculateCarrierSavings, 
+  activeTab = "overview", 
+  onTabChange 
+}: BillTabsProps) {
   const [activeCarrierTab, setActiveCarrierTab] = useState("warp");
   
   const handleTabChange = (value: string) => {

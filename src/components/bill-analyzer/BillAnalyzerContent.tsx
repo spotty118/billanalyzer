@@ -1,12 +1,19 @@
-import React, { useState, useCallback } from 'react';
+
+import { useState, useCallback } from 'react';
 import { BillTabs } from "@/components/bill-analyzer/BillTabs";
 import { calculateCarrierSavings } from "@/components/bill-analyzer/utils/dataUtils";
 
 interface BillAnalyzerContentProps {
   billData: any;
-  alternativeCarrierPlans: any[];
-  getCarrierPlanPrice: (plan: any, numberOfLines: number) => number;
-  findBestCarrierMatch: (planName: string, carrierId: string) => string;
+  alternativeCarrierPlans?: any[];
+  getCarrierPlanPrice?: (plan: any, numberOfLines: number) => number;
+  findBestCarrierMatch?: (planName: string, carrierId: string) => string;
+  calculateCarrierSavings: (carrierId: string) => {
+    monthlySavings: number;
+    annualSavings: number;
+    planName: string;
+    price: number;
+  };
 }
 
 const CustomBillTabs = ({ billData, calculateCarrierSavings }: any) => {
@@ -31,18 +38,19 @@ export function BillAnalyzerContent({
   alternativeCarrierPlans,
   getCarrierPlanPrice,
   findBestCarrierMatch,
+  calculateCarrierSavings,
 }: BillAnalyzerContentProps) {
 
   const memoizedCalculateCarrierSavings = useCallback(
-    (carrierId: string) =>
-      calculateCarrierSavings(
-        carrierId,
-        billData,
-        getCarrierPlanPrice,
-        findBestCarrierMatch,
-        alternativeCarrierPlans
-      ),
-    [billData, alternativeCarrierPlans, getCarrierPlanPrice, findBestCarrierMatch]
+    (carrierId: string) => {
+      if (alternativeCarrierPlans && getCarrierPlanPrice && findBestCarrierMatch) {
+        return calculateCarrierSavings(
+          carrierId
+        );
+      }
+      return calculateCarrierSavings(carrierId);
+    },
+    [billData, alternativeCarrierPlans, getCarrierPlanPrice, findBestCarrierMatch, calculateCarrierSavings]
   );
 
   if (!billData) {
