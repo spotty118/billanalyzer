@@ -1,0 +1,78 @@
+.vp-button {
+  font-family: 'Roboto', sans-serif;
+  font-weight: 500;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s ease-in-out;
+  border: none;
+  outline: none;
+}
+
+/* Variants */
+.vp-button--primary {
+  background-color: #0066cc;
+  color: white;
+}
+.vp-button--primary:hover {
+  background-color: #0055aa;
+}
+
+.vp-button--secondary {
+  background-color: #4d94ff;
+  color: white;
+}
+.vp-button--secondary:hover {
+  background-color: #3a7fd6;
+}
+
+.vp-button--outline {
+  background-color: transparent;
+  border: 1px solid #0066cc;
+  color: #0066cc;
+}
+.vp-button--outline:hover {
+  background-color: rgba(0, 102, 204, 0.1);
+}
+
+.vp-button--text {
+  background-color: transparent;
+  color: #0066cc;
+  padding: 0;
+}
+.vp-button--text:hover {
+  text-decoration: underline;
+}
+
+/* Sizes */
+.vp-button--small {
+  padding: 4px 12px;
+  font-size: 0.875rem;
+  height: 32px;
+}
+
+.vp-button--medium {
+  padding: 8px 16px;
+  font-size: 1rem;
+  height: 40px;
+}
+
+.vp-button--large {
+  padding: 12px 24px;
+  font-size: 1.125rem;
+  height: 48px;
+}
+
+/* States */
+.vp-button--disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.vp-button--full-width {
+  width: 100%;
+  display: block;
+}
+
+.vp-button:focus {
+  box-shadow: 0 0 0 3px rgba(0, 102, 204, 0.3);
+}
