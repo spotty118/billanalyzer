@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -90,7 +91,7 @@ export function RecommendationsTab({
       const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1nemZpb3VhbWlkYXFjdG5xbnJlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzkyMzE3NjQsImV4cCI6MjA1NDgwNzc2NH0._0hxm1UlSMt3wPx8JwaFDvGmpfjI3p5m0HDm6YfaL6Q';
       
       setProgress(30);
-      toast.info("Getting fresh carrier data and recommendations...");
+      toast.info("Getting fresh carrier data with Gemini AI...");
       
       const response = await fetch('https://mgzfiouamidaqctnqnre.supabase.co/functions/v1/ai-plan-recommendations', {
         method: 'POST',
@@ -121,7 +122,7 @@ export function RecommendationsTab({
       setAiRecommendations(data);
       setActiveTab("ai");
       setAiRecommendationsFetched(true);
-      toast.success("Got fresh carrier recommendations!");
+      toast.success("Got fresh carrier recommendations from Gemini!");
       
     } catch (error) {
       console.error("Error fetching AI recommendations:", error);
@@ -363,7 +364,7 @@ export function RecommendationsTab({
       return (
         <div className="flex flex-col items-center justify-center p-10 space-y-4">
           <Progress value={progress} className="w-full" />
-          <p className="text-gray-500">Getting the latest carrier data and generating recommendations...</p>
+          <p className="text-gray-500">Getting the latest carrier data from Gemini AI...</p>
         </div>
       );
     }
@@ -371,10 +372,10 @@ export function RecommendationsTab({
     if (!aiRecommendations) {
       return (
         <div className="flex flex-col items-center justify-center p-10 space-y-4">
-          <p className="text-gray-500">No AI recommendations available. Click refresh to get the latest data.</p>
+          <p className="text-gray-500">No AI recommendations available. Click refresh to get the latest data from Gemini.</p>
           <Button onClick={fetchAIRecommendations} className="mt-4">
             <RefreshCw className="mr-2 h-4 w-4" />
-            Get AI Recommendations
+            Get Gemini Recommendations
           </Button>
         </div>
       );
@@ -582,7 +583,7 @@ export function RecommendationsTab({
           <TabsList className="grid grid-cols-2 mb-6">
             <TabsTrigger value="standard">Standard Recommendations</TabsTrigger>
             <TabsTrigger value="ai" disabled={isLoadingAI && !aiRecommendations}>
-              AI-Powered Analysis
+              Gemini AI Analysis
               {isLoadingAI && <RefreshCw className="ml-2 h-3 w-3 animate-spin" />}
             </TabsTrigger>
           </TabsList>
