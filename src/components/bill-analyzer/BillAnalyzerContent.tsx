@@ -18,6 +18,7 @@ interface BillAnalyzerContentProps {
 }
 
 const CustomBillTabs = ({ billData, calculateCarrierSavings, networkPreference, activeTab, onTabChange }: any) => {
+  console.log("CustomBillTabs - calculateCarrierSavings available:", !!calculateCarrierSavings);
   return (
     <BillTabs 
       billData={billData}
@@ -35,6 +36,7 @@ export function BillAnalyzerContent({
   networkPreference,
 }: BillAnalyzerContentProps) {
   const [activeTab, setActiveTab] = useState("overview");
+  console.log("BillAnalyzerContent - calculateCarrierSavings available:", !!calculateCarrierSavings);
 
   const handleTabChange = (tab: string) => {
     setActiveTab(tab);
@@ -43,7 +45,8 @@ export function BillAnalyzerContent({
   // Ensure we're properly handling the carrier savings calculation by memoizing it
   const memoizedCalculateCarrierSavings = useCallback(
     (carrierId: string) => {
-      // Call the provided function directly now
+      console.log(`Calling calculateCarrierSavings for ${carrierId}`);
+      // Call the provided function directly 
       return calculateCarrierSavings(carrierId);
     },
     [calculateCarrierSavings]

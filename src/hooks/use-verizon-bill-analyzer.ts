@@ -1,7 +1,11 @@
-
 import { useState } from 'react';
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { 
+  alternativeCarrierPlans, 
+  getCarrierPlanPrice, 
+  findBestCarrierMatch 
+} from "@/config/alternativeCarriers";
 
 export type NetworkPreference = 'verizon' | 'tmobile' | 'att' | 'usmobile' | null;
 
@@ -16,47 +20,38 @@ export const useVerizonBillAnalyzer = () => {
     const numberOfLines = billData?.phoneLines?.length || 1;
     const currentMonthlyTotal = billData?.totalAmount || 0;
     
-    let savings = 0;
-    let price = currentMonthlyTotal;
+    console.log(`Calculating savings for carrier ${carrierId} with ${numberOfLines} lines`);
+    console.log(`Current monthly total: ${currentMonthlyTotal}`);
     
-    // Calculate savings based on number of lines and carrier
-    if (carrierId === 'usmobile') {
-      const basePrice = 29.99;
-      const linePrice = numberOfLines > 3 ? 19.99 : 24.99;
-      price = basePrice + (linePrice * (numberOfLines - 1));
-      savings = currentMonthlyTotal - price;
-    } else if (carrierId === 'tmobile') {
-      if (numberOfLines === 1) {
-        price = 70;
-      } else if (numberOfLines === 2) {
-        price = 120;
-      } else if (numberOfLines === 3) {
-        price = 150;
-      } else {
-        price = 180 + Math.max(0, numberOfLines - 4) * 30;
-      }
-      savings = currentMonthlyTotal - price;
-    } else if (carrierId === 'att') {
-      if (numberOfLines === 1) {
-        price = 75;
-      } else if (numberOfLines === 2) {
-        price = 140;
-      } else if (numberOfLines === 3) {
-        price = 165;
-      } else {
-        price = 190 + Math.max(0, numberOfLines - 4) * 25;
-      }
-      savings = currentMonthlyTotal - price;
+    // Find the matching carrier plan
+    const matchingPlanId = findBestCarrierMatch(carrierId);
+    const carrierPlan = alternativeCarrierPlans.find(plan => plan.id === matchingPlanId);
+    
+    if (!carrierPlan) {
+      console.error(`No matching plan found for carrier ID: ${carrierId}`);
+      return {
+        monthlySavings: 0,
+        annualSavings: 0,
+        planName: "No matching plan",
+        price: 0
+      };
     }
     
-    // Ensure we don't show negative savings
-    savings = Math.max(0, savings);
+    // Calculate the price for the carrier plan using the imported function
+    const carrierPrice = getCarrierPlanPrice(carrierPlan, numberOfLines);
+    console.log(`Carrier: ${carrierId}, Plan: ${carrierPlan.name}, Price: ${carrierPrice}`);
+    
+    // Calculate savings (current bill - carrier price)
+    const monthlySavings = currentMonthlyTotal - carrierPrice;
+    const annualSavings = monthlySavings * 12;
+    
+    console.log(`Monthly savings: ${monthlySavings}, Annual savings: ${annualSavings}`);
     
     return {
-      monthlySavings: savings,
-      annualSavings: savings * 12,
-      planName: getCarrierPlanName(carrierId),
-      price: price
+      monthlySavings,
+      annualSavings,
+      planName: carrierPlan.name,
+      price: carrierPrice
     };
   };
 
@@ -244,14 +239,14 @@ export const useVerizonBillAnalyzer = () => {
           
           // Ensure all required details exist
           line.details = {
-            planCost: line.details.planCost || 0,
-            planDiscount: line.details.planDiscount || 0, 
-            devicePayment: line.details.devicePayment || 0,
-            deviceCredit: line.details.deviceCredit || 0,
-            protection: line.details.protection || 0,
+            planCost: parseFloat(line.details.planCost) || 0,
+            planDiscount: parseFloat(line.details.planDiscount) || 0,
+            devicePayment: parseFloat(line.details.devicePayment) || 0,
+            deviceCredit: parseFloat(line.details.deviceCredit) || 0,
+            protection: parseFloat(line.details.protection) || 0,
             perks: line.details.perks || [],
-            surcharges: line.details.surcharges || 0,
-            taxes: line.details.taxes || 0,
+            surcharges: parseFloat(line.details.surcharges) || 0,
+            taxes: parseFloat(line.details.taxes) || 0,
             ...line.details
           };
           
@@ -347,14 +342,14 @@ export const useVerizonBillAnalyzer = () => {
           
           // Ensure all required properties exist with defaults
           line.details = {
-            planCost: line.details.planCost || 0,
-            planDiscount: line.details.planDiscount || 0,
-            devicePayment: line.details.devicePayment || 0,
-            deviceCredit: line.details.deviceCredit || 0,
-            protection: line.details.protection || 0,
+            planCost: parseFloat(line.details.planCost) || 0,
+            planDiscount: parseFloat(line.details.planDiscount) || 0,
+            devicePayment: parseFloat(line.details.devicePayment) || 0,
+            deviceCredit: parseFloat(line.details.deviceCredit) || 0,
+            protection: parseFloat(line.details.protection) || 0,
             perks: line.details.perks || [],
-            surcharges: line.details.surcharges || 0,
-            taxes: line.details.taxes || 0,
+            surcharges: parseFloat(line.details.surcharges) || 0,
+            taxes: parseFloat(line.details.taxes) || 0,
             ...line.details
           };
           
