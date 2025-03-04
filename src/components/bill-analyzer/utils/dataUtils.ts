@@ -1,4 +1,6 @@
 
+import { verizonPlansData, getPlanPrice } from "@/data/verizonPlans";
+
 // Format currency with $ symbol and 2 decimal places
 export const formatCurrency = (value: number): string => {
   return new Intl.NumberFormat('en-US', {
@@ -9,15 +11,30 @@ export const formatCurrency = (value: number): string => {
   }).format(value);
 };
 
-// Prepare line items data for charts
+// Prepare line items data for charts with accurate pricing
 export const prepareLineItemsData = (phoneLines: any[] = []) => {
   if (!phoneLines || phoneLines.length === 0) return [];
   
+  const lineCount = phoneLines.length;
+  
   return phoneLines.map(line => {
     const details = line.details || {};
+    
+    // Get the correct plan price based on the plan name
+    let planPrice = details.planCost || 0;
+    if (line.planName) {
+      const planId = Object.keys(verizonPlansData).find(
+        key => verizonPlansData[key].name === line.planName
+      );
+      
+      if (planId) {
+        planPrice = getPlanPrice(planId, lineCount);
+      }
+    }
+    
     return {
       name: line.phoneNumber || 'Unknown',
-      plan: (details.planCost || 0) - (details.planDiscount || 0),
+      plan: planPrice - (details.planDiscount || 0),
       device: (details.devicePayment || 0) - (details.deviceCredit || 0),
       protection: details.protection || 0,
       taxes: (details.surcharges || 0) + (details.taxes || 0)

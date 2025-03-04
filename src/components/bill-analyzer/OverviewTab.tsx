@@ -80,11 +80,11 @@ export function OverviewTab({ billData, formatCurrency }: OverviewTabProps) {
           {billData.phoneLines?.map((line: any, index: number) => {
             const planDetails = getPlanDetails(line.planName);
             const lineCount = billData.phoneLines?.length || 1;
-            const price = planDetails ? getPlanPrice(planDetails.id, lineCount) : line.monthlyCost || 0;
+            const price = planDetails ? getPlanPrice(planDetails.id, lineCount) : line.monthlyTotal || 0;
             
             return (
               <div key={index} className="p-4 border border-gray-100 rounded-lg">
-                <h4 className="font-medium mb-2">Line {index + 1}: {line.phoneNumber}</h4>
+                <h4 className="font-medium mb-2">Line {index + 1}: {line.phoneNumber || 'Unknown'}</h4>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                   <div>
                     <p className="text-sm text-gray-600">Plan Name:</p>

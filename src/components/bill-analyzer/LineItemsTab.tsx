@@ -8,6 +8,7 @@ import {
   Tooltip, 
   ResponsiveContainer
 } from 'recharts';
+import { verizonPlansData, getPlanPrice } from '@/data/verizonPlans';
 import { prepareLineItemsData } from '@/components/bill-analyzer/utils/dataUtils';
 
 interface LineItemsTabProps {
@@ -18,7 +19,38 @@ interface LineItemsTabProps {
 export function LineItemsTab({ billData, formatCurrency }: LineItemsTabProps) {
   if (!billData) return <div>No bill data available</div>;
 
-  const lineItemsData = prepareLineItemsData(billData.phoneLines);
+  // Prepare line items data with accurate pricing
+  const prepareAccurateLineItemsData = (phoneLines: any[]) => {
+    if (!phoneLines || phoneLines.length === 0) return [];
+    
+    const lineCount = phoneLines.length;
+    
+    return phoneLines.map(line => {
+      const details = line.details || {};
+      
+      // Get the correct plan price based on the plan name
+      let planPrice = details.planCost || 0;
+      if (line.planName) {
+        const planId = Object.keys(verizonPlansData).find(
+          key => verizonPlansData[key].name === line.planName
+        );
+        
+        if (planId) {
+          planPrice = getPlanPrice(planId, lineCount);
+        }
+      }
+      
+      return {
+        name: line.phoneNumber || 'Unknown',
+        plan: planPrice - (details.planDiscount || 0),
+        device: (details.devicePayment || 0) - (details.deviceCredit || 0),
+        protection: details.protection || 0,
+        taxes: (details.surcharges || 0) + (details.taxes || 0)
+      };
+    });
+  };
+  
+  const lineItemsData = prepareAccurateLineItemsData(billData.phoneLines);
   
   // Calculate total for each line
   const lineItemsWithTotal = lineItemsData.map(item => ({
