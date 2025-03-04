@@ -1,16 +1,12 @@
 
 interface BillAnalysisHeaderProps {
   billData: any;
-  resetBillData: () => void;
   formatCurrency: (value: number) => string;
-  ocrProvider: string | null;
 }
 
 export function BillAnalysisHeader({ 
   billData, 
-  resetBillData, 
-  formatCurrency,
-  ocrProvider
+  formatCurrency
 }: BillAnalysisHeaderProps) {
   const accountNumber = billData?.accountInfo?.accountNumber || billData?.accountNumber || 'N/A';
   const billingPeriod = billData?.accountInfo?.billingPeriod || billData?.billingPeriod || 'N/A';

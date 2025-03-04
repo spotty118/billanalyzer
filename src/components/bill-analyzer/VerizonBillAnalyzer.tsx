@@ -12,12 +12,11 @@ import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
 
-export type NetworkPreference = 'verizon' | 'tmobile' | 'att' | 'usmobile' | null;
+export type NetworkPreference = 'verizon' | 'tmobile' | 'att' | null;
 
 export const VerizonBillAnalyzer = () => {
   const { 
     billData, 
-    fileSelected, 
     isLoading, 
     errorMessage, 
     ocrProvider,
@@ -260,13 +259,6 @@ export const VerizonBillAnalyzer = () => {
                           AT&T
                         </Label>
                       </div>
-                      
-                      <div className="flex items-center space-x-2 border rounded-md p-4 hover:bg-gray-50">
-                        <RadioGroupItem value="usmobile" id="usmobile-upload" />
-                        <Label htmlFor="usmobile-upload" className="font-medium cursor-pointer">
-                          US Mobile
-                        </Label>
-                      </div>
                     </RadioGroup>
                     
                     <div className="space-y-4 pt-4">
@@ -381,13 +373,6 @@ export const VerizonBillAnalyzer = () => {
                           AT&T
                         </Label>
                       </div>
-                      
-                      <div className="flex items-center space-x-2 border rounded-md p-4 hover:bg-gray-50">
-                        <RadioGroupItem value="usmobile" id="usmobile-text" />
-                        <Label htmlFor="usmobile-text" className="font-medium cursor-pointer">
-                          US Mobile
-                        </Label>
-                      </div>
                     </RadioGroup>
                     
                     <div className="space-y-4 pt-4">
@@ -469,7 +454,7 @@ export const VerizonBillAnalyzer = () => {
                       <span className="text-red-500">*</span>
                     </div>
                     <p className="text-sm text-gray-500">
-                      This helps us recommend the best US Mobile plan for your location. US Mobile offers plans on multiple networks.
+                      This helps us recommend the best plan for your location.
                     </p>
                     
                     {showNetworkError && (
@@ -502,13 +487,6 @@ export const VerizonBillAnalyzer = () => {
                         <RadioGroupItem value="att" id="att" />
                         <Label htmlFor="att" className="font-medium cursor-pointer">
                           AT&T
-                        </Label>
-                      </div>
-                      
-                      <div className="flex items-center space-x-2 border rounded-md p-4 hover:bg-gray-50">
-                        <RadioGroupItem value="usmobile" id="usmobile" />
-                        <Label htmlFor="usmobile" className="font-medium cursor-pointer">
-                          US Mobile
                         </Label>
                       </div>
                     </RadioGroup>

@@ -32,9 +32,7 @@ export const BillAnalyzerContent = ({
     <div className="space-y-6">
       <BillAnalysisHeader
         billData={billData}
-        resetBillData={resetBillData}
         formatCurrency={formatCurrency}
-        ocrProvider={ocrProvider}
       />
       
       <BillTabs
