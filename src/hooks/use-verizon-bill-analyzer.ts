@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -313,7 +314,15 @@ export const useVerizonBillAnalyzer = () => {
     
     const numberOfLines = billData.phoneLines?.length || 1;
     
-    const matchingPlanId = findBestCarrierMatch(carrierId);
+    // Always use the premium plan for consistent pricing across carriers
+    const premiumPlans = {
+      'darkstar': 'darkstar-premium',
+      'warp': 'warp-premium',
+      'lightspeed': 'lightspeed-premium'
+    };
+    
+    // Use the consistent plan ID for this carrier
+    const matchingPlanId = premiumPlans[carrierId] || findBestCarrierMatch(carrierId);
     
     const carrierPlan = alternativeCarrierPlans.find(plan => plan.id === matchingPlanId);
     
@@ -325,9 +334,13 @@ export const useVerizonBillAnalyzer = () => {
         price: 0
       };
     }
-
-    let alternativePrice = getCarrierPlanPrice(carrierPlan, numberOfLines);
     
+    // Calculate the base price - all US Mobile premium plans should have the same price
+    const basePricePerLine = 44; // Standard pricing for all premium plans
+    const alternativePrice = basePricePerLine * numberOfLines;
+    
+    // Apply network preference discount if applicable
+    let finalPrice = alternativePrice;
     const networkPreference = billData.networkPreference as NetworkPreference;
     if (networkPreference) {
       const networkToCarrierIdMap: Record<string, string[]> = {
@@ -338,18 +351,18 @@ export const useVerizonBillAnalyzer = () => {
       
       const preferredCarrierIds = networkToCarrierIdMap[networkPreference] || [];
       if (preferredCarrierIds.includes(carrierId)) {
-        alternativePrice *= 0.95;
+        finalPrice *= 0.95; // 5% discount for preferred network
       }
     }
     
-    const monthlySavings = billData.totalAmount - alternativePrice;
+    const monthlySavings = billData.totalAmount - finalPrice;
     const annualSavings = monthlySavings * 12;
     
     return {
       monthlySavings,
       annualSavings,
       planName: carrierPlan.name,
-      price: alternativePrice
+      price: finalPrice
     };
   };
 

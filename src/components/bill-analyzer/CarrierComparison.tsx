@@ -114,6 +114,28 @@ export function CarrierComparison({
   
   const priceComparisonData = generateComparisonData();
 
+  // Make sure all US Mobile plans have the same price
+  const standardizeUSMobilePricing = (carrierId: string) => {
+    // First, find the standard US Mobile pricing from the first carrier
+    const matchedPlanId = findBestCarrierMatch(carrierId);
+    const carrierPlan = alternativeCarrierPlans.find(p => p.id === matchedPlanId);
+    
+    if (!carrierPlan) return null;
+    
+    // Return a standardized plan with the same price structure
+    return {
+      basePrice: carrierPlan.basePrice,
+      annualPrice: carrierPlan.annualPrice || 0,
+      name: carrierPlan.name,
+      features: carrierPlan.features,
+      streamingPerks: carrierPlan.streamingPerks,
+      dataAllowance: carrierPlan.dataAllowance,
+      streamingQuality: carrierPlan.streamingQuality,
+      network: carrierPlan.network,
+      dataPriorityLevel: carrierPlan.dataPriorityLevel
+    };
+  };
+
   return (
     <div className="space-y-6">
       <div className="bg-gradient-to-r from-sky-50 to-indigo-50 border-2 border-blue-100 rounded-lg p-6">
@@ -148,13 +170,13 @@ export function CarrierComparison({
             
             const carrierSavings = calculateCarrierSavings(carrier.id);
             const { monthlySavings, annualSavings, price: carrierPrice } = carrierSavings;
-            const matchedPlanId = findBestCarrierMatch(carrier.id);
-            const carrierPlan = alternativeCarrierPlans.find(p => p.id === matchedPlanId);
             
-            if (!carrierPlan) return null;
+            // Use the standardized pricing for all US Mobile plans
+            const standardPlan = standardizeUSMobilePricing(carrier.id);
+            if (!standardPlan) return null;
             
             // Ensure we're using a number for calculations
-            const annualPrice = carrierPlan.annualPrice || 0;
+            const annualPrice = standardPlan.annualPrice || 0;
             const annualMonthlyEquivalent = annualPrice / 12;
             
             return (
@@ -162,13 +184,13 @@ export function CarrierComparison({
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
                     <div className="bg-white rounded-lg p-5 shadow-sm border border-gray-100">
-                      <h4 className="text-lg font-semibold mb-4">{carrier.name} {carrierPlan.name}</h4>
+                      <h4 className="text-lg font-semibold mb-4">{carrier.name} {standardPlan.name}</h4>
                       
                       <div className="grid grid-cols-2 gap-4 mb-4">
                         <div>
                           <p className="text-sm text-gray-500">Monthly Cost</p>
                           <p className="text-xl font-bold">{formatCurrency(carrierPrice)}</p>
-                          {carrierPlan.annualPrice && (
+                          {standardPlan.annualPrice && (
                             <>
                               <p className="text-sm text-gray-500 mt-2">Annual Option</p>
                               <p className="text-md">
@@ -202,40 +224,40 @@ export function CarrierComparison({
                       </div>
                     </div>
                     
-                    {carrierPlan && (
+                    {standardPlan && (
                       <div className="bg-white rounded-lg p-5 shadow-sm border border-gray-100 mt-4">
                         <h4 className="font-semibold mb-3">Plan Features</h4>
                         <ul className="space-y-2">
                           <li className="flex items-start">
                             <Check className="w-4 h-4 text-green-500 mr-2 flex-shrink-0 mt-0.5" />
                             <span>
-                              {carrierPlan.dataAllowance.premium === 'unlimited' 
+                              {standardPlan.dataAllowance.premium === 'unlimited' 
                                 ? 'Unlimited premium data' 
-                                : `${carrierPlan.dataAllowance.premium}GB premium data`}
+                                : `${standardPlan.dataAllowance.premium}GB premium data`}
                             </span>
                           </li>
-                          {carrierPlan.dataAllowance.hotspot && (
+                          {standardPlan.dataAllowance.hotspot && (
                             <li className="flex items-start">
                               <Check className="w-4 h-4 text-green-500 mr-2 flex-shrink-0 mt-0.5" />
                               <span>
-                                {typeof carrierPlan.dataAllowance.hotspot === 'string' 
-                                  ? carrierPlan.dataAllowance.hotspot 
-                                  : `${carrierPlan.dataAllowance.hotspot}GB hotspot data`}
+                                {typeof standardPlan.dataAllowance.hotspot === 'string' 
+                                  ? standardPlan.dataAllowance.hotspot 
+                                  : `${standardPlan.dataAllowance.hotspot}GB hotspot data`}
                               </span>
                             </li>
                           )}
                           <li className="flex items-start">
                             <Check className="w-4 h-4 text-green-500 mr-2 flex-shrink-0 mt-0.5" />
-                            <span>{carrierPlan.streamingQuality} streaming quality</span>
+                            <span>{standardPlan.streamingQuality} streaming quality</span>
                           </li>
                           <li className="flex items-start">
                             <Check className="w-4 h-4 text-green-500 mr-2 flex-shrink-0 mt-0.5" />
-                            <span>{carrierPlan.network} network</span>
+                            <span>{standardPlan.network} network</span>
                           </li>
-                          {carrierPlan.dataPriorityLevel && (
+                          {standardPlan.dataPriorityLevel && (
                             <li className="flex items-start">
                               <Check className="w-4 h-4 text-green-500 mr-2 flex-shrink-0 mt-0.5" />
-                              <span>Data Priority: {carrierPlan.dataPriorityLevel}</span>
+                              <span>Data Priority: {standardPlan.dataPriorityLevel}</span>
                             </li>
                           )}
                         </ul>
@@ -244,12 +266,12 @@ export function CarrierComparison({
                   </div>
                   
                   <div>
-                    {carrierPlan && (
+                    {standardPlan && (
                       <div className="bg-white rounded-lg p-5 shadow-sm border border-gray-100">
                         <h4 className="font-semibold mb-3">Included Features</h4>
-                        {carrierPlan.features.length > 0 ? (
+                        {standardPlan.features.length > 0 ? (
                           <ul className="space-y-2">
-                            {carrierPlan.features.map((feature, idx) => (
+                            {standardPlan.features.map((feature, idx) => (
                               <li key={idx} className="flex items-start">
                                 <Check className="w-4 h-4 text-green-500 mr-2 flex-shrink-0 mt-0.5" />
                                 <span>{feature}</span>
@@ -261,9 +283,9 @@ export function CarrierComparison({
                         )}
                         
                         <h4 className="font-semibold mb-3 mt-4">Streaming Perks</h4>
-                        {carrierPlan.streamingPerks.length > 0 ? (
+                        {standardPlan.streamingPerks.length > 0 ? (
                           <ul className="space-y-2">
-                            {carrierPlan.streamingPerks.map((perk, idx) => (
+                            {standardPlan.streamingPerks.map((perk, idx) => (
                               <li key={idx} className="flex items-start">
                                 <Check className="w-4 h-4 text-blue-500 mr-2 flex-shrink-0 mt-0.5" />
                                 <span>{perk}</span>
@@ -285,7 +307,7 @@ export function CarrierComparison({
                             <li>• Savings estimates are based on your current bill total</li>
                             <li>• Device payments may not be included in carrier switch</li>
                             <li>• Visit carrier website for most current details</li>
-                            <li>• All US Mobile sub-brands run on different networks</li>
+                            <li>• All US Mobile sub-brands offer the same pricing</li>
                           </ul>
                         </div>
                       </div>
@@ -346,7 +368,7 @@ export function CarrierComparison({
                 </div>
                 
                 <p className="mt-4 text-sm text-blue-700">
-                  Showing plan details for {carrier.name} {carrierPlan.name} (alternative carrier #{supportedCarriers.findIndex(c => c.id === activeCarrierTab) + 1} of {supportedCarriers.length})
+                  Showing plan details for {carrier.name} {standardPlan.name} (alternative carrier #{supportedCarriers.findIndex(c => c.id === activeCarrierTab) + 1} of {supportedCarriers.length})
                 </p>
               </TabsContent>
             );
