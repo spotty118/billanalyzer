@@ -106,6 +106,7 @@ async function analyzeBillText(extractedText: string) {
   
   try {
     console.log("Sending extracted text to Claude API for analysis...");
+    console.log("Text sample (first 200 chars):", extractedText.substring(0, 200));
     
     const systemPrompt = `You are an expert Verizon bill analyzer. Analyze the provided Verizon bill text and extract key information into a structured JSON format.
 

@@ -1,10 +1,9 @@
-
 import { useState } from 'react';
 import { BillAnalyzerContent } from './BillAnalyzerContent';
 import { ManualEntryForm } from './ManualEntryForm';
 import { useVerizonBillAnalyzer } from '@/hooks/use-verizon-bill-analyzer';
 import { Button } from '@/components/ui/button';
-import { Upload, PencilLine, RefreshCw, Signal, AlertTriangle, FileText } from 'lucide-react';
+import { Upload, PencilLine, RefreshCw, Signal, AlertTriangle, FileText, Clipboard } from 'lucide-react';
 import { toast } from "sonner";
 import { Card, CardContent } from '@/components/ui/card';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
@@ -66,7 +65,6 @@ const VerizonBillAnalyzer = () => {
     }
 
     if (e.target.files && e.target.files.length > 0) {
-      // Start progress simulation
       setUploadProgress(0);
       const progressInterval = setInterval(() => {
         setUploadProgress(prev => {
@@ -75,14 +73,11 @@ const VerizonBillAnalyzer = () => {
         });
       }, 200);
 
-      // Process the file
       handleFileChange(e).then(() => {
-        // Complete progress on success
         clearInterval(progressInterval);
         setUploadProgress(100);
         setTimeout(() => setUploadProgress(0), 500);
       }).catch(() => {
-        // Reset progress on error
         clearInterval(progressInterval);
         setUploadProgress(0);
       });
@@ -96,12 +91,25 @@ const VerizonBillAnalyzer = () => {
       return;
     }
 
-    if (!billText || billText.trim().length < 100) {
+    if (!billText || billText.trim().length < 50) {
       toast.error("Please paste your Verizon bill text. Make sure to include sufficient content for accurate analysis.");
       return;
     }
 
     await analyzeBillText(billText, networkPreference);
+  };
+
+  const handlePasteSample = () => {
+    fetch('/sample-bill.txt')
+      .then(response => response.text())
+      .then(text => {
+        setBillText(text);
+        toast.success("Sample bill text loaded!");
+      })
+      .catch(error => {
+        console.error("Error loading sample bill:", error);
+        toast.error("Failed to load sample bill text");
+      });
   };
 
   if (billData) {
@@ -347,13 +355,24 @@ const VerizonBillAnalyzer = () => {
                   </RadioGroup>
                   
                   <div className="space-y-4 pt-4">
-                    <h3 className="text-lg font-medium">Paste your Verizon bill text</h3>
+                    <div className="flex flex-row justify-between items-center">
+                      <h3 className="text-lg font-medium">Paste your Verizon bill text</h3>
+                      <Button 
+                        onClick={handlePasteSample} 
+                        variant="outline" 
+                        size="sm"
+                        className="flex items-center gap-1"
+                      >
+                        <Clipboard size={14} />
+                        Load Sample
+                      </Button>
+                    </div>
                     <p className="text-sm text-gray-500">
-                      Copy and paste the text from your Verizon bill to analyze your current charges and potential savings.
+                      Copy and paste the text from your Verizon bill below. Include as much detail as possible for the best analysis.
                     </p>
                     
                     <Textarea
-                      placeholder="Paste your Verizon bill text here..."
+                      placeholder="Paste your Verizon bill text here... (e.g., 'Account: 526905159-00001, Invoice: 8776031257, Balance from last bill: $327.25...')"
                       className="min-h-[300px] font-mono text-sm"
                       value={billText}
                       onChange={(e) => setBillText(e.target.value)}
@@ -365,7 +384,7 @@ const VerizonBillAnalyzer = () => {
                       className="w-full"
                       disabled={isLoading || !networkPreference || !billText}
                     >
-                      Analyze Bill Text
+                      {isLoading ? "Analyzing..." : "Analyze Bill Text"}
                     </Button>
                     
                     {errorMessage && (
@@ -380,7 +399,8 @@ const VerizonBillAnalyzer = () => {
                     
                     {isLoading && (
                       <div className="text-blue-500 bg-blue-50 p-4 rounded-md border border-blue-200 mt-4">
-                        <p className="text-sm">Processing your bill. This may take a few moments...</p>
+                        <p className="text-sm">Processing your bill with Claude AI. This may take a few moments...</p>
+                        <Progress className="mt-2" value={75} />
                       </div>
                     )}
                   </div>

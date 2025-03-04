@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -68,15 +67,15 @@ export const useVerizonBillAnalyzer = () => {
       if (analysisResponse.status === "processing") {
         // This is just a processing notification from Edge Runtime
         console.log("Bill is being processed asynchronously");
-        // In a real-world scenario, you might use websockets or polling to get the result
-        // For now, we'll return a placeholder to avoid blocking the UI
+        // Create a more informative processing placeholder
         return {
           status: "processing",
           message: "Your bill is being analyzed. This may take a moment.",
           timestamp: new Date().toISOString(),
           accountNumber: `PROC-${Date.now().toString().substring(0, 6)}`,
           totalAmount: 0,
-          phoneLines: []
+          phoneLines: [],
+          processingMethod: "direct-text-input"
         };
       }
       
@@ -102,7 +101,7 @@ export const useVerizonBillAnalyzer = () => {
     try {
       const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1nemZpb3VhbWlkYXFjdG5xbnJlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzkyMzE3NjQsImV4cCI6MjA1NDgwNzc2NH0._0hxm1UlSMt3wPx8JwaFDvGmpfjI3p5m0HDm6YfaL6Q';
       
-      console.log('Sending text to analyze with Claude...');
+      console.log('Sending text to analyze with Claude...', text.substring(0, 100) + '...');
       const response = await fetch('https://mgzfiouamidaqctnqnre.supabase.co/functions/v1/analyze-verizon-bill', {
         method: 'POST',
         body: JSON.stringify({ text }),
@@ -132,18 +131,20 @@ export const useVerizonBillAnalyzer = () => {
       
       // Get analysis response
       const analysisResponse = await response.json();
-      console.log('Analysis response received');
+      console.log('Analysis response received', analysisResponse);
       
       if (analysisResponse.status === "processing") {
         // This is just a processing notification from Edge Runtime
         console.log("Bill is being processed asynchronously");
+        // Create a more informative processing placeholder
         return {
           status: "processing",
           message: "Your bill is being analyzed. This may take a moment.",
           timestamp: new Date().toISOString(),
           accountNumber: `PROC-${Date.now().toString().substring(0, 6)}`,
           totalAmount: 0,
-          phoneLines: []
+          phoneLines: [],
+          processingMethod: "direct-text-input"
         };
       }
       
@@ -158,6 +159,7 @@ export const useVerizonBillAnalyzer = () => {
       // Save the OCR provider info
       setOcrProvider(data.analysisSource || 'claude');
       
+      console.log('Real data received from analysis:', data);
       return data;
     } catch (error) {
       console.error('Error processing bill text:', error);
@@ -210,24 +212,50 @@ export const useVerizonBillAnalyzer = () => {
   };
 
   const enhanceBillData = (rawData: any) => {
+    console.log('Enhancing bill data:', rawData);
+    
     if (!rawData.phoneLines || rawData.phoneLines.length === 0) {
       console.log("No phone lines detected in analysis, adding placeholder");
-      rawData.phoneLines = [{
-        phoneNumber: "Primary Line",
-        deviceName: "Smartphone",
-        ownerName: rawData.accountInfo?.customerName || "Primary Owner",
-        planName: "Verizon Plan",
-        monthlyTotal: rawData.totalAmount || 99.99,
-        details: {
-          planCost: (rawData.totalAmount || 99.99) * 0.7,
-          planDiscount: 0,
-          devicePayment: (rawData.totalAmount || 99.99) * 0.2,
-          deviceCredit: 0,
-          protection: (rawData.totalAmount || 99.99) * 0.1
-        }
-      }];
+      // Only add placeholder if this is a processing message or the data is incomplete
+      if (rawData.status === "processing" || !rawData.accountInfo) {
+        rawData.phoneLines = [{
+          phoneNumber: "Primary Line",
+          deviceName: "Smartphone",
+          ownerName: rawData.accountInfo?.customerName || "Primary Owner",
+          planName: "Verizon Plan",
+          monthlyTotal: rawData.totalAmount || 99.99,
+          details: {
+            planCost: (rawData.totalAmount || 99.99) * 0.7,
+            planDiscount: 0,
+            devicePayment: (rawData.totalAmount || 99.99) * 0.2,
+            deviceCredit: 0,
+            protection: (rawData.totalAmount || 99.99) * 0.1
+          }
+        }];
+      }
     }
     
+    // Only apply enhancement data if we're actually missing data
+    // For properly parsed bills, don't add mock data
+    if (rawData.processingMethod === "direct-text-input" && 
+        rawData.status !== "processing" && 
+        rawData.phoneLines && 
+        rawData.phoneLines.length > 0 &&
+        rawData.accountInfo) {
+      // This appears to be real data, just standardize the format
+      const standardizedData = {
+        ...rawData,
+        accountNumber: rawData.accountNumber || rawData.accountInfo?.accountNumber,
+        customerName: rawData.customerName || rawData.accountInfo?.customerName,
+        billingPeriod: rawData.billingPeriod || rawData.accountInfo?.billingPeriod,
+        ocrProvider: rawData.ocrProvider || ocrProvider || rawData.analysisSource
+      };
+      
+      console.log('Standardized data (no enhancement):', standardizedData);
+      return standardizedData;
+    }
+    
+    // Add enhancement data for incomplete or processing responses
     const enhancedData = {
       ...rawData,
       accountNumber: rawData.accountNumber || rawData.accountInfo?.accountNumber || `ACCT-${Date.now().toString().substring(0, 8)}`,
@@ -280,6 +308,7 @@ export const useVerizonBillAnalyzer = () => {
       };
     }
     
+    console.log('Enhanced data:', enhancedData);
     return enhancedData;
   };
 
