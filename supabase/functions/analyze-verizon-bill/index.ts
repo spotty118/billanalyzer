@@ -22,6 +22,8 @@ async function sendPdfToClaude(fileContent: ArrayBuffer) {
     const buffer = new Uint8Array(fileContent);
     const base64Content = btoa(String.fromCharCode(...buffer));
     
+    console.log("Calling Claude API with model: claude-3-7-sonnet-20250219");
+    
     const response = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
       headers: {
@@ -30,7 +32,7 @@ async function sendPdfToClaude(fileContent: ArrayBuffer) {
         "anthropic-version": "2023-06-01"
       },
       body: JSON.stringify({
-        model: "claude-3.7-sonnet-20240229",
+        model: "claude-3-7-sonnet-20250219",
         max_tokens: 4000,
         system: `You are an expert Verizon bill analyzer. Extract and organize the key information from the bill, including account info, billing period, total amount due, and details for each phone line (number, plan, device, charges). Format your response as a clean JSON object that can be directly parsed.`,
         messages: [
