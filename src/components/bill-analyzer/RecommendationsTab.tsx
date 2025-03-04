@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -61,9 +62,15 @@ export function RecommendationsTab({
       const premiumPlans = alternativeCarrierPlans.filter(plan => plan.name.includes('Premium'));
       // Ensure all Premium plans have the same base price
       const consistentBasePrice = premiumPlans[0]?.basePrice || 44;
+
+      // Calculate consistent savings amount for all carriers
+      const currentBillAmount = billData.totalAmount || 0;
+      const consistentSavings = currentBillAmount - consistentBasePrice;
+      const consistentAnnualSavings = consistentSavings * 12;
       
       const allRecommendations = carriersForRecommendation.map(carrier => {
-        const savings = calculateCarrierSavings(carrier.id);
+        // Get the carrier's savings (we'll only use this for the plan name)
+        const carrierData = calculateCarrierSavings(carrier.id);
         
         let reasons: string[] = [];
         let pros: string[] = [];
@@ -113,9 +120,9 @@ export function RecommendationsTab({
           carrier: carrier.name,
           carrierId: carrier.id,
           logo: carrier.logo,
-          planName: savings.planName,
-          monthlySavings: savings.monthlySavings,
-          annualSavings: savings.annualSavings,
+          planName: carrierData.planName,
+          monthlySavings: consistentSavings,
+          annualSavings: consistentAnnualSavings,
           monthlyPrice: consistentBasePrice,
           preferred: networkPreference && carrier.network === networkPreference,
           reasons,
