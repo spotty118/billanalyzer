@@ -3,6 +3,8 @@ project_id = "mgzfiouamidaqctnqnre"
 app_id = "analyze-verizon-bill"
 [serve.parameters]
 PORT = 54321
+SUPABASE_MAX_FUNCTION_TIME_SECONDS = 900
+SUPABASE_FUNCTION_MEMORY_MB = 1024
 
 [secrets]
 ANTHROPIC_API_KEY = ""

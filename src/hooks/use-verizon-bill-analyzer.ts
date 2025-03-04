@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -23,6 +22,11 @@ export const useVerizonBillAnalyzer = () => {
 
   const processVerizonBill = async (file: File): Promise<any> => {
     try {
+      const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+      if (file.size > MAX_FILE_SIZE) {
+        throw new Error("File too large (max 10MB)");
+      }
+      
       const formData = new FormData();
       formData.append('file', file);
       
@@ -111,73 +115,6 @@ export const useVerizonBillAnalyzer = () => {
   };
 
   const enhanceBillData = (rawData: any) => {
-    if (rawData.billVersion?.includes("claude-parser") && rawData.phoneLines?.length > 0) {
-      console.log("Data is already in enhanced format from Claude, minimal processing needed");
-      
-      const enhancedData = {
-        ...rawData,
-        totalAmount: rawData.totalAmount || 0,
-        usageAnalysis: rawData.usageAnalysis || {
-          trend: "stable",
-          percentageChange: 0,
-          avg_data_usage_gb: 25.4,
-          avg_talk_minutes: 120,
-          avg_text_messages: 85
-        },
-        costAnalysis: rawData.costAnalysis || {
-          averageMonthlyBill: rawData.totalAmount || 0,
-          projectedNextBill: (rawData.totalAmount || 0) * 1.05,
-          unusualCharges: [],
-          potentialSavings: [
-            { description: "Switch to autopay discount", estimatedSaving: 50.00 },
-            { description: "Consolidate streaming services", estimatedSaving: 25.00 }
-          ]
-        },
-        planRecommendation: rawData.planRecommendation || {
-          recommendedPlan: "Unlimited Plus",
-          reasons: [
-            "Better value for multiple lines",
-            "Includes premium streaming perks",
-            "Higher mobile hotspot data allowance"
-          ],
-          estimatedMonthlySavings: 96.95,
-          confidenceScore: 0.8,
-          alternativePlans: [
-            {
-              name: "Unlimited Welcome",
-              monthlyCost: rawData.totalAmount * 0.9,
-              pros: ["Lower cost", "Unlimited data"],
-              cons: ["Fewer premium features", "Lower priority data"],
-              estimatedSavings: 64.63
-            }
-          ]
-        },
-        ocrProvider: rawData.ocrProvider || "claude"
-      };
-      
-      if (!enhancedData.chargesByCategory || typeof enhancedData.chargesByCategory !== 'object') {
-        enhancedData.chargesByCategory = {
-          "Plan Charges": 0,
-          "Device Payments": 0,
-          "Services & Add-ons": 0,
-          "Taxes & Fees": 0
-        };
-      } else if (rawData.chargesByCategory) {
-        enhancedData.chargesByCategory = {
-          "Plan Charges": rawData.chargesByCategory.plans || 0,
-          "Device Payments": rawData.chargesByCategory.devices || 0,
-          "Services & Add-ons": rawData.chargesByCategory.services || 0,
-          "Taxes & Fees": rawData.chargesByCategory.taxes || 0
-        };
-      }
-      
-      if (enhancedData.phoneLines.length > 8) {
-        enhancedData.phoneLines = enhancedData.phoneLines.slice(0, 8);
-      }
-      
-      return enhancedData;
-    }
-    
     if (!rawData.phoneLines || rawData.phoneLines.length === 0) {
       console.log("No phone lines detected in analysis, adding placeholder");
       rawData.phoneLines = [{
@@ -198,38 +135,38 @@ export const useVerizonBillAnalyzer = () => {
     
     const enhancedData = {
       ...rawData,
-      usageAnalysis: {
+      usageAnalysis: rawData.usageAnalysis || {
         trend: "stable",
         percentageChange: 0,
         avg_data_usage_gb: 25.4,
         avg_talk_minutes: 120,
         avg_text_messages: 85
       },
-      costAnalysis: {
+      costAnalysis: rawData.costAnalysis || {
         averageMonthlyBill: rawData.totalAmount || 0,
         projectedNextBill: (rawData.totalAmount || 0) * 1.05,
         unusualCharges: [],
         potentialSavings: [
-          { description: "Switch to autopay discount", estimatedSaving: 50.00 },
-          { description: "Consolidate streaming services", estimatedSaving: 25.00 }
+          { description: "Switch to autopay discount", estimatedSaving: 10.00 },
+          { description: "Consolidate streaming services", estimatedSaving: 15.00 }
         ]
       },
-      planRecommendation: {
+      planRecommendation: rawData.planRecommendation || {
         recommendedPlan: "Unlimited Plus",
         reasons: [
           "Better value for multiple lines",
           "Includes premium streaming perks",
           "Higher mobile hotspot data allowance"
         ],
-        estimatedMonthlySavings: 96.95,
-        confidenceScore: 0.8,
+        estimatedMonthlySavings: 45.95,
+        confidenceScore: 0.7,
         alternativePlans: [
           {
             name: "Unlimited Welcome",
             monthlyCost: rawData.totalAmount * 0.9,
             pros: ["Lower cost", "Unlimited data"],
             cons: ["Fewer premium features", "Lower priority data"],
-            estimatedSavings: 64.63
+            estimatedSavings: 35.50
           }
         ]
       },
@@ -250,46 +187,13 @@ export const useVerizonBillAnalyzer = () => {
       });
     }
     
-    if (rawData.upcomingChanges && rawData.upcomingChanges.length > 0) {
-      enhancedData.upcomingChanges = rawData.upcomingChanges;
-    }
-    
-    if (rawData.chargesByCategory) {
+    if (!enhancedData.chargesByCategory) {
       enhancedData.chargesByCategory = {
-        "Plan Charges": rawData.chargesByCategory.plans || 0,
-        "Device Payments": rawData.chargesByCategory.devices || 0,
-        "Services & Add-ons": rawData.chargesByCategory.services || 0,
-        "Taxes & Fees": rawData.chargesByCategory.taxes || 0
+        "Plan Charges": 0,
+        "Device Payments": 0,
+        "Services & Add-ons": 0,
+        "Taxes & Fees": 0
       };
-    }
-    
-    if (!enhancedData.phoneLines || !Array.isArray(enhancedData.phoneLines) || enhancedData.phoneLines.length === 0) {
-      enhancedData.phoneLines = [
-        {
-          deviceName: "iPhone 15",
-          phoneNumber: "555-123-4567",
-          planName: "Unlimited Plus",
-          monthlyTotal: 85,
-          details: {
-            planCost: 90,
-            planDiscount: 10,
-          }
-        },
-        {
-          deviceName: "iPhone 14",
-          phoneNumber: "555-987-6543",
-          planName: "Unlimited Plus",
-          monthlyTotal: 75,
-          details: {
-            planCost: 80,
-            planDiscount: 10,
-          }
-        }
-      ];
-    }
-    
-    if (enhancedData.phoneLines.length > 8) {
-      enhancedData.phoneLines = enhancedData.phoneLines.slice(0, 8);
     }
     
     return enhancedData;
@@ -325,7 +229,9 @@ export const useVerizonBillAnalyzer = () => {
       
       const ocrMethod = enhancedData.ocrProvider?.includes("claude") 
         ? "using Claude AI" 
-        : "using standard extraction";
+        : enhancedData.ocrProvider === "fallback"
+          ? "using simplified extraction"
+          : "using standard extraction";
       
       toast.success(`Bill analysis completed successfully ${ocrMethod}!`);
     } catch (error) {
@@ -333,6 +239,31 @@ export const useVerizonBillAnalyzer = () => {
       const errorMsg = error instanceof Error ? error.message : 'Unknown error';
       setErrorMessage(errorMsg);
       toast.error(`Failed to analyze bill: ${errorMsg}`);
+      
+      // Create fallback data if analysis fails completely
+      const fallbackData = {
+        accountNumber: 'Analysis Failed',
+        billingPeriod: new Date().toLocaleDateString(),
+        totalAmount: 0,
+        phoneLines: [{
+          phoneNumber: "Unknown",
+          deviceName: "Smartphone",
+          ownerName: "Verizon Customer",
+          planName: "Unknown Plan",
+          monthlyTotal: 0,
+          details: {
+            planCost: 0,
+            planDiscount: 0,
+            devicePayment: 0,
+            deviceCredit: 0,
+            protection: 0
+          }
+        }],
+        ocrProvider: "failed"
+      };
+      
+      const enhancedFallback = enhanceBillData(fallbackData);
+      setBillData(enhancedFallback);
     } finally {
       setIsLoading(false);
     }
