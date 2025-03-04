@@ -98,7 +98,7 @@ function arrayBufferToBase64(buffer: ArrayBuffer): string {
   return base64;
 }
 
-async function analyzeBillText(extractedText: string) {
+async function analyzeBillText(extractedText: string, networkPreference?: string) {
   if (!ANTHROPIC_API_KEY) {
     console.error("Missing Anthropic API key");
     throw new Error("Claude API key not configured");
@@ -132,7 +132,17 @@ IMPORTANT: Your response must be a valid JSON object that can be parsed with JSO
         "planDiscount": number,
         "devicePayment": number,
         "deviceCredit": number,
-        "protection": number
+        "protection": number,
+        "perks": [
+          {
+            "name": string,
+            "cost": number
+          }
+        ],
+        "surcharges": number,
+        "taxes": number,
+        "prorated": boolean,
+        "activationFee": number
       }
     }
   ],
@@ -140,11 +150,37 @@ IMPORTANT: Your response must be a valid JSON object that can be parsed with JSO
     "Plan Charges": number,
     "Device Payments": number,
     "Services & Add-ons": number,
-    "Taxes & Fees": number
-  }
+    "Taxes & Fees": number,
+    "Discounts & Credits": number
+  },
+  "perks": [
+    {
+      "name": string,
+      "description": string,
+      "monthlyValue": number,
+      "includedWith": string
+    }
+  ],
+  "promotions": [
+    {
+      "name": string,
+      "description": string,
+      "monthlyValue": number,
+      "remainingMonths": number,
+      "appliedTo": string
+    }
+  ]
 }
 
-Extract all values directly from the bill and DO NOT make up or guess ANY information. If you cannot find a specific value in the document, use an empty string or 0 for numbers. 
+Extract all values directly from the bill text. If you cannot find a specific value in the document, use an empty string for strings or 0 for numbers. Make sure to identify all discounts, credits, device payments, protection plans, and perks, even if they have $0 cost.
+
+Pay special attention to:
+1. Device payments and their associated credits
+2. Plan discounts (such as autopay, loyalty, or multi-line discounts)
+3. Perks included with plans (like streaming services)
+4. Protection plans and insurance
+5. Taxes and regulatory fees
+6. Promotional credits and their remaining duration
 
 YOU MUST ensure your response contains ONLY valid JSON that can be parsed with JSON.parse(). Do not include any explanatory text, markdown formatting, or code blocks before or after the JSON.`;
 
@@ -159,7 +195,9 @@ YOU MUST ensure your response contains ONLY valid JSON that can be parsed with J
           content: [
             {
               type: "text",
-              text: "Here is the text extracted from a Verizon bill. Please analyze it and extract the structured information according to the format specified:\n\n" + extractedText
+              text: "Here is the text extracted from a Verizon bill. Please analyze it and extract the structured information according to the format specified:" + 
+                  (networkPreference ? `\n\nThe customer's preferred network is: ${networkPreference}.\n\n` : "\n\n") + 
+                  extractedText
             }
           ]
         }
@@ -213,6 +251,63 @@ YOU MUST ensure your response contains ONLY valid JSON that can be parsed with J
         }
       }
       
+      // Ensure proper structure for phoneLines and details
+      if (jsonData.phoneLines) {
+        jsonData.phoneLines = jsonData.phoneLines.map((line: any) => {
+          if (!line.details) {
+            line.details = {};
+          }
+          
+          // Ensure all required properties exist with defaults
+          line.details = {
+            planCost: line.details.planCost || 0,
+            planDiscount: line.details.planDiscount || 0,
+            devicePayment: line.details.devicePayment || 0,
+            deviceCredit: line.details.deviceCredit || 0,
+            protection: line.details.protection || 0,
+            perks: line.details.perks || [],
+            surcharges: line.details.surcharges || 0,
+            taxes: line.details.taxes || 0,
+            prorated: line.details.prorated || false,
+            activationFee: line.details.activationFee || 0,
+            ...line.details
+          };
+          
+          // Ensure monthlyTotal is calculated correctly
+          if (!line.monthlyTotal || typeof line.monthlyTotal !== 'number') {
+            const details = line.details;
+            line.monthlyTotal = (
+              (details.planCost || 0) - 
+              (details.planDiscount || 0) + 
+              (details.devicePayment || 0) - 
+              (details.deviceCredit || 0) + 
+              (details.protection || 0) + 
+              (details.surcharges || 0) + 
+              (details.taxes || 0) + 
+              (details.activationFee || 0)
+            );
+          }
+          
+          return line;
+        });
+      }
+      
+      // Ensure chargesByCategory exists
+      if (!jsonData.chargesByCategory) {
+        jsonData.chargesByCategory = {
+          "Plan Charges": 0,
+          "Device Payments": 0,
+          "Services & Add-ons": 0,
+          "Taxes & Fees": 0,
+          "Discounts & Credits": 0
+        };
+      }
+      
+      // Add network preference if provided
+      if (networkPreference) {
+        jsonData.networkPreference = networkPreference;
+      }
+      
       // Add source information
       jsonData.analysisSource = "claude-3-7-sonnet-20250219";
       jsonData.processingMethod = "text-extraction";
@@ -258,6 +353,7 @@ serve(async (req) => {
     
     let extractedText = "";
     let isDirectTextInput = false;
+    let networkPreference = null;
     
     // Check if this is a JSON request or form data
     const contentType = req.headers.get('content-type') || '';
@@ -272,6 +368,13 @@ serve(async (req) => {
       }
       
       extractedText = jsonData.text;
+      
+      // Check if network preference was provided
+      if (jsonData.networkPreference) {
+        networkPreference = jsonData.networkPreference;
+        console.log(`Network preference provided: ${networkPreference}`);
+      }
+      
       isDirectTextInput = true;
       console.log(`Received text input, length: ${extractedText.length} characters`);
       
@@ -280,6 +383,13 @@ serve(async (req) => {
       console.log("Processing file upload");
       const formData = await req.formData();
       const file = formData.get('file');
+      
+      // Check if network preference was provided in form data
+      const networkPref = formData.get('networkPreference');
+      if (networkPref && typeof networkPref === 'string') {
+        networkPreference = networkPref;
+        console.log(`Network preference provided: ${networkPreference}`);
+      }
       
       if (!file || !(file instanceof File)) {
         throw new Error('No file provided or invalid file format');
@@ -297,7 +407,7 @@ serve(async (req) => {
     }
     
     // Analyze the bill using Claude
-    const analysisResult = await analyzeBillText(extractedText);
+    const analysisResult = await analyzeBillText(extractedText, networkPreference);
     console.log("Analysis complete");
     
     // Include the processing method in the result

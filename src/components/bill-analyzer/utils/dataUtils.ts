@@ -32,11 +32,17 @@ export const prepareLineItemsData = (phoneLines: any[] = []) => {
       }
     }
     
+    // Calculate perks total
+    const perksTotal = Array.isArray(details.perks) 
+      ? details.perks.reduce((sum: number, perk: any) => sum + (perk.cost || 0), 0)
+      : 0;
+    
     return {
       name: line.phoneNumber || 'Unknown',
       plan: planPrice - (details.planDiscount || 0),
       device: (details.devicePayment || 0) - (details.deviceCredit || 0),
       protection: details.protection || 0,
+      perks: perksTotal,
       taxes: (details.surcharges || 0) + (details.taxes || 0)
     };
   });
@@ -65,12 +71,44 @@ export const prepareCategoryData = (chargesByCategory: any = {}) => {
     }
   }
   
-  return result.length > 0 ? result : [
-    { name: 'Plan Charges', value: 65 },
-    { name: 'Device Payments', value: 15 },
-    { name: 'Services & Add-ons', value: 10 },
-    { name: 'Taxes & Fees', value: 10 }
-  ];
+  // Add a small value for empty categories to ensure chart displays properly
+  if (result.length === 0) {
+    return [
+      { name: 'Plan Charges', value: 65 },
+      { name: 'Device Payments', value: 15 },
+      { name: 'Services & Add-ons', value: 10 },
+      { name: 'Taxes & Fees', value: 10 }
+    ];
+  }
+  
+  return result;
+};
+
+// Helper function to extract perks and promotional credits
+export const extractPerksAndCredits = (billData: any = {}) => {
+  const perks = billData.perks || [];
+  const promotions = billData.promotions || [];
+  
+  // Extract perks from phone lines if not present at top level
+  if (perks.length === 0 && billData.phoneLines) {
+    billData.phoneLines.forEach((line: any) => {
+      if (line.details && Array.isArray(line.details.perks)) {
+        line.details.perks.forEach((perk: any) => {
+          perks.push({
+            name: perk.name,
+            description: perk.description || `Included with ${line.phoneNumber}`,
+            monthlyValue: perk.cost || 0,
+            includedWith: line.phoneNumber
+          });
+        });
+      }
+    });
+  }
+  
+  return {
+    perks,
+    promotions
+  };
 };
 
 // Calculate carrier savings

@@ -2,7 +2,8 @@
 import { useState } from 'react';
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { NetworkPreference } from '@/components/bill-analyzer/VerizonBillAnalyzer';
+
+export type NetworkPreference = 'verizon' | 'tmobile' | 'att' | 'usmobile' | null;
 
 export const useVerizonBillAnalyzer = () => {
   const [billData, setBillData] = useState<any>(null);
@@ -20,16 +21,56 @@ export const useVerizonBillAnalyzer = () => {
     
     // Calculate savings based on number of lines and carrier
     if (carrierId === 'usmobile') {
-      savings = currentMonthlyTotal * (numberOfLines > 3 ? 0.45 : 0.4);
-      price = currentMonthlyTotal - savings;
+      const basePrice = 29.99;
+      const linePrice = numberOfLines > 3 ? 19.99 : 24.99;
+      price = basePrice + (linePrice * (numberOfLines - 1));
+      savings = currentMonthlyTotal - price;
+    } else if (carrierId === 'tmobile') {
+      if (numberOfLines === 1) {
+        price = 70;
+      } else if (numberOfLines === 2) {
+        price = 120;
+      } else if (numberOfLines === 3) {
+        price = 150;
+      } else {
+        price = 180 + Math.max(0, numberOfLines - 4) * 30;
+      }
+      savings = currentMonthlyTotal - price;
+    } else if (carrierId === 'att') {
+      if (numberOfLines === 1) {
+        price = 75;
+      } else if (numberOfLines === 2) {
+        price = 140;
+      } else if (numberOfLines === 3) {
+        price = 165;
+      } else {
+        price = 190 + Math.max(0, numberOfLines - 4) * 25;
+      }
+      savings = currentMonthlyTotal - price;
     }
+    
+    // Ensure we don't show negative savings
+    savings = Math.max(0, savings);
     
     return {
       monthlySavings: savings,
       annualSavings: savings * 12,
-      planName: `US Mobile ${carrierId === 'usmobile' ? 'Unlimited' : 'Premium'} Plan`,
+      planName: getCarrierPlanName(carrierId),
       price: price
     };
+  };
+
+  const getCarrierPlanName = (carrierId: string): string => {
+    switch (carrierId) {
+      case 'usmobile':
+        return 'US Mobile Unlimited Premium';
+      case 'tmobile':
+        return 'T-Mobile Magenta Max';
+      case 'att':
+        return 'AT&T Unlimited Premium';
+      default:
+        return 'Alternative Plan';
+    }
   };
 
   const addManualLineCharges = (data: any) => {
@@ -38,12 +79,72 @@ export const useVerizonBillAnalyzer = () => {
       return;
     }
     
+    // Format the line details properly
+    const formattedLines = data.lines?.map((line: any) => {
+      return {
+        phoneNumber: line.phoneNumber || '',
+        ownerName: line.ownerName || '',
+        deviceName: line.deviceName || '',
+        planName: line.planName || 'Unlimited Plus',
+        monthlyTotal: parseFloat(line.monthlyTotal) || 0,
+        details: {
+          planCost: parseFloat(line.planCost) || 0,
+          planDiscount: parseFloat(line.discount) || 0,
+          devicePayment: parseFloat(line.devicePayment) || 0,
+          deviceCredit: parseFloat(line.deviceCredit) || 0,
+          protection: parseFloat(line.protection) || 0,
+          perks: line.perks || [],
+          surcharges: parseFloat(line.surcharges) || 0,
+          taxes: parseFloat(line.taxes) || 0
+        }
+      };
+    }) || [];
+    
+    // Calculate total amount from line totals
+    const totalAmount = formattedLines.reduce(
+      (sum: number, line: any) => sum + (line.monthlyTotal || 0), 
+      0
+    );
+    
+    // Create category breakdown
+    const planCharges = formattedLines.reduce(
+      (sum: number, line: any) => sum + ((line.details.planCost || 0) - (line.details.planDiscount || 0)), 
+      0
+    );
+    
+    const devicePayments = formattedLines.reduce(
+      (sum: number, line: any) => sum + ((line.details.devicePayment || 0) - (line.details.deviceCredit || 0)), 
+      0
+    );
+    
+    const servicesAndAddons = formattedLines.reduce(
+      (sum: number, line: any) => sum + (line.details.protection || 0), 
+      0
+    );
+    
+    const taxesAndFees = formattedLines.reduce(
+      (sum: number, line: any) => sum + ((line.details.surcharges || 0) + (line.details.taxes || 0)), 
+      0
+    );
+    
     const formattedData = {
-      accountNumber: data.accountNumber || `ACCT-${Date.now().toString().substring(0, 8)}`,
-      billingPeriod: data.billingPeriod || new Date().toLocaleDateString(),
-      totalAmount: data.totalAmount || 0,
+      accountInfo: {
+        customerName: data.accountNumber || 'Manual Entry',
+        accountNumber: data.accountNumber || `ACCT-${Date.now().toString().substring(0, 8)}`,
+        billingPeriod: data.billingPeriod || new Date().toLocaleDateString(),
+        billDate: new Date().toLocaleDateString(),
+        dueDate: ''
+      },
+      totalAmount: totalAmount,
       networkPreference: data.networkPreference,
-      phoneLines: data.lines || [],
+      phoneLines: formattedLines,
+      chargesByCategory: {
+        "Plan Charges": planCharges,
+        "Device Payments": devicePayments,
+        "Services & Add-ons": servicesAndAddons,
+        "Taxes & Fees": taxesAndFees,
+        "Discounts & Credits": 0
+      },
       manualEntry: true
     };
     
@@ -65,7 +166,7 @@ export const useVerizonBillAnalyzer = () => {
     setOcrProvider(null);
   };
 
-  const processVerizonBill = async (file: File): Promise<any> => {
+  const processVerizonBill = async (file: File, networkPreference?: NetworkPreference): Promise<any> => {
     try {
       const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
       if (file.size > MAX_FILE_SIZE) {
@@ -74,6 +175,11 @@ export const useVerizonBillAnalyzer = () => {
       
       const formData = new FormData();
       formData.append('file', file);
+      
+      // Add network preference if provided
+      if (networkPreference) {
+        formData.append('networkPreference', networkPreference);
+      }
       
       const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1nemZpb3VhbWlkYXFjdG5xbnJlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzkyMzE3NjQsImV4cCI6MjA1NDgwNzc2NH0._0hxm1UlSMt3wPx8JwaFDvGmpfjI3p5m0HDm6YfaL6Q';
       
@@ -124,11 +230,42 @@ export const useVerizonBillAnalyzer = () => {
         throw new Error(analysisResponse.error);
       }
       
+      // Validate the response structure
       if (!analysisResponse.totalAmount && !analysisResponse.accountInfo) {
         throw new Error("Invalid response format from analysis service");
       }
       
+      // Ensure all phone lines have the required details properties
+      if (analysisResponse.phoneLines) {
+        analysisResponse.phoneLines = analysisResponse.phoneLines.map((line: any) => {
+          if (!line.details) {
+            line.details = {};
+          }
+          
+          // Ensure all required details exist
+          line.details = {
+            planCost: line.details.planCost || 0,
+            planDiscount: line.details.planDiscount || 0, 
+            devicePayment: line.details.devicePayment || 0,
+            deviceCredit: line.details.deviceCredit || 0,
+            protection: line.details.protection || 0,
+            perks: line.details.perks || [],
+            surcharges: line.details.surcharges || 0,
+            taxes: line.details.taxes || 0,
+            ...line.details
+          };
+          
+          return line;
+        });
+      }
+      
+      // Store OCR provider info
       setOcrProvider(analysisResponse.analysisSource || 'claude');
+      
+      // Include network preference if provided
+      if (networkPreference) {
+        analysisResponse.networkPreference = networkPreference;
+      }
       
       return analysisResponse;
     } catch (error) {
@@ -144,7 +281,10 @@ export const useVerizonBillAnalyzer = () => {
       console.log('Sending text to analyze with Claude...', text.substring(0, 100) + '...');
       const response = await fetch('https://mgzfiouamidaqctnqnre.supabase.co/functions/v1/analyze-verizon-bill', {
         method: 'POST',
-        body: JSON.stringify({ text, networkPreference }),
+        body: JSON.stringify({ 
+          text, 
+          networkPreference 
+        }),
         headers: {
           'apikey': supabaseAnonKey,
           'Authorization': `Bearer ${supabaseAnonKey}`,
@@ -196,6 +336,30 @@ export const useVerizonBillAnalyzer = () => {
       if (!analysisResponse.totalAmount && !analysisResponse.accountInfo) {
         console.error("Invalid response format:", analysisResponse);
         throw new Error("Invalid response format from analysis service");
+      }
+      
+      // Ensure proper structure for phoneLines and details
+      if (analysisResponse.phoneLines) {
+        analysisResponse.phoneLines = analysisResponse.phoneLines.map((line: any) => {
+          if (!line.details) {
+            line.details = {};
+          }
+          
+          // Ensure all required properties exist with defaults
+          line.details = {
+            planCost: line.details.planCost || 0,
+            planDiscount: line.details.planDiscount || 0,
+            devicePayment: line.details.devicePayment || 0,
+            deviceCredit: line.details.deviceCredit || 0,
+            protection: line.details.protection || 0,
+            perks: line.details.perks || [],
+            surcharges: line.details.surcharges || 0,
+            taxes: line.details.taxes || 0,
+            ...line.details
+          };
+          
+          return line;
+        });
       }
       
       // Ensure the response has the network preference
@@ -307,7 +471,8 @@ export const useVerizonBillAnalyzer = () => {
 
     try {
       toast.info("Analyzing bill with Claude AI...");
-      const analysisResult = await processVerizonBill(file);
+      const networkPreference = billData?.networkPreference || null;
+      const analysisResult = await processVerizonBill(file, networkPreference);
       
       if (!analysisResult || typeof analysisResult !== 'object') {
         throw new Error('Invalid analysis result received');
