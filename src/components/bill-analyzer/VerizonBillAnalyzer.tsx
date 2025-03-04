@@ -4,7 +4,7 @@ import { BillAnalyzerContent } from './BillAnalyzerContent';
 import { ManualEntryForm } from './ManualEntryForm';
 import { useVerizonBillAnalyzer } from '@/hooks/use-verizon-bill-analyzer';
 import { Button } from '@/components/ui/button';
-import { Upload, PencilLine, RefreshCw, Clock, Signal } from 'lucide-react';
+import { Upload, PencilLine, RefreshCw, Clock, Signal, AlertTriangle } from 'lucide-react';
 import { toast } from "sonner";
 import { Card, CardContent } from '@/components/ui/card';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
@@ -22,16 +22,29 @@ const VerizonBillAnalyzer = () => {
 
   const [inputMethod, setInputMethod] = useState<'upload' | 'manual' | null>(null);
   const [networkPreference, setNetworkPreference] = useState<NetworkPreference>(null);
+  const [showNetworkError, setShowNetworkError] = useState(false);
 
   const handleStartOver = () => {
     resetBillData();
     setInputMethod(null);
     setNetworkPreference(null);
+    setShowNetworkError(false);
     toast.success("Analysis reset. You can start over.");
   };
 
   const handleNetworkPreferenceChange = (value: string) => {
     setNetworkPreference(value as NetworkPreference);
+    setShowNetworkError(false);
+  };
+
+  const handleSubmitForm = (data: any) => {
+    if (!networkPreference) {
+      setShowNetworkError(true);
+      toast.error("Please select which carrier works best in your area");
+      return;
+    }
+    
+    addManualLineCharges({...data, networkPreference});
   };
 
   if (billData) {
@@ -145,10 +158,18 @@ const VerizonBillAnalyzer = () => {
                   <div className="flex items-center gap-2">
                     <Signal className="h-5 w-5 text-blue-500" />
                     <h3 className="text-lg font-medium">Which carrier works best in your area?</h3>
+                    <span className="text-red-500">*</span>
                   </div>
                   <p className="text-sm text-gray-500">
                     This helps us recommend the best US Mobile plan for your location. US Mobile offers plans on multiple networks.
                   </p>
+                  
+                  {showNetworkError && (
+                    <div className="flex items-center gap-2 text-red-500 text-sm bg-red-50 p-2 rounded border border-red-200">
+                      <AlertTriangle size={16} />
+                      <span>Please select a network preference to continue</span>
+                    </div>
+                  )}
                   
                   <RadioGroup 
                     value={networkPreference || ''} 
@@ -183,7 +204,7 @@ const VerizonBillAnalyzer = () => {
               </CardContent>
             </Card>
             
-            <ManualEntryForm onSubmit={(data) => addManualLineCharges({...data, networkPreference})} />
+            <ManualEntryForm onSubmit={handleSubmitForm} />
           </div>
         </div>
       )}
