@@ -83,7 +83,7 @@ export function RecommendationsTab({
           if (networkPreference === 'verizon') {
             pros.push("Optimized for your preferred network coverage");
           }
-          cons.push("Newer carrier option");
+          cons.push("May have different coverage in some rural areas");
         } else if (carrier.id === "lightspeed") {
           reasons.push("Fast 5G speeds on T-Mobile's network");
           pros.push("Great international options");
@@ -99,7 +99,7 @@ export function RecommendationsTab({
           if (networkPreference === 'att') {
             pros.push("Optimized for your preferred network coverage");
           }
-          cons.push("Newer service offering");
+          cons.push("Limited international roaming compared to other options");
         }
         
         if (networkPreference && carrier.network === networkPreference) {
