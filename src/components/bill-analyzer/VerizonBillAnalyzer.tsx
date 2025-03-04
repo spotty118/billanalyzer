@@ -4,7 +4,7 @@ import { BillAnalyzerContent } from './BillAnalyzerContent';
 import { ManualEntryForm } from './ManualEntryForm';
 import { useVerizonBillAnalyzer } from '@/hooks/use-verizon-bill-analyzer';
 import { Button } from '@/components/ui/button';
-import { Upload, PencilLine, RefreshCw, Clock, Signal, AlertTriangle } from 'lucide-react';
+import { Upload, PencilLine, RefreshCw, Signal, AlertTriangle } from 'lucide-react';
 import { toast } from "sonner";
 import { Card, CardContent } from '@/components/ui/card';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
