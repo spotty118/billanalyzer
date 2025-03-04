@@ -59,36 +59,37 @@ export const useVerizonBillAnalyzer = () => {
         throw new Error(errorMessage);
       }
       
-      const data = await response.json();
-
-      if (!data || (!Array.isArray(data.phoneLines) && !Array.isArray(data.lines))) {
-        throw new Error('The bill analysis response format is invalid');
+      // Get raw Claude response
+      const claudeResponse = await response.json();
+      
+      // Extract Claude's message content as the analysis
+      if (!claudeResponse.content || !claudeResponse.content[0] || !claudeResponse.content[0].text) {
+        throw new Error('Invalid response format from Claude');
       }
       
-      // Normalize data format
-      if (Array.isArray(data.lines) && !Array.isArray(data.phoneLines)) {
-        data.phoneLines = data.lines.map((line: any) => ({
-          phoneNumber: line.phoneNumber,
-          deviceName: line.device,
-          ownerName: line.owner,
-          planName: line.plan?.name || "Unknown plan",
-          monthlyTotal: line.totalAmount || 0,
-          details: {
-            planCost: line.plan?.basePrice || line.plan?.actualCost || 0,
-            planDiscount: line.plan?.discount?.amount || 0,
-            devicePayment: line.devicePayment?.amount || 0,
-            deviceCredit: line.devicePayment?.promotionalCredit || 0,
-            protection: line.services?.find((s: any) => s.name?.toLowerCase().includes("protect"))?.cost || 0
-          }
-        }));
+      // Extract the JSON from Claude's text response
+      const text = claudeResponse.content[0].text;
+      console.log('Claude response text length:', text.length);
+      
+      // Try to find and parse JSON in Claude's response text
+      let data;
+      try {
+        // Look for JSON object in the text
+        const jsonMatch = text.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+          data = JSON.parse(jsonMatch[0]);
+        } else {
+          throw new Error('No JSON found in Claude response');
+        }
+      } catch (parseError) {
+        console.error('Error parsing Claude response:', parseError);
+        throw new Error('Failed to parse bill data from Claude');
       }
       
-      console.log(`Received ${data.phoneLines?.length || 0} phone lines from analysis`);
+      console.log('Successfully parsed Claude response');
       
-      if (data.ocrProvider) {
-        setOcrProvider(data.ocrProvider);
-        console.log('OCR provider:', data.ocrProvider);
-      }
+      // Set OCR provider
+      setOcrProvider('claude');
       
       return data;
     } catch (error) {
@@ -227,13 +228,7 @@ export const useVerizonBillAnalyzer = () => {
       
       await saveBillAnalysis(enhancedData);
       
-      const ocrMethod = enhancedData.ocrProvider?.includes("claude") 
-        ? "using Claude AI" 
-        : enhancedData.ocrProvider === "fallback"
-          ? "using simplified extraction"
-          : "using standard extraction";
-      
-      toast.success(`Bill analysis completed successfully ${ocrMethod}!`);
+      toast.success(`Bill analysis completed successfully using Claude AI!`);
     } catch (error) {
       console.error('Error processing file:', error);
       const errorMsg = error instanceof Error ? error.message : 'Unknown error';
