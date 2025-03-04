@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { BillAnalyzerContent } from './BillAnalyzerContent';
 import { ManualEntryForm } from './ManualEntryForm';
@@ -178,25 +177,22 @@ const VerizonBillAnalyzer = () => {
                   >
                     <div className="flex items-center space-x-2 border rounded-md p-4 hover:bg-gray-50">
                       <RadioGroupItem value="verizon" id="verizon" />
-                      <Label htmlFor="verizon" className="flex flex-col cursor-pointer">
-                        <span className="font-medium">Verizon</span>
-                        <span className="text-xs text-gray-500">We'll recommend Warp</span>
+                      <Label htmlFor="verizon" className="font-medium cursor-pointer">
+                        Verizon
                       </Label>
                     </div>
                     
                     <div className="flex items-center space-x-2 border rounded-md p-4 hover:bg-gray-50">
                       <RadioGroupItem value="tmobile" id="tmobile" />
-                      <Label htmlFor="tmobile" className="flex flex-col cursor-pointer">
-                        <span className="font-medium">T-Mobile</span>
-                        <span className="text-xs text-gray-500">We'll recommend Lightspeed</span>
+                      <Label htmlFor="tmobile" className="font-medium cursor-pointer">
+                        T-Mobile
                       </Label>
                     </div>
                     
                     <div className="flex items-center space-x-2 border rounded-md p-4 hover:bg-gray-50">
                       <RadioGroupItem value="att" id="att" />
-                      <Label htmlFor="att" className="flex flex-col cursor-pointer">
-                        <span className="font-medium">AT&T</span>
-                        <span className="text-xs text-gray-500">We'll recommend Darkstar</span>
+                      <Label htmlFor="att" className="font-medium cursor-pointer">
+                        AT&T
                       </Label>
                     </div>
                   </RadioGroup>
