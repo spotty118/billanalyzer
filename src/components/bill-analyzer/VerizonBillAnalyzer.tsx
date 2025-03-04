@@ -2,21 +2,29 @@
 import { FC, useState } from 'react';
 import { BillUploader } from './BillUploader';
 import { BillTabs } from './BillTabs';
-import { useBillAnalyzer } from '../../hooks/use-verizon-bill-analyzer';
+import { useVerizonBillAnalyzer } from '../../hooks/use-verizon-bill-analyzer';
 import { BillAnalysisHeader } from './BillAnalysisHeader';
 import { ManualEntryForm } from './ManualEntryForm';
 import { NavBar } from '../ui/tubelight-navbar';
 import { Home, FileText, BarChart3, Lightbulb } from 'lucide-react';
 
+// Export the NetworkPreference type so it can be imported by other components
+export type NetworkPreference = 'verizon' | 'tmobile' | 'att';
+
 const VerizonBillAnalyzer: FC = () => {
   const { 
     billData, 
-    isAnalyzing, 
-    analyzeBill, 
-    resetAnalysis, 
-    enterManualMode, 
-    isManualMode 
-  } = useBillAnalyzer();
+    isLoading: isAnalyzing, 
+    handleFileChange, 
+    resetBillData: resetAnalysis, 
+    addManualLineCharges: analyzeBill,
+    calculateCarrierSavings,
+    errorMessage,
+    fileSelected
+  } = useVerizonBillAnalyzer();
+  
+  const [isManualMode, setIsManualMode] = useState(false);
+  const enterManualMode = (value: boolean) => setIsManualMode(value);
 
   const [activeTab, setActiveTab] = useState("overview");
 
@@ -24,14 +32,16 @@ const VerizonBillAnalyzer: FC = () => {
   const navItems = [
     { name: 'Overview', url: '#overview', icon: Home },
     { name: 'Line Items', url: '#line-items', icon: FileText },
-    { name: 'Analysis', url: '#analysis', icon: BarChart3 },
-    { name: 'Savings', url: '#savings', icon: Lightbulb }
+    { name: 'Analysis', url: '#recommendations', icon: BarChart3 },
+    { name: 'Savings', url: '#carrier-comparison', icon: Lightbulb }
   ];
 
   // Handle tab click from the navbar
   const handleNavClick = (tabName: string) => {
     const tabLowerCase = tabName.toLowerCase();
-    setActiveTab(tabLowerCase);
+    setActiveTab(tabLowerCase === 'analysis' ? 'recommendations' : 
+                 tabLowerCase === 'savings' ? 'carrier-comparison' : 
+                 tabLowerCase);
   };
 
   return (
@@ -39,11 +49,16 @@ const VerizonBillAnalyzer: FC = () => {
       {!billData ? (
         <div className="space-y-6">
           {isManualMode ? (
-            <ManualEntryForm onSubmit={analyzeBill} onCancel={() => enterManualMode(false)} />
+            <ManualEntryForm 
+              onSubmit={analyzeBill} 
+              onCancel={() => enterManualMode(false)} 
+            />
           ) : (
             <BillUploader 
-              onUpload={analyzeBill} 
-              isAnalyzing={isAnalyzing} 
+              fileSelected={fileSelected}
+              isLoading={isAnalyzing} 
+              errorMessage={errorMessage}
+              onFileChange={handleFileChange}
               onManualEntry={() => enterManualMode(true)}
             />
           )}
@@ -51,7 +66,7 @@ const VerizonBillAnalyzer: FC = () => {
       ) : (
         <div className="space-y-4">
           <BillAnalysisHeader 
-            billData={billData} 
+            bill={billData} 
             onReset={resetAnalysis}
           />
           
@@ -72,6 +87,8 @@ const VerizonBillAnalyzer: FC = () => {
             billData={billData} 
             activeTab={activeTab} 
             onTabChange={setActiveTab}
+            calculateCarrierSavings={calculateCarrierSavings}
+            networkPreference={billData.networkPreference}
           />
         </div>
       )}

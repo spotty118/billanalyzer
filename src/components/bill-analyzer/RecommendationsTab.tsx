@@ -26,7 +26,7 @@ const carriers = [
   { id: "darkstar", name: "US Mobile DarkStar", logo: "★", network: "att" },
 ];
 
-const networkToCarrierMap = {
+const networkToCarrierMap: Record<NetworkPreference, string> = {
   verizon: "warp",
   tmobile: "lightspeed",
   att: "darkstar"
@@ -47,8 +47,8 @@ export function RecommendationsTab({
     if (billData) {
       let carriersForRecommendation = [...carriers];
       
-      if (networkPreference && networkToCarrierMap[networkPreference]) {
-        const preferredCarrierId = networkToCarrierMap[networkPreference];
+      if (networkPreference && networkToCarrierMap[networkPreference as NetworkPreference]) {
+        const preferredCarrierId = networkToCarrierMap[networkPreference as NetworkPreference];
         const preferredCarrierIndex = carriersForRecommendation.findIndex(c => c.id === preferredCarrierId);
         
         if (preferredCarrierIndex !== -1) {

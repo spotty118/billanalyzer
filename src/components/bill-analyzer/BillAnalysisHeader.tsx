@@ -1,30 +1,22 @@
-interface BillAnalysisHeaderProps {
-  accountNumber: string;
-  billingPeriod: string;
-  totalAmount: number;
-  formatCurrency: (value: number) => string;
+import React from 'react';
+import { Button } from "@/components/ui/button";
+
+export interface BillAnalysisHeaderProps {
+  bill: any;
+  onReset: () => void;
 }
 
-export function BillAnalysisHeader({ 
-  accountNumber, 
-  billingPeriod, 
-  totalAmount, 
-  formatCurrency 
-}: BillAnalysisHeaderProps) {
+export function BillAnalysisHeader({ bill, onReset }: BillAnalysisHeaderProps) {
   return (
-    <div className="bg-blue-600 p-6 rounded-t-lg text-white">
-      <div className="flex flex-wrap justify-between items-center gap-4">
-        <div>
-          <h1 className="text-2xl font-bold">Verizon Bill Analysis</h1>
-          <p className="text-blue-100">
-            Account: {accountNumber} | Billing Period: {billingPeriod}
-          </p>
-        </div>
-        <div className="text-right">
-          <div className="text-3xl font-bold">{formatCurrency(totalAmount)}</div>
-          <p className="text-blue-100">Total Amount Due</p>
-        </div>
+    <div className="flex justify-between items-center p-4 bg-white shadow-md rounded-lg">
+      <div>
+        <h2 className="text-xl font-bold">Bill Analysis</h2>
+        <p className="text-gray-600">Billing Period: {bill.billingPeriod}</p>
+        <p className="text-gray-600">Total Amount: {bill.totalAmount}</p>
       </div>
+      <Button variant="outline" onClick={onReset}>
+        Reset Analysis
+      </Button>
     </div>
   );
 }

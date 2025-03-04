@@ -1,19 +1,22 @@
 
 import React from 'react';
 import { Upload, AlertCircle, File } from 'lucide-react';
+import { Button } from "@/components/ui/button";
 
 interface BillUploaderProps {
   fileSelected: boolean;
   isLoading: boolean;
   errorMessage?: string | null;
   onFileChange: (event: React.ChangeEvent<HTMLInputElement>) => void;
+  onManualEntry: () => void;
 }
 
 export function BillUploader({ 
   fileSelected, 
   isLoading, 
   errorMessage,
-  onFileChange 
+  onFileChange,
+  onManualEntry
 }: BillUploaderProps) {
   return (
     <div className="flex flex-col items-center justify-center p-8 border-2 border-dashed border-gray-300 rounded-lg bg-gray-50 transition-all duration-200 hover:border-blue-500">
@@ -68,6 +71,16 @@ export function BillUploader({
               onChange={onFileChange}
             />
           </label>
+          
+          <div className="mt-4">
+            <Button 
+              variant="outline" 
+              onClick={onManualEntry}
+              className="text-gray-600"
+            >
+              Enter bill details manually
+            </Button>
+          </div>
           
           <p className="text-xs text-gray-400 mt-4">
             For best results, upload the PDF version of your bill

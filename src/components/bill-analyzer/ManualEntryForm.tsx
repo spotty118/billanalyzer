@@ -21,30 +21,11 @@ interface LineCharge {
 }
 
 interface ManualEntryFormProps {
-  onSubmit: (data: {
-    accountNumber: string;
-    billingPeriod: string;
-    totalAmount: number;
-    phoneLines: Array<{
-      phoneNumber: string;
-      deviceName: string;
-      planName: string;
-      monthlyTotal: number;
-      details: {
-        planCost: number;
-        planDiscount: number;
-        planDiscountType?: 'fixed' | 'percentage';
-        devicePayment: number;
-        deviceCredit: number;
-        protection: number;
-        surcharges: number;
-        taxes: number;
-      }
-    }>
-  }) => void;
+  onSubmit: (data: any) => void;
+  onCancel: () => void;
 }
 
-export function ManualEntryForm({ onSubmit }: ManualEntryFormProps) {
+export function ManualEntryForm({ onSubmit, onCancel }: ManualEntryFormProps) {
   const [accountNumber, setAccountNumber] = useState('');
   const [billingPeriod, setBillingPeriod] = useState('');
   const [includeAccountFees, setIncludeAccountFees] = useState(true);
@@ -441,6 +422,9 @@ export function ManualEntryForm({ onSubmit }: ManualEntryFormProps) {
           </div>
         </div>
         
+        <Button variant="outline" type="button" onClick={onCancel}>
+          Cancel
+        </Button>
         <Button type="submit" className="w-full">
           <Save className="h-4 w-4 mr-2" />
           Analyze Bill
