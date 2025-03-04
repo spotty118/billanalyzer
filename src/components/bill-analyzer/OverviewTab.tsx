@@ -11,8 +11,11 @@ export function OverviewTab({ billData, formatCurrency }: OverviewTabProps) {
 
   // Helper function to get plan details using the plan name
   const getPlanDetails = (planName: string) => {
+    // Clean up plan name to match our data structure
+    const cleanPlanName = planName?.trim().replace(/\s+$/, "");
+
     const planId = Object.keys(verizonPlansData).find(
-      key => verizonPlansData[key].name === planName
+      key => verizonPlansData[key].name.toLowerCase() === cleanPlanName?.toLowerCase()
     );
     
     if (!planId) return null;
@@ -21,20 +24,23 @@ export function OverviewTab({ billData, formatCurrency }: OverviewTabProps) {
 
   // Correct features for Verizon plans
   const getCorrectPlanFeatures = (planName: string) => {
-    switch(planName) {
-      case 'Unlimited Welcome':
+    // Normalize plan name by trimming and removing trailing spaces
+    const normalizedPlanName = planName?.trim().replace(/\s+$/, "");
+    
+    switch(normalizedPlanName?.toLowerCase()) {
+      case 'unlimited welcome':
         return [
           'Unlimited talk, text & data', 
           '5G access', 
           'Mobile hotspot 5GB'
         ];
-      case 'Unlimited Plus':
+      case 'unlimited plus':
         return [
           'Unlimited talk, text & data', 
           '5G Ultra Wideband', 
           'Mobile hotspot 30GB'
         ];
-      case 'Unlimited Ultimate':
+      case 'unlimited ultimate':
         return [
           'Unlimited Premium Data', 
           '5G Ultra Wideband', 
@@ -43,6 +49,16 @@ export function OverviewTab({ billData, formatCurrency }: OverviewTabProps) {
       default:
         return ['Unlimited talk, text & data'];
     }
+  };
+
+  // Normalize plan name to a valid Verizon plan
+  const normalizePlanName = (planName: string) => {
+    if (!planName || planName === "Unknown plan") return "Unlimited Plus";
+    
+    // Check if planName is just "Plus" and convert to full name
+    if (planName.trim() === "Plus") return "Unlimited Plus";
+    
+    return planName.trim();
   };
 
   return (
@@ -109,10 +125,12 @@ export function OverviewTab({ billData, formatCurrency }: OverviewTabProps) {
         <h3 className="text-xl font-bold mb-5 text-gray-800">Plan Details</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {billData.phoneLines?.map((line: any, index: number) => {
-            const planDetails = getPlanDetails(line.planName);
+            // Make sure we have a valid plan name
+            const planName = normalizePlanName(line.planName);
+            const planDetails = getPlanDetails(planName);
             const lineCount = billData.phoneLines?.length || 1;
             const price = planDetails ? getPlanPrice(planDetails.id, lineCount) : line.monthlyTotal || 0;
-            const correctFeatures = getCorrectPlanFeatures(line.planName);
+            const correctFeatures = getCorrectPlanFeatures(planName);
             
             return (
               <div key={index} className="p-5 border border-gray-100 rounded-lg hover:shadow-md transition-shadow bg-gray-50">
@@ -126,7 +144,7 @@ export function OverviewTab({ billData, formatCurrency }: OverviewTabProps) {
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
                   <div className="bg-white p-3 rounded-md shadow-sm">
                     <p className="text-sm text-gray-500 mb-1">Plan Name</p>
-                    <p className="font-semibold text-gray-800">{line.planName || 'Not specified'}</p>
+                    <p className="font-semibold text-gray-800">{planName || 'Unlimited Plus'}</p>
                   </div>
                   <div className="bg-white p-3 rounded-md shadow-sm">
                     <p className="text-sm text-gray-500 mb-1">Monthly Cost</p>
