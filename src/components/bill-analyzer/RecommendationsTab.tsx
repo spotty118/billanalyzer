@@ -72,7 +72,7 @@ export function RecommendationsTab({ billData, formatCurrency, calculateCarrierS
     }
     
     if (plan.features && plan.features.length > 0) {
-      const priorityFeatures = plan.features.filter(f => 
+      const priorityFeatures = plan.features.filter((f: string) => 
         f.toLowerCase().includes('priority') || 
         f.toLowerCase().includes('qci') || 
         f.toLowerCase().includes('premium')
@@ -127,7 +127,7 @@ export function RecommendationsTab({ billData, formatCurrency, calculateCarrierS
     // Add hotspot as pro/con
     if (plan.dataAllowance.hotspot) {
       if (plan.dataAllowance.hotspot === 'unlimited' || 
-          typeof plan.dataAllowance.hotspot === 'string' && plan.dataAllowance.hotspot.includes('GB')) {
+          (typeof plan.dataAllowance.hotspot === 'string' && plan.dataAllowance.hotspot.includes('GB'))) {
         pros.push(`Generous hotspot data`);
       } else if (typeof plan.dataAllowance.hotspot === 'number' && plan.dataAllowance.hotspot >= 15) {
         pros.push(`${plan.dataAllowance.hotspot}GB hotspot data`);

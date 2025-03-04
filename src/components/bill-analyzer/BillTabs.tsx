@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import {
   Tabs,
@@ -5,11 +6,11 @@ import {
   TabsList,
   TabsTrigger,
 } from "@/components/ui/tabs";
-import { OverviewTab } from "@/components/bill-analyzer/OverviewTab";
-import { LineItemsTab } from "@/components/bill-analyzer/LineItemsTab";
 import { RecommendationsTab } from "@/components/bill-analyzer/RecommendationsTab";
 import { CarrierComparison } from "@/components/bill-analyzer/CarrierComparison";
 import { formatCurrency } from "@/components/bill-analyzer/utils/dataUtils";
+import { OverviewTab } from "./OverviewTab";
+import { LineItemsTab } from "./LineItemsTab";
 
 interface BillTabsProps {
   billData: any;
