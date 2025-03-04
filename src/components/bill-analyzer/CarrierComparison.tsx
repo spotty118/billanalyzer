@@ -38,6 +38,13 @@ interface CarrierComparisonProps {
   formatCurrency: (value: number) => string;
 }
 
+// Define types for the chart data to avoid type errors
+interface ComparisonDataPoint {
+  lines: number;
+  current: number;
+  [key: string]: number; // This allows dynamic carrier IDs and saving properties
+}
+
 export function CarrierComparison({
   billData,
   activeCarrierTab,
@@ -55,8 +62,8 @@ export function CarrierComparison({
   };
 
   // Generate price comparison data for charts
-  const generateComparisonData = () => {
-    const data = [];
+  const generateComparisonData = (): ComparisonDataPoint[] => {
+    const data: ComparisonDataPoint[] = [];
     const lineCount = billData.phoneLines?.length || 1;
     
     // Generate data for 1-5 lines regardless of user's actual line count
@@ -77,7 +84,7 @@ export function CarrierComparison({
         };
       });
       
-      const entry = {
+      const entry: ComparisonDataPoint = {
         lines: i,
         current: billData.totalAmount * (i / lineCount)
       };
@@ -140,7 +147,9 @@ export function CarrierComparison({
             
             if (!carrierPlan) return null;
             
-            const annualMonthlyEquivalent = carrierPlan.annualPrice ? carrierPlan.annualPrice / 12 : 0;
+            // Ensure we're using a number for calculations
+            const annualPrice = carrierPlan.annualPrice || 0;
+            const annualMonthlyEquivalent = annualPrice / 12;
             
             return (
               <TabsContent key={carrier.id} value={carrier.id} forceMount>
@@ -157,7 +166,7 @@ export function CarrierComparison({
                             <>
                               <p className="text-sm text-gray-500 mt-2">Annual Option</p>
                               <p className="text-md">
-                                {formatCurrency(carrierPlan.annualPrice)}/yr
+                                {formatCurrency(annualPrice)}/yr
                                 <span className="text-sm text-gray-500 ml-1">
                                   (≈{formatCurrency(annualMonthlyEquivalent)}/mo)
                                 </span>
@@ -300,7 +309,7 @@ export function CarrierComparison({
                         <CartesianGrid strokeDasharray="3 3" />
                         <XAxis dataKey="lines" label={{ value: 'Number of Lines', position: 'insideBottom', offset: -5 }} />
                         <YAxis label={{ value: 'Monthly Savings ($)', angle: -90, position: 'insideLeft' }} />
-                        <Tooltip formatter={(value) => [`$${Math.round(value * 100) / 100}`, 'Monthly Savings']} />
+                        <Tooltip formatter={(value) => [`$${Math.round(Number(value) * 100) / 100}`, 'Monthly Savings']} />
                         <Bar dataKey={`${carrier.id}Saving`} fill="#38B0DE" name={`${carrier.name} Savings`} />
                       </BarChart>
                     </ResponsiveContainer>
@@ -321,7 +330,7 @@ export function CarrierComparison({
                         <CartesianGrid strokeDasharray="3 3" />
                         <XAxis dataKey="lines" label={{ value: 'Number of Lines', position: 'insideBottom', offset: -5 }} />
                         <YAxis label={{ value: 'Monthly Cost ($)', angle: -90, position: 'insideLeft' }} />
-                        <Tooltip formatter={(value) => [`$${Math.round(value * 100) / 100}`, '']} />
+                        <Tooltip formatter={(value) => [`$${Math.round(Number(value) * 100) / 100}`, '']} />
                         <Legend />
                         <Line type="monotone" dataKey="current" stroke="#0052CC" name="Your Current Plan" />
                         <Line type="monotone" dataKey={carrier.id} stroke="#00A36C" name={carrier.name} />
@@ -350,7 +359,7 @@ export function CarrierComparison({
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis type="number" label={{ value: 'Annual Savings ($)', position: 'insideBottom', offset: -5 }} />
                 <YAxis type="category" dataKey="name" width={100} />
-                <Tooltip formatter={(value) => [`$${Math.round(value * 100) / 100}`, 'Annual Savings']} />
+                <Tooltip formatter={(value) => [`$${Math.round(Number(value) * 100) / 100}`, 'Annual Savings']} />
                 <Bar dataKey="annual" fill="#4CAF50" name="Annual Savings" />
               </BarChart>
             </ResponsiveContainer>
