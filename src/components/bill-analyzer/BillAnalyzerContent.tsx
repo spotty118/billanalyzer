@@ -31,9 +31,6 @@ const CustomBillTabs = ({ billData, calculateCarrierSavings, networkPreference, 
 
 export function BillAnalyzerContent({
   billData,
-  alternativeCarrierPlans,
-  getCarrierPlanPrice,
-  findBestCarrierMatch,
   calculateCarrierSavings,
   networkPreference,
 }: BillAnalyzerContentProps) {
