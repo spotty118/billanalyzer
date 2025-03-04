@@ -9,6 +9,24 @@ const CORS_HEADERS = {
 // Get Claude API key from environment variable
 const ANTHROPIC_API_KEY = Deno.env.get('ANTHROPIC_API_KEY');
 
+// Safely convert ArrayBuffer to base64 in chunks to avoid call stack issues
+function arrayBufferToBase64(buffer: ArrayBuffer): string {
+  const uint8Array = new Uint8Array(buffer);
+  const chunkSize = 8192; // Process in 8KB chunks to avoid stack overflow
+  let base64 = '';
+  
+  // Process the array in chunks
+  for (let i = 0; i < uint8Array.length; i += chunkSize) {
+    const chunk = uint8Array.slice(i, Math.min(i + chunkSize, uint8Array.length));
+    const binaryString = Array.from(chunk)
+      .map(byte => String.fromCharCode(byte))
+      .join('');
+    base64 += btoa(binaryString);
+  }
+  
+  return base64;
+}
+
 async function sendPdfToClaude(fileContent: ArrayBuffer) {
   if (!ANTHROPIC_API_KEY) {
     console.error("Missing Anthropic API key");
@@ -18,14 +36,16 @@ async function sendPdfToClaude(fileContent: ArrayBuffer) {
   try {
     console.log("Sending PDF to Claude API...");
     
-    // Create a file object from the array buffer
-    const pdfBytes = new Uint8Array(fileContent);
-    const base64Content = btoa(String.fromCharCode.apply(null, pdfBytes));
+    // Convert the ArrayBuffer to base64 using the chunking function
+    const base64Content = arrayBufferToBase64(fileContent);
     
-    console.log(`PDF converted to base64, size: ${base64Content.length} chars`);
-    console.log(`Using Claude API with key length: ${ANTHROPIC_API_KEY.length} chars`);
+    console.log(`PDF converted to base64, length: ${base64Content.length}`);
+    console.log(`Using Claude API with key length: ${ANTHROPIC_API_KEY.length}`);
     
-    // Send to Claude using the text+pdf approach instead of the image approach
+    // Create a unique file ID for this upload
+    const fileId = `file_${Math.random().toString(36).substring(2, 15)}`;
+    
+    // Send to Claude using the file approach which works better for PDFs
     const response = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
       headers: {
@@ -47,7 +67,7 @@ async function sendPdfToClaude(fileContent: ArrayBuffer) {
               },
               {
                 type: "file",
-                file_id: "file_" + Math.random().toString(36).substring(2, 11),
+                file_id: fileId,
                 media_type: "application/pdf",
                 data: base64Content
               }
