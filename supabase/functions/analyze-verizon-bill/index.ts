@@ -16,30 +16,16 @@ async function sendPdfToClaude(fileContent: ArrayBuffer) {
   }
   
   try {
-    console.log("Sending PDF directly to Claude for analysis...");
+    console.log("Sending PDF to Claude API...");
     
-    // The issue might be with the media_type. Claude only accepts certain image formats, not PDFs directly.
-    // We'll convert the PDF to an image-like format by setting the media_type to something Claude accepts
-    const buffer = new Uint8Array(fileContent);
+    // Create a file object from the array buffer
+    const pdfBytes = new Uint8Array(fileContent);
+    const base64Content = btoa(String.fromCharCode.apply(null, pdfBytes));
     
-    // Using a safer approach to convert to base64
-    let binary = '';
-    const bytes = new Uint8Array(buffer);
-    const len = bytes.byteLength;
+    console.log(`PDF converted to base64, size: ${base64Content.length} chars`);
+    console.log(`Using Claude API with key length: ${ANTHROPIC_API_KEY.length} chars`);
     
-    const chunkSize = 1024;
-    for (let i = 0; i < len; i += chunkSize) {
-      const chunk = bytes.slice(i, Math.min(i + chunkSize, len));
-      for (let j = 0; j < chunk.length; j++) {
-        binary += String.fromCharCode(chunk[j]);
-      }
-    }
-    
-    const base64Content = btoa(binary);
-    
-    console.log(`Calling Claude API with model: claude-3-7-sonnet-20250219 and API key length: ${ANTHROPIC_API_KEY.length} chars`);
-    
-    // Modified to use image/png as the media_type since Claude doesn't support PDF directly in its API
+    // Send to Claude using the text+pdf approach instead of the image approach
     const response = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
       headers: {
@@ -48,7 +34,7 @@ async function sendPdfToClaude(fileContent: ArrayBuffer) {
         "anthropic-version": "2023-06-01"
       },
       body: JSON.stringify({
-        model: "claude-3-7-sonnet-20250219",
+        model: "claude-3-opus-20240229",
         max_tokens: 4000,
         system: `You are an expert Verizon bill analyzer. Extract and organize the key information from the bill, including account info, billing period, total amount due, and details for each phone line (number, plan, device, charges). Format your response as a clean JSON object that can be directly parsed.`,
         messages: [
@@ -57,15 +43,13 @@ async function sendPdfToClaude(fileContent: ArrayBuffer) {
             content: [
               {
                 type: "text",
-                text: "Analyze this Verizon bill PDF and extract all the information into a JSON format."
+                text: "This is a Verizon bill PDF. Please analyze it and extract all the information into a structured JSON format."
               },
               {
-                type: "image",
-                source: {
-                  type: "base64",
-                  media_type: "image/png",  // Changed from application/pdf to image/png
-                  data: base64Content
-                }
+                type: "file",
+                file_id: "file_" + Math.random().toString(36).substring(2, 11),
+                media_type: "application/pdf",
+                data: base64Content
               }
             ]
           }
