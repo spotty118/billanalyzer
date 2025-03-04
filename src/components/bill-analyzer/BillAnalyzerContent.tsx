@@ -39,7 +39,6 @@ export function BillAnalyzerContent({
   networkPreference,
 }: BillAnalyzerContentProps) {
   const [activeTab, setActiveTab] = useState("overview");
-  const [analysisProgress, setAnalysisProgress] = useState(100);
   console.log("BillAnalyzerContent - calculateCarrierSavings available:", !!calculateCarrierSavings);
 
   const handleTabChange = (tab: string) => {
@@ -83,11 +82,6 @@ export function BillAnalyzerContent({
       </div>
     );
   }
-
-  // Ensure phone lines have proper plan names and devices
-  const hasValidPhoneLines = billData.phoneLines && 
-    billData.phoneLines.length > 0 && 
-    billData.phoneLines.some((line: any) => line.planName || line.deviceName);
 
   // Check if the bill data has been privacy-protected
   const isPrivacyProtected = billData.privacyProtected || 
