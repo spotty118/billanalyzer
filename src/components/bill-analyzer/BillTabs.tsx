@@ -6,6 +6,7 @@ import { LineItemsTab } from "./LineItemsTab";
 import { RecommendationsTab } from "./RecommendationsTab";
 import { CarrierComparison } from "./CarrierComparison";
 import { formatCurrency } from "./utils/dataUtils";
+import { NetworkPreference } from './VerizonBillAnalyzer';
 
 interface BillTabsProps {
   billData: any;
@@ -15,6 +16,7 @@ interface BillTabsProps {
     planName: string;
     price: number;
   };
+  networkPreference?: NetworkPreference;
   activeTab?: string;
   onTabChange?: (tab: string) => void;
 }
@@ -22,6 +24,7 @@ interface BillTabsProps {
 export function BillTabs({ 
   billData, 
   calculateCarrierSavings, 
+  networkPreference,
   activeTab = "overview", 
   onTabChange 
 }: BillTabsProps) {
@@ -67,6 +70,7 @@ export function BillTabs({
           billData={billData} 
           formatCurrency={formatCurrency}
           calculateCarrierSavings={calculateCarrierSavings}
+          networkPreference={networkPreference}
         />
       </TabsContent>
       <TabsContent value="carrier-comparison">
