@@ -8,7 +8,6 @@ import {
   MessageSquare,
   ChevronLeft,
   ChevronRight,
-  Navigation
 } from 'lucide-react';
 import { useSidebar } from '@/contexts/SidebarContext';
 import { cn } from '@/lib/utils';
@@ -41,7 +40,6 @@ export function AppSidebar() {
           <SidebarItem to="/quotes" icon={<Calculator />} label="Quote Calculator" isCollapsed={isCollapsed} />
           <SidebarItem to="/commissions" icon={<BadgeDollarSign />} label="Commission Calculator" isCollapsed={isCollapsed} />
           <SidebarItem to="/promotions" icon={<MessageSquare />} label="Promotions" isCollapsed={isCollapsed} />
-          <SidebarItem to="/tubelight-navbar-demo" icon={<Navigation />} label="Navbar Demo" isCollapsed={isCollapsed} />
         </ul>
         <hr className="h-px my-4 bg-gray-200 border-0 dark:bg-gray-700" />
         <ul>

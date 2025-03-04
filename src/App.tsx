@@ -7,7 +7,6 @@ import { MainContent } from './components/layouts/MainContent';
 import { PageHeader } from './components/layouts/PageHeader';
 import { ContentArea } from './components/layouts/ContentArea';
 import { SidebarProvider } from './contexts/SidebarContext';
-import { NavBarDemo } from './components/ui/navbar.demo';
 
 // Regular imports for main components
 import VerizonBillAnalyzer from './components/bill-analyzer/VerizonBillAnalyzer';
@@ -51,7 +50,6 @@ function App() {
                   />
                   <Route path="/admin-login" element={<AdminLogin />} />
                   <Route path="/admin-dashboard" element={<AdminDashboard />} />
-                  <Route path="/tubelight-navbar-demo" element={<NavBarDemo />} />
                   <Route path="*" element={<Navigate to="/" replace />} />
                 </Routes>
               </Suspense>
