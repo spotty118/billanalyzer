@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -58,6 +57,11 @@ export function RecommendationsTab({
         }
       }
       
+      // Find all premium plans to ensure price consistency
+      const premiumPlans = alternativeCarrierPlans.filter(plan => plan.name.includes('Premium'));
+      // Ensure all Premium plans have the same base price
+      const consistentBasePrice = premiumPlans[0]?.basePrice || 44;
+      
       const allRecommendations = carriersForRecommendation.map(carrier => {
         const savings = calculateCarrierSavings(carrier.id);
         
@@ -70,7 +74,6 @@ export function RecommendationsTab({
         const premiumPlan = carrierPlans.find(plan => plan.name.includes('Premium'));
         
         // Get features for this carrier from the alternativeCarrierPlans data
-        // Explicitly type the features array as FeaturesList (string[])
         let features: FeaturesList = [];
         if (premiumPlan) {
           features = premiumPlan.features;
@@ -113,12 +116,12 @@ export function RecommendationsTab({
           planName: savings.planName,
           monthlySavings: savings.monthlySavings,
           annualSavings: savings.annualSavings,
-          monthlyPrice: savings.price,
+          monthlyPrice: consistentBasePrice,
           preferred: networkPreference && carrier.network === networkPreference,
           reasons,
           pros,
           cons,
-          features // Now properly typed
+          features
         };
       });
       
