@@ -1,7 +1,6 @@
 
 import { Suspense, lazy } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { AppSidebar } from './components/AppSidebar';
 import { ErrorBoundary } from './components/ui/error-boundary';
 import { DashboardLayout } from './components/layouts/DashboardLayout';
 import { MainContent } from './components/layouts/MainContent';
@@ -10,10 +9,7 @@ import { ContentArea } from './components/layouts/ContentArea';
 import { SidebarProvider } from './contexts/SidebarContext';
 
 // Regular imports for main components
-import { QuoteCalculator } from './components/QuoteCalculator';
 import VerizonBillAnalyzer from './components/bill-analyzer/VerizonBillAnalyzer';
-import { CommissionCalculator } from './components/CommissionCalculator';
-import { PromotionsOverview } from './components/PromotionsOverview';
 
 // Lazy load admin components
 const AdminLogin = lazy(() => import('./pages/AdminLogin'));
@@ -29,72 +25,28 @@ const LoadingFallback = () => (
   </div>
 );
 
-function Dashboard() {
-  return (
-    <>
-      <PageHeader 
-        title="Dashboard" 
-        description="Welcome to your dashboard. Access all your tools and calculators here."
-      />
-      <ContentArea>
-        <VerizonBillAnalyzer />
-      </ContentArea>
-    </>
-  );
-}
-
 function App() {
   return (
     <ErrorBoundary>
       <Router basename="/">
         <SidebarProvider>
           <DashboardLayout>
-            <AppSidebar />
             <MainContent>
               <Suspense fallback={<LoadingFallback />}>
                 <Routes>
-                  <Route path="/" element={<Dashboard />} />
                   <Route 
-                    path="/quotes" 
+                    path="/" 
                     element={
                       <>
                         <PageHeader 
-                          title="Quote Calculator" 
-                          description="Calculate quotes for different plan combinations"
+                          title="Verizon Bill Analyzer" 
+                          description="Upload your Verizon bill to find potential savings"
                         />
                         <ContentArea>
-                          <QuoteCalculator />
+                          <VerizonBillAnalyzer />
                         </ContentArea>
                       </>
-                    }
-                  />
-                  <Route 
-                    path="/commissions" 
-                    element={
-                      <>
-                        <PageHeader 
-                          title="Commission Calculator" 
-                          description="Calculate your commission earnings"
-                        />
-                        <ContentArea>
-                          <CommissionCalculator />
-                        </ContentArea>
-                      </>
-                    }
-                  />
-                  <Route 
-                    path="/promotions" 
-                    element={
-                      <>
-                        <PageHeader 
-                          title="Promotions" 
-                          description="View and manage current promotions"
-                        />
-                        <ContentArea>
-                          <PromotionsOverview />
-                        </ContentArea>
-                      </>
-                    }
+                    } 
                   />
                   <Route path="/admin-login" element={<AdminLogin />} />
                   <Route path="/admin-dashboard" element={<AdminDashboard />} />

@@ -1,5 +1,4 @@
-
-import React, { createContext, useContext, useState } from 'react';
+import React, { createContext, useContext } from 'react';
 
 type SidebarContextType = {
   isCollapsed: boolean;
@@ -9,10 +8,12 @@ type SidebarContextType = {
 const SidebarContext = createContext<SidebarContextType | undefined>(undefined);
 
 export function SidebarProvider({ children }: { children: React.ReactNode }) {
-  const [isCollapsed, setIsCollapsed] = useState(false);
-
+  // Always set isCollapsed to true since we're removing the sidebar
+  const isCollapsed = true;
+  
+  // Keep the toggleSidebar function as a no-op
   const toggleSidebar = () => {
-    setIsCollapsed(!isCollapsed);
+    // No-op function since sidebar is always collapsed/hidden
   };
 
   return (
