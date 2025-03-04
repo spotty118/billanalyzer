@@ -204,7 +204,7 @@ export function ManualEntryForm({ onSubmit }: ManualEntryFormProps) {
                 </Select>
               </div>
               
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Plan Cost ($)</label>
                   <Input 
@@ -217,22 +217,49 @@ export function ManualEntryForm({ onSubmit }: ManualEntryFormProps) {
                 </div>
                 
                 <div className="space-y-2">
-                  <label className="text-sm font-medium">Plan Discount ($)</label>
+                  <label className="text-sm font-medium">Discount Type</label>
+                  <Select 
+                    value={line.planDiscountType} 
+                    onValueChange={value => updateLine(index, 'planDiscountType', value as 'fixed' | 'percentage')}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select discount type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="fixed">Fixed Amount ($)</SelectItem>
+                      <SelectItem value="percentage">Percentage (%)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">
+                    {line.planDiscountType === 'percentage' ? 'Plan Discount (%)' : 'Plan Discount ($)'}
+                  </label>
                   <Input 
                     type="number"
                     value={line.planDiscount.toString()}
                     onChange={e => updateLine(index, 'planDiscount', e.target.value)}
                     placeholder="0.00"
-                    step="0.01"
+                    step={line.planDiscountType === 'percentage' ? "1" : "0.01"}
                   />
                 </div>
                 
-                <div className="space-y-2 md:col-span-2">
+                <div className="space-y-2">
                   <label className="text-sm font-medium">Line Total</label>
                   <div className="h-10 px-3 py-2 rounded-md border bg-gray-100 flex items-center">
                     ${calculateLineTotal(line).toFixed(2)}
                   </div>
                 </div>
+                
+                {line.planDiscountType === 'percentage' && line.planDiscount > 0 && (
+                  <div className="md:col-span-2 text-sm text-gray-600">
+                    Discount amount: ${(line.planCost * (line.planDiscount / 100)).toFixed(2)} 
+                    ({line.planDiscount}% of ${line.planCost.toFixed(2)})
+                  </div>
+                )}
               </div>
             </div>
           ))}
