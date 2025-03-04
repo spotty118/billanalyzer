@@ -19,6 +19,8 @@ interface BillAnalyzerContentProps {
 
 export const BillAnalyzerContent = ({ 
   billData, 
+  ocrProvider,
+  resetBillData,
   formatCurrency,
   calculateCarrierSavings,
   aiRecommendationsFetched,

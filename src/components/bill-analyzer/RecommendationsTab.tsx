@@ -2,12 +2,11 @@ import { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { CheckIcon, XIcon, RefreshCw } from "lucide-react";
-import { Progress } from "@/components/ui/progress";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { NetworkPreference } from './VerizonBillAnalyzer';
-import { alternativeCarrierPlans } from '@/config/alternativeCarriers';
+import { Skeleton } from "@/components/ui/skeleton";
+import { ArrowDown, ArrowDownRight, CheckCircle, Clock, DollarSign, PhoneCall, Smartphone, Wifi } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import type { NetworkPreference } from '@/hooks/use-verizon-bill-analyzer';
 
 interface RecommendationsTabProps {
   billData: any;
@@ -18,57 +17,31 @@ interface RecommendationsTabProps {
     planName: string;
     price: number;
   };
-  networkPreference?: NetworkPreference;
+  networkPreference: NetworkPreference;
   aiRecommendationsFetched: boolean;
   setAiRecommendationsFetched: (fetched: boolean) => void;
 }
 
-const carriers = [
-  { id: "warp", name: "US Mobile Warp", logo: "🌀", network: "verizon" },
-  { id: "lightspeed", name: "US Mobile LightSpeed", logo: "⚡", network: "tmobile" },
-  { id: "darkstar", name: "US Mobile DarkStar", logo: "★", network: "att" },
-  { id: "visible", name: "Visible", logo: "👁️", network: "verizon" },
-];
-
-const networkToCarrierMap = {
-  verizon: "warp",
-  tmobile: "lightspeed",
-  att: "darkstar"
-};
-
-type FeaturesList = string[];
-
-interface AIRecommendation {
+interface Recommendation {
   carrier: string;
   planName: string;
-  network: string;
-  monthlyPrice: number;
-  features: string[];
-  reasons: string[];
-  pros: string[];
-  cons: string[];
+  monthlySavings: number;
+  annualSavings: number;
+  price: number;
 }
 
-interface AIRecommendationsData {
-  recommendations: AIRecommendation[];
-  marketInsights: {
-    currentPromos: string[];
-    trendingPlans: string[];
-    networkPerformance: {
-      verizon: string;
-      tmobile: string;
-      att: string;
-    };
-  };
-  personalizedAdvice: string;
-  meta?: {
-    generatedAt: string;
-    source: string;
-    billDataTimestamp: string;
-  };
+interface Feature {
+  name: string;
+  included: boolean;
 }
 
-const carrierLogos = {
+interface PlanDetail {
+  title: string;
+  description: string;
+  features: Feature[];
+}
+
+const carrierLogos: Record<string, string> = {
   verizon: '/verizon-logo.png',
   tmobile: '/tmobile-logo.png',
   att: '/att-logo.png',
@@ -84,526 +57,246 @@ export function RecommendationsTab({
   aiRecommendationsFetched,
   setAiRecommendationsFetched
 }: RecommendationsTabProps) {
-  const [recommendations, setRecommendations] = useState<any[]>([]);
-  const [aiRecommendations, setAiRecommendations] = useState<AIRecommendationsData | null>(null);
-  const [isLoadingAI, setIsLoadingAI] = useState(false);
-  const [activeTab, setActiveTab] = useState("standard");
-  const [progress, setProgress] = useState(0);
-
+  const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
+  const [planDetails, setPlanDetails] = useState<PlanDetail | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [selectedCarrier, setSelectedCarrier] = useState<string | null>(null);
+  
+  useEffect(() => {
+    if (!aiRecommendationsFetched) {
+      fetchAIRecommendations();
+    }
+  }, [billData, aiRecommendationsFetched]);
+  
   const fetchAIRecommendations = async () => {
-    setIsLoadingAI(true);
-    setProgress(10);
+    setLoading(true);
+    setError(null);
     
     try {
+      if (!billData?.accountNumber) {
+        throw new Error("Account number is missing from bill data.");
+      }
+      
+      const { data, error } = await supabase
+        .from('ai_recommendations')
+        .select('*')
+        .eq('account_number', billData.accountNumber)
+        .single();
+      
+      if (error) {
+        console.error("Supabase error fetching AI recommendations:", error);
+        throw new Error(`Failed to fetch AI recommendations: ${error.message}`);
+      }
+      
+      if (data && data.recommendations) {
+        setRecommendations(data.recommendations);
+        setPlanDetails(data.planDetails);
+        setAiRecommendationsFetched(true);
+        toast.success("AI recommendations loaded successfully!");
+      } else {
+        console.warn("No AI recommendations found in Supabase, generating...");
+        await generateAIRecommendations();
+      }
+    } catch (err: any) {
+      console.error("Error fetching AI recommendations:", err);
+      setError(err.message || "Failed to fetch AI recommendations.");
+      toast.error(`Error fetching AI recommendations: ${err.message}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+  const generateAIRecommendations = async () => {
+    setLoading(true);
+    setError(null);
+    
+    try {
+      if (!billData) {
+        throw new Error("Bill data is missing.");
+      }
+      
       const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1nemZpb3VhbWlkYXFjdG5xbnJlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzkyMzE3NjQsImV4cCI6MjA1NDgwNzc2NH0._0hxm1UlSMt3wPx8JwaFDvGmpfjI3p5m0HDm6YfaL6Q';
       
-      setProgress(30);
-      toast.info("Getting fresh carrier data with Gemini AI...");
-      
-      const response = await fetch('https://mgzfiouamidaqctnqnre.supabase.co/functions/v1/ai-plan-recommendations', {
+      const response = await fetch('https://mgzfiouamidaqctnqnre.supabase.co/functions/v1/generate-recommendations', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
           'apikey': supabaseAnonKey,
-          'Authorization': `Bearer ${supabaseAnonKey}`
+          'Authorization': `Bearer ${supabaseAnonKey}`,
+          'Content-Type': 'application/json'
         },
-        body: JSON.stringify({
-          billData,
-          networkPreference
-        })
+        body: JSON.stringify(billData)
       });
       
-      setProgress(70);
-      
       if (!response.ok) {
-        throw new Error(`Failed to get AI recommendations: ${response.status}`);
+        const errorText = await response.text();
+        console.error("Function error response:", errorText);
+        throw new Error(`Failed to generate recommendations: ${response.status} - ${errorText}`);
       }
       
-      const data = await response.json();
-      setProgress(90);
+      const result = await response.json();
       
-      if (data.error) {
-        throw new Error(data.error);
+      if (!result || !result.recommendations || !result.planDetails) {
+        console.error("Invalid response from function:", result);
+        throw new Error("Invalid response format from recommendations service.");
       }
       
-      setAiRecommendations(data);
-      setActiveTab("ai");
+      setRecommendations(result.recommendations);
+      setPlanDetails(result.planDetails);
       setAiRecommendationsFetched(true);
-      toast.success("Got fresh carrier recommendations from Gemini!");
       
-    } catch (error) {
-      console.error("Error fetching AI recommendations:", error);
-      toast.error("Failed to get AI recommendations. Using standard recommendations instead.");
-    } finally {
-      setIsLoadingAI(false);
-      setProgress(100);
-    }
-  };
-
-  useEffect(() => {
-    if (billData) {
-      let carriersForRecommendation = [...carriers];
-      
-      if (networkPreference && networkToCarrierMap[networkPreference]) {
-        const preferredCarrierId = networkToCarrierMap[networkPreference];
-        const preferredCarrierIndex = carriersForRecommendation.findIndex(c => c.id === preferredCarrierId);
+      // Save the recommendations to Supabase
+      try {
+        const { data: savedData, error: saveError } = await supabase
+          .from('ai_recommendations')
+          .upsert([
+            {
+              account_number: billData.accountNumber,
+              recommendations: result.recommendations,
+              plan_details: result.planDetails
+            }
+          ], { onConflict: 'account_number' });
         
-        if (preferredCarrierIndex !== -1) {
-          const preferredCarrier = carriersForRecommendation[preferredCarrierIndex];
-          carriersForRecommendation.splice(preferredCarrierIndex, 1);
-          carriersForRecommendation.unshift(preferredCarrier);
-        }
-      }
-      
-      const currentBillAmount = billData.totalAmount || 0;
-      
-      const allRecommendations = carriersForRecommendation.map(carrier => {
-        const plans = alternativeCarrierPlans.filter(plan => plan.carrierId === carrier.id);
-        let selectedPlan;
-        
-        if (carrier.id === "visible") {
-          selectedPlan = plans.find(plan => plan.id === "visible-plus") || plans[0];
+        if (saveError) {
+          console.error("Supabase error saving AI recommendations:", saveError);
+          toast.error(`Failed to save AI recommendations: ${saveError.message}`);
         } else {
-          selectedPlan = plans.find(plan => plan.name.includes('Premium')) || plans[0];
+          console.log("AI recommendations saved to Supabase:", savedData);
+          toast.success("AI recommendations generated and saved successfully!");
         }
-        
-        if (!selectedPlan) return null;
-        
-        const planBasePrice = selectedPlan.basePrice;
-        const lineCount = billData.phoneLines?.length || 1;
-        const totalPlanPrice = planBasePrice * lineCount;
-        const monthlySavings = currentBillAmount - totalPlanPrice;
-        const annualSavings = monthlySavings * 12;
-        
-        let features: FeaturesList = [];
-        if (selectedPlan) {
-          features = selectedPlan.features;
-        }
-        
-        let reasons: string[] = [];
-        let pros: string[] = [];
-        let cons: string[] = [];
-        
-        if (carrier.id === "warp") {
-          reasons.push("Unlimited data with no speed caps on Verizon's network");
-          pros.push("No contracts or hidden fees");
-          pros.push("Uses Verizon's reliable nationwide network");
-          if (networkPreference === 'verizon') {
-            pros.push("Optimized for your preferred network coverage");
-          }
-          cons.push("May have different coverage in some rural areas");
-        } else if (carrier.id === "lightspeed") {
-          reasons.push("Fast 5G speeds on T-Mobile's network");
-          pros.push("Great international options");
-          pros.push("Affordable pricing with premium features");
-          if (networkPreference === 'tmobile') {
-            pros.push("Optimized for your preferred network coverage");
-          }
-          cons.push("Coverage may vary in rural areas");
-        } else if (carrier.id === "darkstar") {
-          reasons.push("Reliable coverage on AT&T's network");
-          pros.push("Premium data priority");
-          pros.push("Extensive hotspot data");
-          if (networkPreference === 'att') {
-            pros.push("Optimized for your preferred network coverage");
-          }
-          cons.push("Limited international roaming compared to other options");
-        } else if (carrier.id === "visible") {
-          reasons.push("Simple, all-inclusive pricing on Verizon's network");
-          pros.push("No contracts, taxes and fees included");
-          pros.push("Party Pay available for multi-line discounts");
-          if (networkPreference === 'verizon') {
-            pros.push("Uses your preferred Verizon network");
-          }
-          cons.push("Customer service is app/chat based");
-          cons.push("Deprioritized during network congestion");
-        }
-        
-        if (networkPreference && carrier.network === networkPreference) {
-          reasons.unshift(`Recommended for ${networkPreference.toUpperCase()} coverage in your area`);
-        }
-        
-        return {
-          carrier: carrier.name,
-          carrierId: carrier.id,
-          logo: carrier.logo,
-          planName: selectedPlan.name,
-          monthlySavings,
-          annualSavings,
-          monthlyPrice: totalPlanPrice / lineCount,
-          preferred: networkPreference && carrier.network === networkPreference,
-          reasons,
-          pros,
-          cons,
-          features
-        };
-      }).filter(rec => rec !== null);
-      
-      const sortedRecommendations = allRecommendations.sort((a, b) => {
-        if (a.preferred && !b.preferred) return -1;
-        if (!a.preferred && b.preferred) return 1;
-        return b.annualSavings - a.annualSavings;
-      }).filter(rec => rec.annualSavings > 0 || rec.preferred);
-      
-      setRecommendations(sortedRecommendations.length > 0 ? sortedRecommendations : [
-        {
-          carrier: "Current Plan",
-          carrierId: "current",
-          logo: "✓",
-          planName: billData.phoneLines?.[0]?.planName || "Current Plan",
-          monthlySavings: 0,
-          annualSavings: 0,
-          monthlyPrice: billData.totalAmount || 0,
-          reasons: ["Your current plan appears to be competitive"],
-          pros: ["No need to switch carriers", "Familiar billing"],
-          cons: ["You may be missing perks from other carriers"],
-          features: []
-        }
-      ]);
-      
-      if (!aiRecommendations && !isLoadingAI && !aiRecommendationsFetched) {
-        fetchAIRecommendations();
+      } catch (saveErr: any) {
+        console.error("Error saving AI recommendations to Supabase:", saveErr);
+        toast.error(`Error saving AI recommendations: ${saveErr.message}`);
       }
+    } catch (err: any) {
+      console.error("Error generating AI recommendations:", err);
+      setError(err.message || "Failed to generate AI recommendations.");
+      toast.error(`Error generating AI recommendations: ${err.message}`);
+    } finally {
+      setLoading(false);
     }
-  }, [billData, calculateCarrierSavings, networkPreference, aiRecommendations, isLoadingAI, aiRecommendationsFetched, setAiRecommendationsFetched]);
-
-  const renderStandardRecommendations = () => (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-      {recommendations.map((rec, index) => (
-        <Card key={index} className={`border ${index === 0 ? 'border-blue-400 shadow-md' : 'border-gray-200'}`}>
-          <CardHeader className="pb-2">
-            <div className="flex justify-between items-center">
-              <div className="flex items-center gap-2">
-                <span className="text-2xl">{rec.logo}</span>
-                <CardTitle>{rec.carrier}</CardTitle>
-              </div>
-              <div className="flex gap-2">
-                {rec.preferred && (
-                  <Badge className="bg-green-500">Best Network Match</Badge>
-                )}
-                {index === 0 && !rec.preferred && (
-                  <Badge className="bg-blue-500">Best Value</Badge>
-                )}
-              </div>
-            </div>
-            <CardDescription>{rec.planName}</CardDescription>
-          </CardHeader>
-          <CardContent className="py-2">
-            <div className="space-y-4">
-              <div>
-                <p className="text-sm text-gray-500">Monthly Price</p>
-                <p className="text-lg font-bold">{formatCurrency(rec.monthlyPrice)}</p>
-              </div>
-              
-              {rec.annualSavings > 0 && (
-                <div>
-                  <p className="text-sm text-gray-500">Potential Savings</p>
-                  <p className="text-lg font-bold text-green-600">
-                    {formatCurrency(rec.monthlySavings)}/mo ({formatCurrency(rec.annualSavings)}/yr)
-                  </p>
-                </div>
-              )}
-              
-              <div>
-                <p className="text-sm font-medium">Why we recommend this:</p>
-                <ul className="mt-1 space-y-1 text-sm">
-                  {rec.reasons.map((reason: string, i: number) => (
-                    <li key={i} className="flex items-start">
-                      <span className="mr-1.5 text-blue-500">•</span>
-                      <span>{reason}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-              
-              {rec.features && rec.features.length > 0 && (
-                <div>
-                  <p className="text-sm font-medium text-blue-600">Included Features</p>
-                  <ul className="mt-1 space-y-1 text-sm">
-                    {rec.features.map((feature: string, i: number) => (
-                      <li key={i} className="flex items-start">
-                        <span className="mr-1.5 text-blue-500">→</span>
-                        <span>{feature}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-              
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <p className="text-sm font-medium text-green-600">Pros</p>
-                  <ul className="mt-1 space-y-1 text-sm">
-                    {rec.pros.map((pro: string, i: number) => (
-                      <li key={i} className="flex items-start">
-                        <CheckIcon className="h-4 w-4 mr-1.5 text-green-500 flex-shrink-0" />
-                        <span>{pro}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-red-600">Cons</p>
-                  <ul className="mt-1 space-y-1 text-sm">
-                    {rec.cons.map((con: string, i: number) => (
-                      <li key={i} className="flex items-start">
-                        <XIcon className="h-4 w-4 mr-1.5 text-red-500 flex-shrink-0" />
-                        <span>{con}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              </div>
-            </div>
-          </CardContent>
-          <CardFooter>
-            <Button className="w-full" variant={index === 0 ? "default" : "outline"}>
-              Get More Details
-            </Button>
-          </CardFooter>
-        </Card>
-      ))}
-    </div>
-  );
-
-  const renderAIRecommendations = () => {
-    if (isLoadingAI) {
-      return (
-        <div className="flex flex-col items-center justify-center p-10 space-y-4">
-          <Progress value={progress} className="w-full" />
-          <p className="text-gray-500">Getting the latest carrier data from Gemini AI...</p>
-        </div>
-      );
-    }
-
-    if (!aiRecommendations) {
-      return (
-        <div className="flex flex-col items-center justify-center p-10 space-y-4">
-          <p className="text-gray-500">No AI recommendations available. Click refresh to get the latest data from Gemini.</p>
-          <Button onClick={fetchAIRecommendations} className="mt-4">
-            <RefreshCw className="mr-2 h-4 w-4" />
-            Get Gemini Recommendations
-          </Button>
-        </div>
-      );
-    }
-
-    return (
-      <div className="space-y-8">
-        <Card className="border border-blue-200 bg-blue-50/30">
-          <CardHeader>
-            <CardTitle className="text-blue-800">Market Insights</CardTitle>
-            <CardDescription>
-              Latest trends and promotions from our AI analysis
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-6">
-              <div>
-                <h4 className="font-medium text-blue-800 mb-2">Current Promotions</h4>
-                <ul className="space-y-1">
-                  {aiRecommendations.marketInsights.currentPromos.map((promo, idx) => (
-                    <li key={idx} className="flex items-start">
-                      <span className="mr-1.5 text-blue-500">•</span>
-                      <span>{promo}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <h4 className="font-medium text-blue-800 mb-2">Trending Plans</h4>
-                  <ul className="space-y-1">
-                    {aiRecommendations.marketInsights.trendingPlans.map((plan, idx) => (
-                      <li key={idx} className="flex items-start">
-                        <span className="mr-1.5 text-blue-500">→</span>
-                        <span>{plan}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-                
-                <div>
-                  <h4 className="font-medium text-blue-800 mb-2">Network Performance</h4>
-                  <ul className="space-y-2">
-                    <li className="flex items-start">
-                      <Badge className="mr-2 bg-red-100 text-red-800 hover:bg-red-200">Verizon</Badge>
-                      <span className="text-sm">{aiRecommendations.marketInsights.networkPerformance.verizon}</span>
-                    </li>
-                    <li className="flex items-start">
-                      <Badge className="mr-2 bg-pink-100 text-pink-800 hover:bg-pink-200">T-Mobile</Badge>
-                      <span className="text-sm">{aiRecommendations.marketInsights.networkPerformance.tmobile}</span>
-                    </li>
-                    <li className="flex items-start">
-                      <Badge className="mr-2 bg-blue-100 text-blue-800 hover:bg-blue-200">AT&T</Badge>
-                      <span className="text-sm">{aiRecommendations.marketInsights.networkPerformance.att}</span>
-                    </li>
-                  </ul>
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        
-        <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
-          <h3 className="text-lg font-semibold mb-2">Personalized Advice</h3>
-          <p className="text-gray-700">{aiRecommendations.personalizedAdvice}</p>
-        </div>
-
-        <div>
-          <h3 className="text-lg font-semibold mb-4">AI-Powered Recommendations</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {aiRecommendations.recommendations.map((rec, index) => (
-              <Card key={index} className={`border ${index === 0 ? 'border-blue-400 shadow-md' : 'border-gray-200'}`}>
-                <CardHeader className="pb-2">
-                  <div className="flex justify-between items-center">
-                    <div className="flex items-center gap-2">
-                      <span className="text-2xl">{
-                        rec.network === 'verizon' ? '🌀' : 
-                        rec.network === 'tmobile' ? '⚡' : 
-                        rec.network === 'att' ? '★' : '📱'
-                      }</span>
-                      <CardTitle>{rec.carrier}</CardTitle>
-                    </div>
-                    <div className="flex gap-2">
-                      {networkPreference === rec.network && (
-                        <Badge className="bg-green-500">Best Network Match</Badge>
-                      )}
-                      {index === 0 && networkPreference !== rec.network && (
-                        <Badge className="bg-blue-500">Best Value</Badge>
-                      )}
-                    </div>
-                  </div>
-                  <CardDescription>{rec.planName}</CardDescription>
-                </CardHeader>
-                <CardContent className="py-2">
-                  <div className="space-y-4">
-                    <div>
-                      <p className="text-sm text-gray-500">Monthly Price</p>
-                      <p className="text-lg font-bold">{formatCurrency(rec.monthlyPrice)}</p>
-                    </div>
-                    
-                    {billData.totalAmount > rec.monthlyPrice && (
-                      <div>
-                        <p className="text-sm text-gray-500">Potential Monthly Savings</p>
-                        <p className="text-lg font-bold text-green-600">
-                          {formatCurrency(billData.totalAmount - rec.monthlyPrice)}/mo
-                        </p>
-                      </div>
-                    )}
-                    
-                    <div>
-                      <p className="text-sm font-medium">Why AI recommends this:</p>
-                      <ul className="mt-1 space-y-1 text-sm">
-                        {rec.reasons.map((reason: string, i: number) => (
-                          <li key={i} className="flex items-start">
-                            <span className="mr-1.5 text-blue-500">•</span>
-                            <span>{reason}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                    
-                    {rec.features && rec.features.length > 0 && (
-                      <div>
-                        <p className="text-sm font-medium text-blue-600">Included Features</p>
-                        <ul className="mt-1 space-y-1 text-sm">
-                          {rec.features.map((feature: string, i: number) => (
-                            <li key={i} className="flex items-start">
-                              <span className="mr-1.5 text-blue-500">→</span>
-                              <span>{feature}</span>
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    )}
-                    
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <p className="text-sm font-medium text-green-600">Pros</p>
-                        <ul className="mt-1 space-y-1 text-sm">
-                          {rec.pros.map((pro: string, i: number) => (
-                            <li key={i} className="flex items-start">
-                              <CheckIcon className="h-4 w-4 mr-1.5 text-green-500 flex-shrink-0" />
-                              <span>{pro}</span>
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium text-red-600">Cons</p>
-                        <ul className="mt-1 space-y-1 text-sm">
-                          {rec.cons.map((con: string, i: number) => (
-                            <li key={i} className="flex items-start">
-                              <XIcon className="h-4 w-4 mr-1.5 text-red-500 flex-shrink-0" />
-                              <span>{con}</span>
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    </div>
-                  </div>
-                </CardContent>
-                <CardFooter>
-                  <Button className="w-full" variant={index === 0 ? "default" : "outline"}>
-                    Get More Details
-                  </Button>
-                </CardFooter>
-              </Card>
-            ))}
-          </div>
-        </div>
-        
-        {aiRecommendations.meta && (
-          <div className="text-xs text-gray-400 text-right mt-4">
-            Data updated: {new Date(aiRecommendations.meta.generatedAt).toLocaleString()}
-          </div>
-        )}
-      </div>
-    );
   };
-
-  if (!billData) return <div>No bill data available</div>;
-
+  
+  const handleCarrierSelection = (carrier: string) => {
+    setSelectedCarrier(carrier);
+  };
+  
+  const renderRecommendationCards = () => {
+    if (loading) {
+      return (
+        <>
+          {[...Array(3)].map((_, i) => (
+            <Card key={`skeleton-${i}`} className="w-full">
+              <CardHeader>
+                <CardTitle><Skeleton className="h-5 w-4/5" /></CardTitle>
+                <CardDescription><Skeleton className="h-4 w-3/5" /></CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Skeleton className="h-24 w-full" />
+              </CardContent>
+              <CardFooter>
+                <Skeleton className="h-10 w-1/4" />
+              </CardFooter>
+            </Card>
+          ))}
+        </>
+      );
+    }
+    
+    if (error) {
+      return (
+        <div className="text-red-500 p-4">
+          Error: {error}
+        </div>
+      );
+    }
+    
+    if (!recommendations || recommendations.length === 0) {
+      return (
+        <div className="text-gray-500 p-4">
+          No recommendations found.
+        </div>
+      );
+    }
+    
+    return recommendations.map((rec, index) => (
+      <Card 
+        key={index} 
+        className={`w-full ${selectedCarrier === rec.carrier ? 'border-2 border-blue-500' : ''}`}
+      >
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            {rec.carrier && carrierLogos[rec.carrier] && (
+              <img src={carrierLogos[rec.carrier]} alt={`${rec.carrier} Logo`} className="h-6 w-auto" />
+            )}
+            {rec.planName}
+          </CardTitle>
+          <CardDescription>
+            Potential Savings with {rec.carrier}
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-2">
+            <p className="text-xl font-semibold">
+              Monthly Savings: {formatCurrency(rec.monthlySavings)}
+            </p>
+            <p className="text-gray-500">
+              Annual Savings: {formatCurrency(rec.annualSavings)}
+            </p>
+            <p className="text-sm">
+              Estimated Plan Price: {formatCurrency(rec.price)}
+            </p>
+          </div>
+        </CardContent>
+        <CardFooter>
+          <Button onClick={() => handleCarrierSelection(rec.carrier)}>
+            {selectedCarrier === rec.carrier ? "Selected" : "Select"}
+          </Button>
+        </CardFooter>
+      </Card>
+    ));
+  };
+  
   return (
     <div className="space-y-6">
-      <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-        <div className="flex justify-between items-center mb-4">
-          <h3 className="text-lg font-bold">Personalized Recommendations</h3>
-          <Button 
-            variant="outline" 
-            size="sm" 
-            onClick={fetchAIRecommendations}
-            disabled={isLoadingAI}
-          >
-            <RefreshCw className={`mr-2 h-4 w-4 ${isLoadingAI ? 'animate-spin' : ''}`} />
-            {isLoadingAI ? 'Updating...' : 'Refresh Data'}
-          </Button>
-        </div>
-        
-        <p className="text-gray-600 mb-6">
-          Based on your current bill, usage patterns, and network preferences, here are our recommendations to help you save:
+      <div className="text-center">
+        <h2 className="text-2xl font-bold">AI-Powered Recommendations</h2>
+        <p className="text-gray-500">
+          Based on your bill analysis, here are some potential savings opportunities.
         </p>
-        
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid grid-cols-2 mb-6">
-            <TabsTrigger value="standard">Standard Recommendations</TabsTrigger>
-            <TabsTrigger value="ai" disabled={isLoadingAI && !aiRecommendations}>
-              Gemini AI Analysis
-              {isLoadingAI && <RefreshCw className="ml-2 h-3 w-3 animate-spin" />}
-            </TabsTrigger>
-          </TabsList>
-          
-          <TabsContent value="standard" className="mt-0">
-            {renderStandardRecommendations()}
-          </TabsContent>
-          
-          <TabsContent value="ai" className="mt-0">
-            {renderAIRecommendations()}
-          </TabsContent>
-        </Tabs>
       </div>
+      
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {renderRecommendationCards()}
+      </div>
+      
+      {planDetails && (
+        <Card className="w-full">
+          <CardHeader>
+            <CardTitle>Recommended Plan Details</CardTitle>
+            <CardDescription>
+              Here's a breakdown of the recommended plan features.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <h3 className="text-lg font-semibold">{planDetails.title}</h3>
+            <p className="text-gray-600">{planDetails.description}</p>
+            
+            <ul className="list-none space-y-2">
+              {planDetails.features.map((feature, index) => (
+                <li key={index} className="flex items-center gap-2">
+                  {feature.included ? (
+                    <CheckCircle className="h-5 w-5 text-green-500" />
+                  ) : (
+                    <ArrowDownRight className="h-5 w-5 text-red-500" />
+                  )}
+                  <span>{feature.name}</span>
+                </li>
+              ))}
+            </ul>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }

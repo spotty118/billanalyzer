@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { BillAnalyzerContent } from './BillAnalyzerContent';
 import { ManualEntryForm } from './ManualEntryForm';
@@ -11,13 +12,13 @@ import { Label } from '@/components/ui/label';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
+import { formatCurrency } from '@/data/utils/verizonUtils'; // Import the formatCurrency function
 
 export type NetworkPreference = 'verizon' | 'tmobile' | 'att' | 'usmobile' | null;
 
 export const VerizonBillAnalyzer = () => {
   const { 
     billData, 
-    fileSelected, 
     isLoading, 
     errorMessage, 
     ocrProvider,
