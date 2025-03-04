@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 
 const CORS_HEADERS = {
@@ -309,7 +308,7 @@ YOU MUST ensure your response contains ONLY valid JSON that can be parsed with J
       }
       
       // Add source information
-      jsonData.analysisSource = "claude-3-7-sonnet-20250219";
+      jsonData.analysisSource = "our-ai";
       jsonData.processingMethod = "text-extraction";
       jsonData.extractionDate = new Date().toISOString();
       
@@ -324,7 +323,7 @@ YOU MUST ensure your response contains ONLY valid JSON that can be parsed with J
     }
   } catch (error) {
     console.error("Error using Claude for analysis:", error);
-    throw new Error(`Claude analysis failed: ${error.message}`);
+    throw new Error(`AI analysis failed: ${error.message}`);
   }
 }
 
@@ -406,7 +405,7 @@ serve(async (req) => {
       console.log("Text extracted successfully from PDF");
     }
     
-    // Analyze the bill using Claude
+    // Analyze the bill using Our AI
     const analysisResult = await analyzeBillText(extractedText, networkPreference);
     console.log("Analysis complete");
     

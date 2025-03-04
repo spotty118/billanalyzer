@@ -303,7 +303,6 @@ export const useVerizonBillAnalyzer = () => {
           accountNumber: `PROC-${Date.now().toString().substring(0, 6)}`,
           totalAmount: 0,
           phoneLines: [],
-          networkPreference,
           processingMethod: "direct-text-input"
         };
       }
@@ -401,7 +400,7 @@ export const useVerizonBillAnalyzer = () => {
     setErrorMessage(null);
 
     try {
-      toast.info("Analyzing bill text with Claude AI...");
+      toast.info("Analyzing bill text with Our AI...");
       const analysisResult = await processBillText(text, networkPreference);
       
       if (!analysisResult || typeof analysisResult !== 'object') {
@@ -488,7 +487,7 @@ export const useVerizonBillAnalyzer = () => {
     setErrorMessage(null);
 
     try {
-      toast.info("Analyzing bill with Claude AI...");
+      toast.info("Analyzing bill with Our AI...");
       const networkPreference = billData?.networkPreference || null;
       const analysisResult = await processVerizonBill(file, networkPreference);
       

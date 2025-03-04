@@ -121,7 +121,7 @@ const VerizonBillAnalyzer = () => {
             {ocrProvider && (
               <div className="flex items-center gap-2 mt-1">
                 <Badge variant={ocrProvider === 'claude' ? "secondary" : "outline"}>
-                  {ocrProvider === 'claude' ? 'Claude AI OCR' : 'Standard Extraction'}
+                  {ocrProvider === 'claude' ? 'Our AI OCR' : 'Standard Extraction'}
                 </Badge>
               </div>
             )}
@@ -399,7 +399,7 @@ const VerizonBillAnalyzer = () => {
                     
                     {isLoading && (
                       <div className="text-blue-500 bg-blue-50 p-4 rounded-md border border-blue-200 mt-4">
-                        <p className="text-sm">Processing your bill with Claude AI. This may take a few moments...</p>
+                        <p className="text-sm">Processing your bill with Our AI. This may take a few moments...</p>
                         <Progress className="mt-2" value={75} />
                       </div>
                     )}
