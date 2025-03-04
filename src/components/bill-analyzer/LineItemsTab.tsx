@@ -1,4 +1,3 @@
-
 import {
   BarChart,
   Bar,
@@ -22,12 +21,18 @@ export function LineItemsTab({ billData, formatCurrency }: LineItemsTabProps) {
   // Use the prepareLineItemsData utility to get data properly formatted
   const lineItemsData = prepareLineItemsData(billData.phoneLines);
   
-  // Calculate total for each line
+  // Calculate total for each line if not already present
   const lineItemsWithTotal = lineItemsData.map(item => {
-    const total = item.plan + item.device + item.protection + item.perks + item.taxes;
+    // If total already exists from prepareLineItemsData and is valid, use it
+    if (item.total && typeof item.total === 'number' && item.total > 0) {
+      return item;
+    }
+    
+    // Otherwise calculate the total
+    const calculatedTotal = item.plan + item.device + item.protection + item.perks + item.taxes;
     return {
       ...item,
-      total
+      total: calculatedTotal
     };
   });
   
@@ -47,6 +52,14 @@ export function LineItemsTab({ billData, formatCurrency }: LineItemsTabProps) {
   
   // Add total row
   const finalData = [...lineItemsWithTotal, totalsByCategory];
+
+  // Add console log to debug the data
+  console.log('LineItemsTab - Prepared data:', {
+    originalLines: billData.phoneLines,
+    preparedData: lineItemsData,
+    lineItemsWithTotal,
+    finalData
+  });
 
   return (
     <div className="space-y-8">

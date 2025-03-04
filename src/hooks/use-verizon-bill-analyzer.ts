@@ -414,6 +414,43 @@ export const useVerizonBillAnalyzer = () => {
         networkPreference
       };
       
+      // Ensure each phone line has proper details structure and calculated monthly total
+      if (resultWithNetwork.phoneLines && resultWithNetwork.phoneLines.length > 0) {
+        resultWithNetwork.phoneLines = resultWithNetwork.phoneLines.map((line: any) => {
+          if (!line.details) {
+            line.details = {};
+          }
+          
+          // Ensure all properties exist
+          const details = {
+            planCost: parseFloat(line.details.planCost) || 0,
+            planDiscount: parseFloat(line.details.planDiscount) || 0,
+            devicePayment: parseFloat(line.details.devicePayment) || 0,
+            deviceCredit: parseFloat(line.details.deviceCredit) || 0,
+            protection: parseFloat(line.details.protection) || 0,
+            perks: line.details.perks || [],
+            surcharges: parseFloat(line.details.surcharges) || 0,
+            taxes: parseFloat(line.details.taxes) || 0
+          };
+          
+          // Calculate monthly total if missing
+          const total = 
+            details.planCost - 
+            details.planDiscount + 
+            details.devicePayment - 
+            details.deviceCredit + 
+            details.protection + 
+            details.surcharges + 
+            details.taxes;
+          
+          return {
+            ...line,
+            details,
+            monthlyTotal: line.monthlyTotal || total
+          };
+        });
+      }
+      
       setBillData(resultWithNetwork);
       
       try {
@@ -457,6 +494,43 @@ export const useVerizonBillAnalyzer = () => {
       
       if (!analysisResult || typeof analysisResult !== 'object') {
         throw new Error('Invalid analysis result received');
+      }
+      
+      // Ensure each phone line has proper details structure and calculated monthly total
+      if (analysisResult.phoneLines && analysisResult.phoneLines.length > 0) {
+        analysisResult.phoneLines = analysisResult.phoneLines.map((line: any) => {
+          if (!line.details) {
+            line.details = {};
+          }
+          
+          // Ensure all properties exist
+          const details = {
+            planCost: parseFloat(line.details.planCost) || 0,
+            planDiscount: parseFloat(line.details.planDiscount) || 0,
+            devicePayment: parseFloat(line.details.devicePayment) || 0,
+            deviceCredit: parseFloat(line.details.deviceCredit) || 0,
+            protection: parseFloat(line.details.protection) || 0,
+            perks: line.details.perks || [],
+            surcharges: parseFloat(line.details.surcharges) || 0,
+            taxes: parseFloat(line.details.taxes) || 0
+          };
+          
+          // Calculate monthly total if missing
+          const total = 
+            details.planCost - 
+            details.planDiscount + 
+            details.devicePayment - 
+            details.deviceCredit + 
+            details.protection + 
+            details.surcharges + 
+            details.taxes;
+          
+          return {
+            ...line,
+            details,
+            monthlyTotal: line.monthlyTotal || total
+          };
+        });
       }
       
       setBillData(analysisResult);

@@ -36,13 +36,17 @@ export const prepareLineItemsData = (phoneLines: any[] = []) => {
       ? details.perks.reduce((sum: number, perk: any) => sum + (perk.cost || 0), 0)
       : 0;
     
+    // For each line item, ensure we pull the values from the correct places
+    // First check if there are line-specific charges, then fall back to general details
     return {
       name: line.phoneNumber || 'Unknown',
       plan: planPrice - (details.planDiscount || 0),
       device: (details.devicePayment || 0) - (details.deviceCredit || 0),
       protection: details.protection || 0,
       perks: perksTotal,
-      taxes: (details.surcharges || 0) + (details.taxes || 0)
+      taxes: (details.surcharges || 0) + (details.taxes || 0),
+      // Include total from the line if available (for data consistency)
+      total: line.monthlyTotal || 0
     };
   });
 };
