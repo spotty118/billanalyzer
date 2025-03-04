@@ -90,10 +90,26 @@ export const prepareCategoryData = (chargesByCategory: any = {}) => {
   return result;
 };
 
+// Define interfaces for perks and promotions
+interface Perk {
+  name: string;
+  description: string;
+  monthlyValue: number;
+  includedWith: string;
+}
+
+interface Promotion {
+  name: string;
+  description: string;
+  monthlyValue: number;
+  remainingMonths: number;
+  appliedTo: string;
+}
+
 // Helper function to extract perks and promotional credits
-export const extractPerksAndCredits = (billData: any = {}) => {
-  const perks = [];
-  const promotions = [];
+export const extractPerksAndCredits = (billData: any = {}): { perks: Perk[]; promotions: Promotion[] } => {
+  const perks: Perk[] = [];
+  const promotions: Promotion[] = [];
   
   // Extract perks from parsed bill data
   if (billData.perks && Array.isArray(billData.perks) && billData.perks.length > 0) {
