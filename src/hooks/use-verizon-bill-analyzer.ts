@@ -332,22 +332,7 @@ export const useVerizonBillAnalyzer = () => {
     }
     
     const basePricePerLine = 44; // Standard pricing for all premium plans
-    const alternativePrice = basePricePerLine * numberOfLines;
-    
-    let finalPrice = alternativePrice;
-    const networkPreference = billData.networkPreference as NetworkPreference;
-    if (networkPreference) {
-      const networkToCarrierIdMap: Record<string, string[]> = {
-        'verizon': ['warp'],
-        'att': ['darkstar'],
-        'tmobile': ['lightspeed']
-      };
-      
-      const preferredCarrierIds = networkToCarrierIdMap[networkPreference] || [];
-      if (preferredCarrierIds.includes(carrierId)) {
-        finalPrice *= 0.95; // 5% discount for preferred network
-      }
-    }
+    const finalPrice = basePricePerLine * numberOfLines;
     
     const monthlySavings = billData.totalAmount - finalPrice;
     const annualSavings = monthlySavings * 12;
