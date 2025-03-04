@@ -330,10 +330,7 @@ export const useVerizonBillAnalyzer = () => {
     
     const numberOfLines = billData.phoneLines?.length || 1;
     
-    const matchingPlanId = findBestCarrierMatch(
-      billData.phoneLines[0]?.planName || 'Unlimited Plus',
-      carrierId
-    );
+    const matchingPlanId = findBestCarrierMatch(carrierId);
     
     const carrierPlan = alternativeCarrierPlans.find(plan => plan.id === matchingPlanId);
     
@@ -370,50 +367,3 @@ export const useVerizonBillAnalyzer = () => {
     resetBillData
   };
 };
-
-function calculateCarrierSavingsHelper(
-  carrierId: string, 
-  billData: any, 
-  getCarrierPlanPrice: Function, 
-  findBestCarrierMatch: Function, 
-  alternativeCarrierPlans: any[]
-) {
-  if (!billData) {
-    return {
-      monthlySavings: 0,
-      annualSavings: 0,
-      planName: "N/A",
-      price: 0
-    };
-  }
-  
-  const numberOfLines = billData.phoneLines?.length || 1;
-  
-  const matchingPlanId = findBestCarrierMatch(
-    billData.phoneLines[0]?.planName || 'Unlimited Plus',
-    carrierId
-  );
-  
-  const carrierPlan = alternativeCarrierPlans.find(plan => plan.id === matchingPlanId);
-  
-  if (!carrierPlan) {
-    return {
-      monthlySavings: 0,
-      annualSavings: 0,
-      planName: "No matching plan",
-      price: 0
-    };
-  }
-  
-  const alternativePrice = getCarrierPlanPrice(carrierPlan, numberOfLines);
-  
-  const monthlySavings = billData.totalAmount - alternativePrice;
-  const annualSavings = monthlySavings * 12;
-  
-  return {
-    monthlySavings,
-    annualSavings,
-    planName: carrierPlan.name,
-    price: alternativePrice
-  };
-}
