@@ -1,6 +1,5 @@
 
 import { useState } from 'react';
-import { BillUploader } from './BillUploader';
 import { BillAnalyzerContent } from './BillAnalyzerContent';
 import { ManualEntryForm } from './ManualEntryForm';
 import { useVerizonBillAnalyzer } from '@/hooks/use-verizon-bill-analyzer';
@@ -11,13 +10,9 @@ import { toast } from "sonner";
 const VerizonBillAnalyzer = () => {
   const { 
     billData,
-    fileSelected,
-    isLoading,
-    errorMessage,
-    handleFileChange,
+    resetBillData,
     calculateCarrierSavings,
-    addManualLineCharges,
-    resetBillData
+    addManualLineCharges
   } = useVerizonBillAnalyzer();
 
   const [inputMethod, setInputMethod] = useState<'upload' | 'manual' | null>(null);
