@@ -1,4 +1,3 @@
-
 import { ArrowLeftRight, AlertCircle, Check, Star, Zap, Lightbulb } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { 
@@ -24,6 +23,7 @@ import {
   Legend,
   ResponsiveContainer
 } from 'recharts';
+import { verizonPlansData } from "@/data/verizonPlans";
 
 interface CarrierComparisonProps {
   billData: any;
