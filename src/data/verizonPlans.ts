@@ -21,8 +21,13 @@ interface VerizonPlan {
   features: string[];
 }
 
+// Define type for the entire plan data object with index signature
+interface VerizonPlansData {
+  [key: string]: VerizonPlan;
+}
+
 // Verizon MyPlan pricing (per line)
-export const verizonPlansData: {[key: string]: VerizonPlan} = {
+export const verizonPlansData: VerizonPlansData = {
   'unlimited-welcome': {
     name: 'Unlimited Welcome',
     prices: {

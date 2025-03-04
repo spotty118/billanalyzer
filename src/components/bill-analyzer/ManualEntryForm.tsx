@@ -1,10 +1,10 @@
-
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Plus, Trash, Save, Percent, DollarSign } from 'lucide-react';
+import { verizonPlansData, getPlanPrice } from '@/data/verizonPlans';
 
 interface LineCharge {
   phoneNumber: string;
@@ -49,12 +49,13 @@ export function ManualEntryForm({ onSubmit }: ManualEntryFormProps) {
   const [billingPeriod, setBillingPeriod] = useState('');
   const [includeAccountFees, setIncludeAccountFees] = useState(true);
   const [accountFees, setAccountFees] = useState(0);
+  
   const [lines, setLines] = useState<LineCharge[]>([
     {
       phoneNumber: '',
       deviceName: '',
       planName: 'Unlimited Plus',
-      planCost: 80,
+      planCost: verizonPlansData['unlimited-plus'].prices[1],
       planDiscount: 0,
       planDiscountType: 'fixed',
       devicePayment: 0,
@@ -65,21 +66,19 @@ export function ManualEntryForm({ onSubmit }: ManualEntryFormProps) {
     }
   ]);
 
-  const planOptions = [
-    'Unlimited Welcome',
-    'Unlimited Plus',
-    'Unlimited Ultimate',
-    'One Unlimited',
-    'More Unlimited',
-    '5G Start'
-  ];
+  const planOptions = Object.values(verizonPlansData).map(plan => plan.name);
 
   const addLine = () => {
+    const lineCount = lines.length + 1;
+    const defaultPlanId = 'unlimited-plus';
+    const defaultPlanName = verizonPlansData[defaultPlanId].name;
+    const planCost = getPlanPrice(defaultPlanId, lineCount);
+    
     setLines([...lines, {
       phoneNumber: '',
       deviceName: '',
-      planName: 'Unlimited Plus',
-      planCost: 80,
+      planName: defaultPlanName,
+      planCost: planCost,
       planDiscount: 0,
       planDiscountType: 'fixed',
       devicePayment: 0,
@@ -138,6 +137,26 @@ export function ManualEntryForm({ onSubmit }: ManualEntryFormProps) {
     setLines(updatedLines);
   };
 
+  const updatePlanName = (index: number, planName: string) => {
+    const planId = Object.keys(verizonPlansData).find(
+      key => verizonPlansData[key].name === planName
+    );
+    
+    if (!planId) return;
+    
+    const lineCount = lines.length;
+    const planCost = getPlanPrice(planId, lineCount);
+    
+    const updatedLines = [...lines];
+    updatedLines[index] = {
+      ...updatedLines[index],
+      planName,
+      planCost
+    };
+    
+    setLines(updatedLines);
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -170,7 +189,6 @@ export function ManualEntryForm({ onSubmit }: ManualEntryFormProps) {
     };
 
     if (includeAccountFees && accountFees > 0) {
-      // Add account fees as a separate "line" for display purposes
       formattedData.phoneLines.push({
         phoneNumber: 'Account Fees',
         deviceName: '',
@@ -179,7 +197,7 @@ export function ManualEntryForm({ onSubmit }: ManualEntryFormProps) {
         details: {
           planCost: accountFees,
           planDiscount: 0,
-          planDiscountType: 'fixed', // Add the missing planDiscountType property
+          planDiscountType: 'fixed',
           devicePayment: 0,
           deviceCredit: 0,
           protection: 0,
@@ -290,7 +308,7 @@ export function ManualEntryForm({ onSubmit }: ManualEntryFormProps) {
                 <label className="text-sm font-medium">Plan Name</label>
                 <Select 
                   value={line.planName} 
-                  onValueChange={value => updateLine(index, 'planName', value)}
+                  onValueChange={value => updatePlanName(index, value)}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Select a plan" />
