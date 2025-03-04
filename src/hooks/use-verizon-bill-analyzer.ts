@@ -2,12 +2,55 @@ import { useState } from 'react';
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
+import { NetworkPreference } from '@/components/bill-analyzer/VerizonBillAnalyzer';
+
 export const useVerizonBillAnalyzer = () => {
   const [billData, setBillData] = useState<any>(null);
   const [fileSelected, setFileSelected] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [ocrProvider, setOcrProvider] = useState<string | null>(null);
+
+  const calculateCarrierSavings = (carrierId: string) => {
+    const numberOfLines = billData?.phoneLines?.length || 1;
+    const currentMonthlyTotal = billData?.totalAmount || 0;
+    
+    let savings = 0;
+    let price = currentMonthlyTotal;
+    
+    if (carrierId === 'usmobile') {
+      savings = currentMonthlyTotal * 0.4;
+      price = currentMonthlyTotal * 0.6;
+    }
+    
+    return {
+      monthlySavings: savings,
+      annualSavings: savings * 12,
+      planName: `US Mobile ${carrierId === 'usmobile' ? 'Unlimited' : 'Premium'} Plan`,
+      price: price
+    };
+  };
+
+  const addManualLineCharges = (data: any) => {
+    const formattedData = {
+      accountNumber: data.accountNumber || `ACCT-${Date.now().toString().substring(0, 8)}`,
+      billingPeriod: data.billingPeriod || new Date().toLocaleDateString(),
+      totalAmount: data.totalAmount || 0,
+      networkPreference: data.networkPreference,
+      phoneLines: data.lines || [],
+      manualEntry: true
+    };
+    
+    setBillData(formattedData);
+    
+    try {
+      saveBillAnalysis(formattedData);
+      toast.success('Manual bill data saved successfully');
+    } catch (error) {
+      console.error('Error saving manual bill data:', error);
+      toast.error('Failed to save manual bill data');
+    }
+  };
 
   const resetBillData = () => {
     setBillData(null);
@@ -55,14 +98,11 @@ export const useVerizonBillAnalyzer = () => {
         throw new Error(errorMessage);
       }
       
-      // Get analysis response
       const analysisResponse = await response.json();
       console.log('Analysis response received');
       
       if (analysisResponse.status === "processing") {
-        // This is just a processing notification from Edge Runtime
         console.log("Bill is being processed asynchronously");
-        // Create a more informative processing placeholder
         return {
           status: "processing",
           message: "Your bill is being analyzed. This may take a moment.",
@@ -74,15 +114,12 @@ export const useVerizonBillAnalyzer = () => {
         };
       }
       
-      // The response should already be the parsed data
       const data = analysisResponse;
       
-      // If there's an error property, something went wrong
       if (data.error) {
         throw new Error(data.error);
       }
       
-      // Save the OCR provider info
       setOcrProvider(data.analysisSource || 'claude');
       
       return data;
@@ -127,7 +164,6 @@ export const useVerizonBillAnalyzer = () => {
       const analysisResponse = await response.json();
       console.log('Analysis response received', analysisResponse);
       
-      // Return the raw analysis data without any enhancements
       return analysisResponse;
     } catch (error) {
       console.error('Error processing bill text:', error);
@@ -137,23 +173,19 @@ export const useVerizonBillAnalyzer = () => {
 
   const saveBillAnalysis = async (analysis: any) => {
     try {
-      // Check if required fields exist before saving to database
       if (!analysis.accountNumber && analysis.accountInfo?.accountNumber) {
         analysis.accountNumber = analysis.accountInfo.accountNumber;
       }
       
-      // If accountNumber is still missing, generate a fallback
       if (!analysis.accountNumber) {
         analysis.accountNumber = `ACCT-${Date.now().toString().substring(0, 8)}`;
         console.log('Generated fallback account number:', analysis.accountNumber);
       }
       
-      // Ensure billing period exists
       const billingPeriod = analysis.billingPeriod || 
                            analysis.accountInfo?.billingPeriod || 
                            new Date().toLocaleDateString();
       
-      // Ensure total amount exists
       const totalAmount = analysis.totalAmount || 
                          (analysis.phoneLines && analysis.phoneLines.length > 0 ? 
                           analysis.phoneLines.reduce((sum: number, line: any) => sum + (line.monthlyTotal || 0), 0) : 
@@ -179,7 +211,7 @@ export const useVerizonBillAnalyzer = () => {
     }
   };
 
-  const analyzeBillText = async (text: string, networkPref: NetworkPreference) => {
+  const analyzeBillText = async (text: string, networkPreference: NetworkPreference) => {
     setIsLoading(true);
     setErrorMessage(null);
 
@@ -191,7 +223,6 @@ export const useVerizonBillAnalyzer = () => {
         throw new Error('Invalid analysis result received');
       }
       
-      // Store the raw analysis data without any enhancements
       setBillData(analysisResult);
       
       try {
@@ -236,7 +267,6 @@ export const useVerizonBillAnalyzer = () => {
         throw new Error('Invalid analysis result received');
       }
       
-      // Store the raw analysis data without any enhancements
       setBillData(analysisResult);
       
       try {
@@ -266,6 +296,8 @@ export const useVerizonBillAnalyzer = () => {
     ocrProvider,
     handleFileChange,
     analyzeBillText,
-    resetBillData
+    resetBillData,
+    calculateCarrierSavings,
+    addManualLineCharges
   };
 };
