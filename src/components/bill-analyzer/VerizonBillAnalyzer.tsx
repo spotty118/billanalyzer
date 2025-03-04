@@ -10,6 +10,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
 import { Progress } from '@/components/ui/progress';
+import { Badge } from '@/components/ui/badge';
 
 export type NetworkPreference = 'verizon' | 'tmobile' | 'att' | null;
 
@@ -21,7 +22,8 @@ const VerizonBillAnalyzer = () => {
     addManualLineCharges,
     handleFileChange,
     isLoading,
-    errorMessage
+    errorMessage,
+    ocrProvider
   } = useVerizonBillAnalyzer();
 
   const [inputMethod, setInputMethod] = useState<'upload' | 'manual' | null>(null);
@@ -87,7 +89,16 @@ const VerizonBillAnalyzer = () => {
     return (
       <div className="flex flex-col w-full max-w-6xl mx-auto bg-white rounded-lg shadow">
         <div className="flex justify-between items-center px-6 pt-6">
-          <h1 className="text-2xl font-bold">Bill Analysis</h1>
+          <div>
+            <h1 className="text-2xl font-bold">Bill Analysis</h1>
+            {ocrProvider && (
+              <div className="flex items-center gap-2 mt-1">
+                <Badge variant={ocrProvider === 'claude' ? "success" : "secondary"}>
+                  {ocrProvider === 'claude' ? 'Claude AI OCR' : 'Standard Extraction'}
+                </Badge>
+              </div>
+            )}
+          </div>
           <Button 
             onClick={handleStartOver}
             variant="outline"

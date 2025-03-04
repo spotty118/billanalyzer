@@ -1,10 +1,12 @@
-
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
+
+// Get Claude API key from environment variable
+const ANTHROPIC_API_KEY = Deno.env.get('ANTHROPIC_API_KEY');
 
 class VerizonBillParser {
   private text: string;
@@ -503,24 +505,124 @@ class VerizonBillParser {
   }
 }
 
-async function analyzeVerizonBill(fileContent: string) {
-  console.log("Analyzing Verizon bill with the comprehensive JavaScript parser...");
+async function extractTextWithClaude(fileContent: ArrayBuffer): Promise<string> {
+  if (!ANTHROPIC_API_KEY) {
+    console.error("Missing Anthropic API key");
+    throw new Error("Claude API key not configured");
+  }
   
-  // Create an instance of the parser and process the bill
-  const parser = new VerizonBillParser(fileContent);
-  const parsedData = parser.parseBill();
+  try {
+    console.log("Sending PDF to Claude for OCR extraction...");
+    
+    // Convert ArrayBuffer to base64
+    const buffer = new Uint8Array(fileContent);
+    const base64Content = btoa(String.fromCharCode(...buffer));
+    
+    const response = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-api-key": ANTHROPIC_API_KEY,
+        "anthropic-version": "2023-06-01"
+      },
+      body: JSON.stringify({
+        model: "claude-3-opus-20240229",
+        max_tokens: 4000,
+        system: "You are an expert in extracting and structuring text from PDF bills, specifically Verizon bills. Extract all visible text accurately without interpretation. Include all headers, values, account numbers, charges, dates, and line items exactly as they appear.",
+        messages: [
+          {
+            role: "user",
+            content: [
+              {
+                type: "text",
+                text: "Extract all text from this Verizon bill PDF. Include all headers, tables, numbers, account information, charges, and line items exactly as they appear."
+              },
+              {
+                type: "image",
+                source: {
+                  type: "base64",
+                  media_type: "application/pdf",
+                  data: base64Content
+                }
+              }
+            ]
+          }
+        ]
+      })
+    });
+    
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error("Claude API error:", errorText);
+      throw new Error(`Claude API error: ${response.status} ${response.statusText}`);
+    }
+    
+    const result = await response.json();
+    const extractedText = result.content[0].text;
+    console.log("Claude successfully extracted text of length:", extractedText.length);
+    
+    return extractedText;
+  } catch (error) {
+    console.error("Error using Claude for OCR:", error);
+    throw new Error(`Claude OCR failed: ${error.message}`);
+  }
+}
+
+async function analyzeVerizonBill(fileContent: ArrayBuffer) {
+  console.log("Analyzing Verizon bill with Claude OCR and comprehensive parser...");
   
-  // Generate a standardized summary compatible with existing UI
-  const billSummary = parser.generateBillSummary();
-  
-  // Add additional information from parsing
-  billSummary.upcomingChanges = parsedData.upcomingChanges;
-  billSummary.paymentOptions = parsedData.paymentOptions;
-  billSummary.accountInfo = parsedData.accountInfo;
-  billSummary.rawBillSummary = parsedData.billSummary;
-  
-  console.log("Bill analysis completed successfully");
-  return billSummary;
+  try {
+    // First extract text using Claude AI OCR
+    const extractedText = await extractTextWithClaude(fileContent);
+    
+    // Create an instance of the parser and process the bill using the Claude-extracted text
+    const parser = new VerizonBillParser(extractedText);
+    const parsedData = parser.parseBill();
+    
+    // Generate a standardized summary compatible with existing UI
+    const billSummary = parser.generateBillSummary();
+    
+    // Add additional information from parsing
+    billSummary.upcomingChanges = parsedData.upcomingChanges;
+    billSummary.paymentOptions = parsedData.paymentOptions;
+    billSummary.accountInfo = parsedData.accountInfo;
+    billSummary.rawBillSummary = parsedData.billSummary;
+    billSummary.ocrProvider = "claude";
+    
+    console.log("Bill analysis completed successfully using Claude OCR");
+    return billSummary;
+  } catch (claudeError) {
+    console.error("Claude OCR failed, falling back to regular extraction:", claudeError);
+    
+    // If Claude fails, fall back to the regular text extraction
+    try {
+      const decoder = new TextDecoder("utf-8");
+      const fileText = decoder.decode(fileContent);
+      
+      // Clean the bill content before processing
+      const cleanedContent = cleanBillContent(fileText);
+      
+      // Process the file content using our enhanced parser
+      const parser = new VerizonBillParser(cleanedContent);
+      const parsedData = parser.parseBill();
+      
+      // Generate a standardized summary compatible with existing UI
+      const billSummary = parser.generateBillSummary();
+      
+      // Add additional information from parsing
+      billSummary.upcomingChanges = parsedData.upcomingChanges;
+      billSummary.paymentOptions = parsedData.paymentOptions;
+      billSummary.accountInfo = parsedData.accountInfo;
+      billSummary.rawBillSummary = parsedData.billSummary;
+      billSummary.ocrProvider = "fallback";
+      
+      console.log("Bill analysis completed successfully using fallback extraction");
+      return billSummary;
+    } catch (fallbackError) {
+      console.error("Error in fallback extraction:", fallbackError);
+      throw new Error(`Both Claude OCR and fallback extraction failed. ${claudeError.message} | ${fallbackError.message}`);
+    }
+  }
 }
 
 // Clean bill content by removing problematic sections
@@ -595,7 +697,7 @@ serve(async (req) => {
 
     // Handle different content types
     const contentType = req.headers.get('content-type') || '';
-    let fileContent = '';
+    let fileBuffer: ArrayBuffer | null = null;
     
     if (contentType.includes('multipart/form-data')) {
       // Process form data with file
@@ -610,9 +712,9 @@ serve(async (req) => {
           );
         }
 
-        // Read the file content
-        fileContent = await file.text();
-        console.log("Received file with size:", fileContent.length);
+        // Convert file to ArrayBuffer for Claude API
+        fileBuffer = await file.arrayBuffer();
+        console.log("Received file with size:", fileBuffer.byteLength);
         
       } catch (error) {
         console.error('Error processing form data:', error);
@@ -625,9 +727,36 @@ serve(async (req) => {
       // Process JSON data (for testing or alternate input)
       try {
         const jsonData = await req.json();
-        // Allow sample text to be passed for testing
-        fileContent = jsonData.sampleText || jsonData.text || 'Sample Verizon bill content for testing';
-        console.log('Using sample text for analysis:', fileContent.substring(0, 50) + '...');
+        // For JSON requests, we can't use Claude, so we'll use the text-based approach
+        if (jsonData.sampleText || jsonData.text) {
+          const text = jsonData.sampleText || jsonData.text || 'Sample Verizon bill content for testing';
+          console.log('Using sample text for analysis:', text.substring(0, 50) + '...');
+          
+          // Clean the bill content before processing
+          const cleanedContent = cleanBillContent(text);
+          
+          // Process using our enhanced parser
+          const parser = new VerizonBillParser(cleanedContent);
+          const parsedData = parser.parseBill();
+          const billSummary = parser.generateBillSummary();
+          
+          // Add additional information from parsing
+          billSummary.upcomingChanges = parsedData.upcomingChanges;
+          billSummary.paymentOptions = parsedData.paymentOptions;
+          billSummary.accountInfo = parsedData.accountInfo;
+          billSummary.rawBillSummary = parsedData.billSummary;
+          billSummary.ocrProvider = "text-input";
+          
+          return new Response(
+            JSON.stringify(billSummary),
+            { headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' } }
+          );
+        } else {
+          return new Response(
+            JSON.stringify({ error: 'No sample text provided' }),
+            { headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' }, status: 400 }
+          );
+        }
       } catch (error) {
         console.error('Error processing JSON data:', error);
         return new Response(
@@ -643,18 +772,15 @@ serve(async (req) => {
     }
     
     // Basic validation of file content
-    if (!fileContent || fileContent.length < 10) {
+    if (!fileBuffer || fileBuffer.byteLength < 10) {
       return new Response(
         JSON.stringify({ error: 'File content is too small or empty' }),
         { headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' }, status: 400 }
       );
     }
 
-    // Clean the bill content before processing
-    fileContent = cleanBillContent(fileContent);
-
-    // Process the file content using our enhanced parser
-    const analysisResult = await analyzeVerizonBill(fileContent);
+    // Process the PDF file using Claude OCR with fallback to regular extraction
+    const analysisResult = await analyzeVerizonBill(fileBuffer);
     console.log("Analysis completed successfully");
 
     // Return the analysis result

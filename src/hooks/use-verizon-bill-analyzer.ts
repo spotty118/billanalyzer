@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -12,11 +11,13 @@ export const useVerizonBillAnalyzer = () => {
   const [fileSelected, setFileSelected] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [ocrProvider, setOcrProvider] = useState<string | null>(null);
 
   const resetBillData = () => {
     setBillData(null);
     setFileSelected(false);
     setErrorMessage(null);
+    setOcrProvider(null);
   };
 
   const processVerizonBill = async (file: File): Promise<any> => {
@@ -26,7 +27,7 @@ export const useVerizonBillAnalyzer = () => {
       
       const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1nemZpb3VhbWlkYXFjdG5xbnJlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzkyMzE3NjQsImV4cCI6MjA1NDgwNzc2NH0._0hxm1UlSMt3wPx8JwaFDvGmpfjI3p5m0HDm6YfaL6Q';
       
-      console.log('Sending request to analyze bill...');
+      console.log('Sending request to analyze bill with Claude OCR...');
       const response = await fetch('https://mgzfiouamidaqctnqnre.supabase.co/functions/v1/analyze-verizon-bill', {
         method: 'POST',
         body: formData,
@@ -57,6 +58,11 @@ export const useVerizonBillAnalyzer = () => {
       
       if (!data || !Array.isArray(data.phoneLines) || data.phoneLines.length === 0) {
         throw new Error('The bill analysis did not return any valid phone lines data');
+      }
+      
+      // Store the OCR provider information
+      if (data.ocrProvider) {
+        setOcrProvider(data.ocrProvider);
       }
       
       return data;
@@ -120,7 +126,8 @@ export const useVerizonBillAnalyzer = () => {
             estimatedSavings: 64.63
           }
         ]
-      }
+      },
+      ocrProvider: rawData.ocrProvider || ocrProvider || "standard"
     };
     
     // Add owner names to phoneLines if present in accountInfo
@@ -203,6 +210,7 @@ export const useVerizonBillAnalyzer = () => {
     setErrorMessage(null);
 
     try {
+      toast.info("Analyzing bill with Claude AI OCR...", { duration: 3000 });
       const analysisResult = await processVerizonBill(file);
       
       if (!analysisResult || typeof analysisResult !== 'object') {
@@ -215,7 +223,12 @@ export const useVerizonBillAnalyzer = () => {
       
       await saveBillAnalysis(enhancedData);
       
-      toast.success("Bill analysis completed successfully!");
+      // Display which OCR provider was used
+      const ocrMethod = enhancedData.ocrProvider === "claude" 
+        ? "using Claude AI" 
+        : "using standard extraction";
+      
+      toast.success(`Bill analysis completed successfully ${ocrMethod}!`);
     } catch (error) {
       console.error('Error processing file:', error);
       const errorMsg = error instanceof Error ? error.message : 'Unknown error';
@@ -372,6 +385,7 @@ export const useVerizonBillAnalyzer = () => {
     fileSelected,
     isLoading,
     errorMessage,
+    ocrProvider,
     handleFileChange,
     calculateCarrierSavings,
     addManualLineCharges,
