@@ -55,19 +55,6 @@ export const useVerizonBillAnalyzer = () => {
     };
   };
 
-  const getCarrierPlanName = (carrierId: string): string => {
-    switch (carrierId) {
-      case 'usmobile':
-        return 'US Mobile Unlimited Premium';
-      case 'tmobile':
-        return 'T-Mobile Magenta Max';
-      case 'att':
-        return 'AT&T Unlimited Premium';
-      default:
-        return 'Alternative Plan';
-    }
-  };
-
   const addManualLineCharges = (data: any) => {
     if (!data.networkPreference) {
       toast.error('Network preference is required');
@@ -246,8 +233,7 @@ export const useVerizonBillAnalyzer = () => {
             protection: parseFloat(line.details.protection) || 0,
             perks: line.details.perks || [],
             surcharges: parseFloat(line.details.surcharges) || 0,
-            taxes: parseFloat(line.details.taxes) || 0,
-            ...line.details
+            taxes: parseFloat(line.details.taxes) || 0
           };
           
           return line;
