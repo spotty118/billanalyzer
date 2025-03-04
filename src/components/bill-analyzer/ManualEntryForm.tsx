@@ -3,11 +3,10 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Plus, Trash, Save } from 'lucide-react';
+import { Plus, Trash, Save, ShieldCheck } from 'lucide-react';
 import { verizonPlansData, getPlanPrice } from '@/data/verizonPlans';
 
 interface LineCharge {
-  phoneNumber: string;
   deviceName: string;
   planName: string;
   planCost: number;
@@ -35,7 +34,6 @@ interface ManualEntryFormProps {
 export function ManualEntryForm({ onSubmit }: ManualEntryFormProps) {
   const [lines, setLines] = useState<LineCharge[]>([
     {
-      phoneNumber: '',
       deviceName: '',
       planName: 'Unlimited Plus',
       planCost: verizonPlansData['unlimited-plus'].prices[1],
@@ -53,7 +51,6 @@ export function ManualEntryForm({ onSubmit }: ManualEntryFormProps) {
     const planCost = getPlanPrice(defaultPlanId, lineCount);
     
     setLines([...lines, {
-      phoneNumber: '',
       deviceName: '',
       planName: defaultPlanName,
       planCost: planCost,
@@ -73,7 +70,6 @@ export function ManualEntryForm({ onSubmit }: ManualEntryFormProps) {
     updatedLines[index] = {
       ...updatedLines[index],
       [field]: typeof value === 'string' && 
-               field !== 'phoneNumber' && 
                field !== 'deviceName' && 
                field !== 'planName' &&
                field !== 'planDiscountType'
@@ -120,13 +116,13 @@ export function ManualEntryForm({ onSubmit }: ManualEntryFormProps) {
     
     const formattedData = {
       totalAmount: calculateBillTotal(),
-      phoneLines: lines.map(line => {
+      phoneLines: lines.map((line, index) => {
         const planDiscountAmount = line.planDiscountType === 'percentage' 
           ? line.planCost * (line.planDiscount / 100)
           : line.planDiscount;
           
         return {
-          phoneNumber: line.phoneNumber || 'Unknown',
+          phoneNumber: `Line ${index + 1}`, // Use generic identifier instead of actual phone number
           deviceName: line.deviceName || 'Smartphone',
           planName: line.planName,
           monthlyTotal: calculateLineTotal(line),
@@ -144,7 +140,13 @@ export function ManualEntryForm({ onSubmit }: ManualEntryFormProps) {
 
   return (
     <div className="p-6 max-w-4xl mx-auto">
-      <h2 className="text-2xl font-semibold mb-6">Enter Your Verizon Bill Details</h2>
+      <div className="flex items-center mb-6">
+        <h2 className="text-2xl font-semibold">Enter Your Verizon Bill Details</h2>
+        <div className="ml-3 flex items-center gap-1 text-xs bg-green-50 text-green-700 px-2 py-1 rounded-full">
+          <ShieldCheck className="h-3 w-3" />
+          <span>Privacy Protected</span>
+        </div>
+      </div>
       
       <form onSubmit={handleSubmit} className="space-y-8">
         <div>
@@ -167,24 +169,13 @@ export function ManualEntryForm({ onSubmit }: ManualEntryFormProps) {
                 )}
               </div>
               
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Phone Number</label>
-                  <Input 
-                    value={line.phoneNumber}
-                    onChange={e => updateLine(index, 'phoneNumber', e.target.value)}
-                    placeholder="e.g. 555-123-4567"
-                  />
-                </div>
-                
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Device Name</label>
-                  <Input 
-                    value={line.deviceName}
-                    onChange={e => updateLine(index, 'deviceName', e.target.value)}
-                    placeholder="e.g. iPhone 15"
-                  />
-                </div>
+              <div className="space-y-2 mb-4">
+                <label className="text-sm font-medium">Device Name</label>
+                <Input 
+                  value={line.deviceName}
+                  onChange={e => updateLine(index, 'deviceName', e.target.value)}
+                  placeholder="e.g. iPhone 15"
+                />
               </div>
               
               <div className="space-y-2 mb-4">

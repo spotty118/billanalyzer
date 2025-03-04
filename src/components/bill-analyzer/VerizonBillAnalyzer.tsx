@@ -3,7 +3,7 @@ import { BillAnalyzerContent } from './BillAnalyzerContent';
 import { ManualEntryForm } from './ManualEntryForm';
 import { useVerizonBillAnalyzer } from '@/hooks/use-verizon-bill-analyzer';
 import { Button } from '@/components/ui/button';
-import { Upload, PencilLine, RefreshCw, Signal, AlertTriangle, FileText, Clipboard } from 'lucide-react';
+import { Upload, PencilLine, RefreshCw, Signal, AlertTriangle, FileText, Clipboard, ShieldCheck } from 'lucide-react';
 import { toast } from "sonner";
 import { Card, CardContent } from '@/components/ui/card';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
@@ -118,13 +118,17 @@ const VerizonBillAnalyzer = () => {
         <div className="flex justify-between items-center px-6 pt-6">
           <div>
             <h1 className="text-2xl font-bold">Bill Analysis</h1>
-            {ocrProvider && (
-              <div className="flex items-center gap-2 mt-1">
+            <div className="flex items-center gap-2 mt-1">
+              {ocrProvider && (
                 <Badge variant={ocrProvider === 'claude' ? "secondary" : "outline"}>
                   {ocrProvider === 'claude' ? 'Our AI OCR' : 'Standard Extraction'}
                 </Badge>
-              </div>
-            )}
+              )}
+              <Badge variant="outline" className="flex items-center gap-1 text-green-600 bg-green-50 border-green-200">
+                <ShieldCheck size={12} />
+                Privacy Protected
+              </Badge>
+            </div>
           </div>
           <Button 
             onClick={handleStartOver}
@@ -158,6 +162,13 @@ const VerizonBillAnalyzer = () => {
           <p className="text-gray-600 text-center max-w-md">
             You can upload a Verizon bill PDF, paste the bill text, or manually enter your line charges.
           </p>
+
+          <div className="flex items-center justify-center gap-2 p-3 bg-blue-50 border border-blue-100 rounded-md max-w-md">
+            <ShieldCheck className="h-5 w-5 text-blue-500 flex-shrink-0" />
+            <p className="text-sm text-blue-700">
+              <span className="font-medium">Privacy Notice:</span> All personal information like names, addresses, and account numbers are automatically removed during processing. Your data is never stored and is immediately destroyed after analysis.
+            </p>
+          </div>
           
           <div className="flex flex-col sm:flex-row gap-4 w-full max-w-md">
             <Button 
@@ -202,6 +213,13 @@ const VerizonBillAnalyzer = () => {
             ← Back to selection
           </Button>
           <div className="flex flex-col items-center justify-center p-10 space-y-8">
+            <div className="flex items-center justify-center gap-2 p-3 bg-blue-50 border border-blue-100 rounded-md max-w-md mb-4">
+              <ShieldCheck className="h-5 w-5 text-blue-500 flex-shrink-0" />
+              <p className="text-sm text-blue-700">
+                Your bill will be processed securely. All personal information like names, addresses, and account numbers will be automatically removed.
+              </p>
+            </div>
+            
             <Card className="w-full max-w-md">
               <CardContent className="pt-6">
                 <div className="space-y-6">
@@ -316,6 +334,13 @@ const VerizonBillAnalyzer = () => {
             ← Back to selection
           </Button>
           <div className="flex flex-col items-center justify-center p-10 space-y-8">
+            <div className="flex items-center justify-center gap-2 p-3 bg-blue-50 border border-blue-100 rounded-md max-w-md mb-4">
+              <ShieldCheck className="h-5 w-5 text-blue-500 flex-shrink-0" />
+              <p className="text-sm text-blue-700">
+                Your bill text will be processed securely. All personal information will be automatically removed.
+              </p>
+            </div>
+            
             <Card className="w-full max-w-2xl">
               <CardContent className="pt-6">
                 <div className="space-y-6">
@@ -377,7 +402,7 @@ const VerizonBillAnalyzer = () => {
                     </p>
                     
                     <Textarea
-                      placeholder="Paste your Verizon bill text here... (e.g., 'Account: 526905159-00001, Invoice: 8776031257, Balance from last bill: $327.25...')"
+                      placeholder="Paste your Verizon bill text here... (e.g., 'Invoice: XXXX, Balance from last bill: $327.25...')"
                       className="min-h-[300px] font-mono text-sm"
                       value={billText}
                       onChange={(e) => setBillText(e.target.value)}
@@ -429,6 +454,13 @@ const VerizonBillAnalyzer = () => {
           </Button>
           
           <div className="px-6 pt-2 pb-6">
+            <div className="flex items-center justify-center gap-2 p-3 bg-blue-50 border border-blue-100 rounded-md max-w-3xl mx-auto mb-6">
+              <ShieldCheck className="h-5 w-5 text-blue-500 flex-shrink-0" />
+              <p className="text-sm text-blue-700">
+                No personal information is needed for manual entry. Your data is processed securely and not stored after analysis.
+              </p>
+            </div>
+            
             <Card className="mb-6">
               <CardContent className="pt-6">
                 <div className="space-y-4">
