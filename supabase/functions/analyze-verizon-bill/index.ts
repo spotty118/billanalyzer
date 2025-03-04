@@ -9,6 +9,9 @@ const CORS_HEADERS = {
 // Get Claude API key from environment variable
 const ANTHROPIC_API_KEY = Deno.env.get('ANTHROPIC_API_KEY');
 
+// In EdgeRuntime, use the waitUntil function to continue processing after response is sent
+const isEdgeRuntime = typeof EdgeRuntime !== 'undefined';
+
 // Safely convert ArrayBuffer to base64 in chunks to avoid call stack issues
 function arrayBufferToBase64(buffer: ArrayBuffer): string {
   const uint8Array = new Uint8Array(buffer);
@@ -38,22 +41,9 @@ async function sendToClaude(fileContent: ArrayBuffer) {
     
     // Convert the ArrayBuffer to base64 using the chunking function
     const base64Content = arrayBufferToBase64(fileContent);
-    
     console.log(`Content converted to base64, length: ${base64Content.length}`);
-    console.log(`Using Claude API with key length: ${ANTHROPIC_API_KEY.length}`);
     
-    // Send to Claude using the text-only approach
-    const response = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-api-key": ANTHROPIC_API_KEY,
-        "anthropic-version": "2023-06-01"
-      },
-      body: JSON.stringify({
-        model: "claude-3-7-sonnet-20250219", // Using the requested model
-        max_tokens: 4000,
-        system: `You are an expert Verizon bill analyzer. Extract and organize the key information from the bill, including account info, billing period, total amount due, and details for each phone line (number, plan, device, charges). Format your response as a clean JSON object that can be directly parsed.
+    const systemPrompt = `You are an expert Verizon bill analyzer. Extract and organize the key information from the bill, including account info, billing period, total amount due, and details for each phone line (number, plan, device, charges). Format your response as a clean JSON object that can be directly parsed.
 
 IMPORTANT: Your response must be a valid JSON object that can be parsed with JSON.parse(). Structure it like this:
 {
@@ -89,19 +79,45 @@ IMPORTANT: Your response must be a valid JSON object that can be parsed with JSO
   }
 }
 
-NEVER return mock data, always return the structure above but with empty strings or zeros if you cannot determine the values.`,
-        messages: [
-          {
-            role: "user",
-            content: [
-              {
-                type: "text",
-                text: "I've uploaded a Verizon bill PDF but we can't process it directly. Please analyze this bill based on my description: It's a standard Verizon wireless bill showing account details, charges for multiple lines, device payments, and total due. Please extract all the standard information you would find in a typical Verizon bill and return it in a structured JSON format."
+Extract all values directly from the bill and DO NOT make up or guess ANY information. If you cannot find a specific value in the document, use an empty string or 0 for numbers.`;
+
+    // Set up the Claude API request
+    const claudeRequest = {
+      model: "claude-3-7-sonnet-20250219",
+      max_tokens: 4000,
+      system: systemPrompt,
+      messages: [
+        {
+          role: "user",
+          content: [
+            {
+              type: "text",
+              text: "Here is a Verizon bill I need analyzed. Please extract all relevant information and format it according to the structure specified. Don't guess or make up any information - only extract what you can definitively identify in the document."
+            },
+            {
+              type: "image",
+              source: {
+                type: "base64",
+                media_type: "application/pdf",
+                data: base64Content
               }
-            ]
-          }
-        ]
-      })
+            }
+          ]
+        }
+      ]
+    };
+    
+    console.log("Sending request to Claude API...");
+    
+    // Send request to Claude API
+    const response = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-api-key": ANTHROPIC_API_KEY,
+        "anthropic-version": "2023-06-01"
+      },
+      body: JSON.stringify(claudeRequest)
     });
     
     if (!response.ok) {
@@ -109,7 +125,7 @@ NEVER return mock data, always return the structure above but with empty strings
       console.error("Claude API error response:", errorText);
       console.error("Claude API status:", response.status, response.statusText);
       
-      // Parse the error if possible to provide more detail
+      // Try to parse the error for more detailed information
       try {
         const errorData = JSON.parse(errorText);
         console.error("Claude API error details:", JSON.stringify(errorData));
@@ -119,12 +135,11 @@ NEVER return mock data, always return the structure above but with empty strings
       }
     }
     
-    // Get the response data
-    const responseData = await response.json();
+    // Parse the response from Claude
+    const claudeResponse = await response.json();
     console.log("Claude API response received successfully");
     
-    // Return the raw Claude response
-    return responseData;
+    return claudeResponse;
   } catch (error) {
     console.error("Error using Claude for analysis:", error);
     throw new Error(`Claude analysis failed: ${error.message}`);
@@ -168,18 +183,49 @@ serve(async (req) => {
     const fileContent = await file.arrayBuffer();
     console.log(`File read as ArrayBuffer, length: ${fileContent.byteLength}`);
     
-    // Send the file content to Claude for analysis
-    const analysisResult = await sendToClaude(fileContent);
-    console.log("Analysis complete, returning result");
-    
-    // Return the Claude analysis result
-    return new Response(JSON.stringify(analysisResult), {
-      status: 200,
-      headers: {
-        ...CORS_HEADERS,
-        'Content-Type': 'application/json'
+    // Define an async function for bill analysis
+    const analyzeBill = async () => {
+      try {
+        // Send the file content to Claude for analysis
+        const analysisResult = await sendToClaude(fileContent);
+        console.log("Analysis complete");
+        return analysisResult;
+      } catch (error) {
+        console.error("Error in background task:", error);
+        throw error;
       }
-    });
+    };
+    
+    // For Deno Deploy Edge Runtime, use waitUntil to continue processing in the background
+    if (isEdgeRuntime) {
+      // @ts-ignore: EdgeRuntime is available in Deno Deploy
+      const analysisPromise = analyzeBill();
+      // @ts-ignore: EdgeRuntime is available in Deno Deploy
+      EdgeRuntime.waitUntil(analysisPromise);
+      
+      // Return a quick response
+      return new Response(JSON.stringify({ 
+        status: "processing",
+        message: "Bill analysis started, check logs for results"
+      }), {
+        status: 202,
+        headers: {
+          ...CORS_HEADERS,
+          'Content-Type': 'application/json'
+        }
+      });
+    } else {
+      // For standard Deno runtime, complete the analysis before responding
+      const analysisResult = await analyzeBill();
+      
+      return new Response(JSON.stringify(analysisResult), {
+        status: 200,
+        headers: {
+          ...CORS_HEADERS,
+          'Content-Type': 'application/json'
+        }
+      });
+    }
   } catch (error) {
     console.error('Error processing file:', error);
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';

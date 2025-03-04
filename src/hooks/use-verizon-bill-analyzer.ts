@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -60,31 +59,30 @@ export const useVerizonBillAnalyzer = () => {
         throw new Error(errorMessage);
       }
       
-      // Get raw Claude response
+      // Get Claude response
       const claudeResponse = await response.json();
-      
-      // Extract Claude's message content as the analysis
-      if (!claudeResponse.content || !claudeResponse.content[0] || !claudeResponse.content[0].text) {
-        throw new Error('Invalid response format from Claude');
-      }
+      console.log('Claude response text length:', claudeResponse?.content?.[0]?.text?.length || 'unknown');
       
       // Extract the JSON from Claude's text response
-      const text = claudeResponse.content[0].text;
-      console.log('Claude response text length:', text.length);
-      
-      // Try to find and parse JSON in Claude's response text
       let data;
-      try {
-        // Look for JSON object in the text
-        const jsonMatch = text.match(/\{[\s\S]*\}/);
-        if (jsonMatch) {
-          data = JSON.parse(jsonMatch[0]);
-        } else {
-          throw new Error('No JSON found in Claude response');
+      
+      if (claudeResponse.content && claudeResponse.content[0] && claudeResponse.content[0].text) {
+        try {
+          // Look for JSON object in the text
+          const text = claudeResponse.content[0].text;
+          const jsonMatch = text.match(/\{[\s\S]*\}/);
+          if (jsonMatch) {
+            data = JSON.parse(jsonMatch[0]);
+          } else {
+            throw new Error('No JSON found in Claude response');
+          }
+        } catch (parseError) {
+          console.error('Error parsing Claude response:', parseError);
+          throw new Error('Failed to parse bill data from Claude');
         }
-      } catch (parseError) {
-        console.error('Error parsing Claude response:', parseError);
-        throw new Error('Failed to parse bill data from Claude');
+      } else {
+        // Direct response might already be the data we need
+        data = claudeResponse;
       }
       
       console.log('Successfully parsed Claude response');
