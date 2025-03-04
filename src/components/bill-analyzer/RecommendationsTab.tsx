@@ -146,29 +146,19 @@ export function RecommendationsTab({
         }
       }
       
-      // Find all premium plans to ensure price consistency for each carrier
-      const premiumPlans = alternativeCarrierPlans.filter(plan => plan.name.includes('Premium'));
-      
       // Calculate savings amounts for all carriers
       const currentBillAmount = billData.totalAmount || 0;
       
       const allRecommendations = carriersForRecommendation.map(carrier => {
-        // Get the carrier's savings (we'll only use this for the plan name)
-        const carrierData = calculateCarrierSavings(carrier.id);
-        
-        let reasons: string[] = [];
-        let pros: string[] = [];
-        let cons: string[] = [];
-        
-        // Find the carrier's plans in the alternativeCarrierPlans data
-        const carrierPlans = alternativeCarrierPlans.filter(plan => plan.carrierId === carrier.id);
+        // Get the plan name for the carrier
+        const plans = alternativeCarrierPlans.filter(plan => plan.carrierId === carrier.id);
+        let selectedPlan;
         
         // For Visible, select Visible+ as default, for others select Premium plans
-        let selectedPlan;
         if (carrier.id === "visible") {
-          selectedPlan = carrierPlans.find(plan => plan.id === "visible-plus") || carrierPlans[0];
+          selectedPlan = plans.find(plan => plan.id === "visible-plus") || plans[0];
         } else {
-          selectedPlan = carrierPlans.find(plan => plan.name.includes('Premium')) || carrierPlans[0];
+          selectedPlan = plans.find(plan => plan.name.includes('Premium')) || plans[0];
         }
         
         if (!selectedPlan) return null;
@@ -185,6 +175,10 @@ export function RecommendationsTab({
         if (selectedPlan) {
           features = selectedPlan.features;
         }
+        
+        let reasons: string[] = [];
+        let pros: string[] = [];
+        let cons: string[] = [];
         
         if (carrier.id === "warp") {
           reasons.push("Unlimited data with no speed caps on Verizon's network");

@@ -160,7 +160,7 @@ export function CarrierComparison({
             if (carrier.id !== activeCarrierTab) return null;
             
             const carrierSavings = calculateCarrierSavings(carrier.id);
-            const { monthlySavings, annualSavings, price: carrierPrice } = carrierSavings;
+            const { monthlySavings, annualSavings } = carrierSavings;
             
             const standardPlan = standardizeCarrierPricing(carrier.id);
             if (!standardPlan) return null;
