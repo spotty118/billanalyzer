@@ -1,4 +1,3 @@
-
 import { verizonPlansData, getPlanPrice } from "@/data/verizonPlans";
 
 // Format currency with $ symbol and 2 decimal places
@@ -192,7 +191,12 @@ export const calculateCarrierSavings = (
   getCarrierPlanPrice: Function, 
   findBestCarrierMatch: Function, 
   alternativeCarrierPlans: any[]
-) => {
+): {
+  monthlySavings: number;
+  annualSavings: number;
+  planName: string;
+  price: number;
+} => {
   if (!billData) {
     return {
       monthlySavings: 0,
@@ -207,7 +211,7 @@ export const calculateCarrierSavings = (
 
   // Find the best matching plan from the alternative carrier
   const matchingPlanId = findBestCarrierMatch(
-    billData.phoneLines[0]?.planName || 'Unlimited Plus',
+    billData.phoneLines?.[0]?.planName || 'Unlimited Plus',
     carrierId
   );
   
@@ -215,6 +219,7 @@ export const calculateCarrierSavings = (
   const carrierPlan = alternativeCarrierPlans.find(plan => plan.id === matchingPlanId);
   
   if (!carrierPlan) {
+    console.error(`No matching plan found for carrier ID: ${carrierId}, matching plan ID: ${matchingPlanId}`);
     return {
       monthlySavings: 0,
       annualSavings: 0,
@@ -223,11 +228,17 @@ export const calculateCarrierSavings = (
     };
   }
   
+  console.log(`Found matching plan: ${carrierPlan.name} for carrier ID: ${carrierId}`);
+  
   // Calculate the price for the alternative carrier plan
   const alternativePrice = getCarrierPlanPrice(carrierPlan, numberOfLines);
+  console.log(`Alternative price for ${numberOfLines} lines: ${alternativePrice}`);
   
   // Calculate savings
-  const monthlySavings = billData.totalAmount - alternativePrice;
+  const currentBillAmount = billData.totalAmount || 0;
+  console.log(`Current bill amount: ${currentBillAmount}, Alternative price: ${alternativePrice}`);
+  
+  const monthlySavings = currentBillAmount - alternativePrice;
   const annualSavings = monthlySavings * 12;
   
   return {

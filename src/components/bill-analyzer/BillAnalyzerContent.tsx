@@ -43,16 +43,13 @@ export function BillAnalyzerContent({
     setActiveTab(tab);
   };
 
+  // Ensure we're properly handling the carrier savings calculation by memoizing it
   const memoizedCalculateCarrierSavings = useCallback(
     (carrierId: string) => {
-      if (alternativeCarrierPlans && getCarrierPlanPrice && findBestCarrierMatch) {
-        return calculateCarrierSavings(
-          carrierId
-        );
-      }
+      // Call the provided function directly now
       return calculateCarrierSavings(carrierId);
     },
-    [billData, alternativeCarrierPlans, getCarrierPlanPrice, findBestCarrierMatch, calculateCarrierSavings]
+    [calculateCarrierSavings]
   );
 
   if (!billData) {
