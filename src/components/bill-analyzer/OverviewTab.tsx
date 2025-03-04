@@ -1,6 +1,4 @@
 
-import React from 'react';
-
 interface OverviewTabProps {
   billData: any;
   formatCurrency: (value: number) => string;

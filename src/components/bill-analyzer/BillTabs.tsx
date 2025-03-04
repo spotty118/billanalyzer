@@ -1,14 +1,9 @@
 
 import { useState } from "react";
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "@/components/ui/tabs";
-import { RecommendationsTab } from "@/components/bill-analyzer/RecommendationsTab";
-import { CarrierComparison } from "@/components/bill-analyzer/CarrierComparison";
-import { formatCurrency } from "@/components/bill-analyzer/utils/dataUtils";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { RecommendationsTab } from "./RecommendationsTab";
+import { CarrierComparison } from "./CarrierComparison";
+import { formatCurrency } from "./utils/dataUtils";
 import { OverviewTab } from "./OverviewTab";
 import { LineItemsTab } from "./LineItemsTab";
 
@@ -20,13 +15,26 @@ interface BillTabsProps {
     planName: string;
     price: number;
   };
+  activeTab?: string;
+  onTabChange?: (tab: string) => void;
 }
 
-export function BillTabs({ billData, calculateCarrierSavings }: BillTabsProps) {
+export function BillTabs({ billData, calculateCarrierSavings, activeTab, onTabChange }: BillTabsProps) {
   const [activeCarrierTab, setActiveCarrierTab] = useState("warp");
+  
+  const handleTabChange = (value: string) => {
+    if (onTabChange) {
+      onTabChange(value);
+    }
+  };
 
   return (
-    <Tabs defaultValue="overview" className="w-full space-y-4">
+    <Tabs 
+      defaultValue="overview" 
+      className="w-full space-y-4"
+      value={activeTab}
+      onValueChange={handleTabChange}
+    >
       <TabsList>
         <div className="flex space-x-2">
           <TabsTrigger value="overview" className="data-[state=active]:bg-blue-100">

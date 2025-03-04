@@ -1,5 +1,4 @@
 
-import React from 'react';
 import { 
   BarChart, 
   Bar, 
@@ -7,8 +6,7 @@ import {
   YAxis, 
   CartesianGrid, 
   Tooltip, 
-  ResponsiveContainer,
-  Cell 
+  ResponsiveContainer
 } from 'recharts';
 import { prepareLineItemsData } from '@/components/bill-analyzer/utils/dataUtils';
 

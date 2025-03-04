@@ -1,6 +1,9 @@
 
-import { Check, AlertCircle, Zap, Star, Lightbulb } from 'lucide-react';
-import { supportedCarriers, alternativeCarrierPlans, findBestCarrierMatch } from "@/config/alternativeCarriers";
+import { useState, useEffect } from 'react';
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { CheckIcon, XIcon } from "lucide-react";
 
 interface RecommendationsTabProps {
   billData: any;
@@ -13,284 +16,180 @@ interface RecommendationsTabProps {
   };
 }
 
-export function RecommendationsTab({ billData, formatCurrency, calculateCarrierSavings }: RecommendationsTabProps) {
+const carriers = [
+  { id: "warp", name: "Warp", logo: "🌀" },
+  { id: "usmobile", name: "US Mobile", logo: "🇺🇸" },
+  { id: "verizon", name: "Verizon", logo: "✓" },
+  { id: "tmobile", name: "T-Mobile", logo: "📱" },
+  { id: "att", name: "AT&T", logo: "🔵" },
+];
+
+export function RecommendationsTab({ 
+  billData, 
+  formatCurrency, 
+  calculateCarrierSavings 
+}: RecommendationsTabProps) {
+  const [recommendations, setRecommendations] = useState<any[]>([]);
+
+  useEffect(() => {
+    if (billData) {
+      // Calculate recommendations based on savings from each carrier
+      const allRecommendations = carriers.map(carrier => {
+        const savings = calculateCarrierSavings(carrier.id);
+        
+        // Generate meaningful reasons and pros/cons for each carrier
+        let reasons = [];
+        let pros = [];
+        let cons = [];
+        
+        if (carrier.id === "warp") {
+          reasons.push("Unlimited data with no speed caps");
+          pros.push("No contracts or hidden fees");
+          pros.push("Simple billing structure");
+          cons.push("Newer carrier in the market");
+        } else if (carrier.id === "usmobile") {
+          reasons.push("Customizable plans to fit your needs");
+          pros.push("Affordable pricing");
+          pros.push("Works on multiple networks");
+          cons.push("May not have as many perks as major carriers");
+        } else if (carrier.id === "verizon") {
+          reasons.push("Excellent coverage nationwide");
+          pros.push("Premium network quality");
+          pros.push("Many entertainment perks");
+          cons.push("Generally higher pricing");
+        } else if (carrier.id === "tmobile") {
+          reasons.push("Aggressive pricing on family plans");
+          pros.push("Free international data");
+          pros.push("Netflix included in some plans");
+          cons.push("Coverage may vary in rural areas");
+        } else if (carrier.id === "att") {
+          reasons.push("Wide network coverage");
+          pros.push("HBO Max included with elite plans");
+          pros.push("Strong rural coverage");
+          cons.push("Higher prices compared to some alternatives");
+        }
+        
+        return {
+          carrier: carrier.name,
+          carrierId: carrier.id,
+          logo: carrier.logo,
+          planName: savings.planName,
+          monthlySavings: savings.monthlySavings,
+          annualSavings: savings.annualSavings,
+          monthlyPrice: savings.price,
+          reasons,
+          pros,
+          cons
+        };
+      });
+      
+      // Sort by savings (highest first) and filter out negative savings
+      const sortedRecommendations = allRecommendations
+        .sort((a, b) => b.annualSavings - a.annualSavings)
+        .filter(rec => rec.annualSavings > 0);
+      
+      setRecommendations(sortedRecommendations.length > 0 ? sortedRecommendations : [
+        {
+          carrier: "Current Plan",
+          carrierId: "current",
+          logo: "✓",
+          planName: billData.phoneLines?.[0]?.planName || "Current Plan",
+          monthlySavings: 0,
+          annualSavings: 0,
+          monthlyPrice: billData.totalAmount || 0,
+          reasons: ["Your current plan appears to be competitive"],
+          pros: ["No need to switch carriers", "Familiar billing"],
+          cons: ["You may be missing perks from other carriers"]
+        }
+      ]);
+    }
+  }, [billData, calculateCarrierSavings]);
+
   if (!billData) return <div>No bill data available</div>;
-  
-  // Calculate savings for each carrier to determine the best recommendation
-  const carrierSavings = supportedCarriers.map(carrier => {
-    const savings = calculateCarrierSavings(carrier.id);
-    return {
-      carrierId: carrier.id,
-      carrierName: carrier.name,
-      icon: carrier.icon,
-      ...savings
-    };
-  });
-  
-  // Sort by highest monthly savings
-  const sortedSavings = [...carrierSavings].sort((a, b) => b.monthlySavings - a.monthlySavings);
-  
-  // Get best recommendation (carrier with highest savings)
-  const bestRecommendation = sortedSavings[0];
-  
-  // Get alternative plans (the other carriers)
-  const alternativeSavings = sortedSavings.slice(1);
-  
-  // Generate reasons for recommendation based on plan features
-  const matchedPlanId = findBestCarrierMatch(bestRecommendation.carrierId);
-  const recommendedPlan = alternativeCarrierPlans.find(p => p.id === matchedPlanId);
-  
-  // Generate reasons based on real plan features
-  const generateReasons = (plan: any) => {
-    const reasons = [];
-    
-    if (plan.dataAllowance.premium === 'unlimited' || plan.dataAllowance.premium >= 100) {
-      reasons.push("Generous high-speed data allocation");
-    }
-    
-    if (plan.dataAllowance.hotspot && 
-        (plan.dataAllowance.hotspot === 'unlimited' || 
-         plan.dataAllowance.hotspot >= 30 || 
-         typeof plan.dataAllowance.hotspot === 'string' && plan.dataAllowance.hotspot.includes('GB'))) {
-      reasons.push("Substantial hotspot data included");
-    }
-    
-    if (plan.streamingPerks && plan.streamingPerks.length > 0) {
-      reasons.push("Includes valuable streaming perks");
-    }
-    
-    if (plan.streamingQuality && plan.streamingQuality !== '480p') {
-      reasons.push(`High-quality ${plan.streamingQuality} video streaming`);
-    }
-    
-    if (plan.annualPrice) {
-      reasons.push(`Annual payment option saves ${formatCurrency(plan.basePrice * 12 - plan.annualPrice)} per year`);
-    }
-    
-    if (bestRecommendation.monthlySavings > 0) {
-      reasons.push(`Save ${formatCurrency(bestRecommendation.monthlySavings)} monthly compared to current bill`);
-    }
-    
-    if (plan.features && plan.features.length > 0) {
-      const priorityFeatures = plan.features.filter((f: string) => 
-        f.toLowerCase().includes('priority') || 
-        f.toLowerCase().includes('qci') || 
-        f.toLowerCase().includes('premium')
-      );
-      
-      if (priorityFeatures.length > 0) {
-        reasons.push("Premium network priority for fast data speeds");
-      }
-    }
-    
-    // Add network-specific reason
-    if (plan.network) {
-      reasons.push(`Utilizes the ${plan.network} network for coverage`);
-    }
-    
-    return reasons.slice(0, 4); // Limit to 4 reasons
-  };
-  
-  // Generate pros and cons for alternative plans
-  const generateProsAndCons = (plan: any, carrier: any) => {
-    const pros = [];
-    const cons = [];
-    
-    // Add savings as pro if positive
-    if (carrier.monthlySavings > 0) {
-      pros.push(`Save ${formatCurrency(carrier.monthlySavings)} monthly`);
-    } else {
-      cons.push(`Costs ${formatCurrency(Math.abs(carrier.monthlySavings))} more monthly`);
-    }
-    
-    // Add network as pro or con based on perception (simplified for demo)
-    if (plan.network === 'Verizon') {
-      pros.push("Verizon network coverage");
-    } else if (plan.network === 'T-Mobile') {
-      pros.push("Fast T-Mobile 5G speeds");
-      cons.push("Coverage may vary in rural areas");
-    } else if (plan.network === 'AT&T') {
-      pros.push("Reliable AT&T network");
-    }
-    
-    // Add data-related pros/cons
-    if (plan.dataAllowance.premium === 'unlimited') {
-      pros.push("Unlimited premium data");
-    } else if (typeof plan.dataAllowance.premium === 'number') {
-      if (plan.dataAllowance.premium >= 50) {
-        pros.push(`${plan.dataAllowance.premium}GB premium data`);
-      } else {
-        cons.push(`Limited to ${plan.dataAllowance.premium}GB premium data`);
-      }
-    }
-    
-    // Add hotspot as pro/con
-    if (plan.dataAllowance.hotspot) {
-      if (plan.dataAllowance.hotspot === 'unlimited' || 
-          (typeof plan.dataAllowance.hotspot === 'string' && plan.dataAllowance.hotspot.includes('GB'))) {
-        pros.push(`Generous hotspot data`);
-      } else if (typeof plan.dataAllowance.hotspot === 'number' && plan.dataAllowance.hotspot >= 15) {
-        pros.push(`${plan.dataAllowance.hotspot}GB hotspot data`);
-      } else {
-        cons.push(`Limited hotspot data`);
-      }
-    } else {
-      cons.push("No hotspot data included");
-    }
-    
-    // Add streaming quality as pro/con
-    if (plan.streamingQuality === '4K' || plan.streamingQuality === 'QHD' || plan.streamingQuality === '1080p') {
-      pros.push(`${plan.streamingQuality} streaming quality`);
-    } else {
-      cons.push(`Limited to ${plan.streamingQuality} streaming quality`);
-    }
-    
-    // Add annual option as pro if available
-    if (plan.annualPrice) {
-      pros.push("Annual payment option for greater savings");
-    }
-    
-    // Ensure we have at least 2 pros and 2 cons
-    while (pros.length < 2) pros.push(plan.features?.[pros.length] || "Flexible plan structure");
-    while (cons.length < 2) cons.push("May require network adjustment" || "New carrier onboarding process");
-    
-    return {
-      pros: pros.slice(0, 3),
-      cons: cons.slice(0, 3)
-    };
-  };
-  
-  const getCarrierIcon = (iconName: string) => {
-    switch (iconName) {
-      case 'Star': return <Star className="w-5 h-5 text-blue-600" />;
-      case 'Zap': return <Zap className="w-5 h-5 text-blue-600" />;
-      case 'Lightbulb': return <Lightbulb className="w-5 h-5 text-blue-600" />;
-      default: return null;
-    }
-  };
-  
-  // Create the real recommendation data
-  const planRecommendation = {
-    recommendedPlan: `${bestRecommendation.carrierName} ${bestRecommendation.planName}`,
-    reasons: recommendedPlan ? generateReasons(recommendedPlan) : [
-      "Best overall value", 
-      "Compatible with your usage patterns",
-      "Significant cost savings"
-    ],
-    estimatedMonthlySavings: bestRecommendation.monthlySavings,
-    confidenceScore: bestRecommendation.monthlySavings > 0 ? 0.85 : 0.65,
-    alternativePlans: alternativeSavings.map(carrier => {
-      const planId = findBestCarrierMatch(carrier.carrierId);
-      const plan = alternativeCarrierPlans.find(p => p.id === planId);
-      
-      const { pros, cons } = plan ? generateProsAndCons(plan, carrier) : {
-        pros: ["Competitive pricing", "Flexible plan structure"],
-        cons: ["May require network adjustment", "Different coverage area"]
-      };
-      
-      return {
-        name: `${carrier.carrierName} ${carrier.planName}`,
-        monthlyCost: carrier.price,
-        pros,
-        cons,
-        estimatedSavings: carrier.monthlySavings
-      };
-    })
-  };
 
   return (
     <div className="space-y-6">
       <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-        <div className="flex items-center mb-4">
-          <div className="p-2 rounded-full bg-blue-100 mr-4">
-            {getCarrierIcon(bestRecommendation.icon) || <Check className="w-6 h-6 text-blue-600" />}
-          </div>
-          <h3 className="font-bold text-xl">Recommended Plan</h3>
-        </div>
+        <h3 className="text-lg font-bold mb-4">Personalized Recommendations</h3>
+        <p className="text-gray-600 mb-6">
+          Based on your current bill and usage patterns, here are our recommendations to help you save:
+        </p>
         
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-          <div className="col-span-2">
-            <h4 className="text-lg font-semibold mb-2">{planRecommendation.recommendedPlan}</h4>
-            
-            <h5 className="font-medium text-gray-700 mt-4 mb-2">Why this plan?</h5>
-            <ul className="space-y-2">
-              {planRecommendation.reasons.map((reason: string, index: number) => (
-                <li key={index} className="flex items-start">
-                  <Check className="w-5 h-5 text-green-500 mr-2 flex-shrink-0 mt-0.5" />
-                  <span>{reason}</span>
-                </li>
-              ))}
-            </ul>
-          </div>
-          
-          <div className="flex flex-col justify-center items-center p-6 bg-blue-50 rounded-lg">
-            <p className="text-sm text-blue-700 mb-2">Estimated Monthly Savings</p>
-            <p className={`text-3xl font-bold ${planRecommendation.estimatedMonthlySavings > 0 ? 'text-green-600' : 'text-red-600'}`}>
-              {planRecommendation.estimatedMonthlySavings > 0 
-                ? formatCurrency(planRecommendation.estimatedMonthlySavings) 
-                : `-${formatCurrency(Math.abs(planRecommendation.estimatedMonthlySavings))}`}
-            </p>
-            <div className="w-full mt-4 bg-gray-200 rounded-full h-2.5">
-              <div 
-                className="bg-blue-600 h-2.5 rounded-full" 
-                style={{ width: `${planRecommendation.confidenceScore * 100}%` }}
-              ></div>
-            </div>
-            <p className="text-xs text-gray-500 mt-1">
-              {Math.round(planRecommendation.confidenceScore * 100)}% confidence
-            </p>
-          </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {recommendations.map((rec, index) => (
+            <Card key={index} className={`border ${index === 0 ? 'border-blue-400 shadow-md' : 'border-gray-200'}`}>
+              <CardHeader className="pb-2">
+                <div className="flex justify-between items-center">
+                  <div className="flex items-center gap-2">
+                    <span className="text-2xl">{rec.logo}</span>
+                    <CardTitle>{rec.carrier}</CardTitle>
+                  </div>
+                  {index === 0 && <Badge className="bg-blue-500">Best Match</Badge>}
+                </div>
+                <CardDescription>{rec.planName}</CardDescription>
+              </CardHeader>
+              <CardContent className="py-2">
+                <div className="space-y-4">
+                  <div>
+                    <p className="text-sm text-gray-500">Monthly Price</p>
+                    <p className="text-lg font-bold">{formatCurrency(rec.monthlyPrice)}</p>
+                  </div>
+                  
+                  {rec.annualSavings > 0 && (
+                    <div>
+                      <p className="text-sm text-gray-500">Potential Savings</p>
+                      <p className="text-lg font-bold text-green-600">
+                        {formatCurrency(rec.monthlySavings)}/mo ({formatCurrency(rec.annualSavings)}/yr)
+                      </p>
+                    </div>
+                  )}
+                  
+                  <div>
+                    <p className="text-sm font-medium">Why we recommend this:</p>
+                    <ul className="mt-1 space-y-1 text-sm">
+                      {rec.reasons.map((reason: string, i: number) => (
+                        <li key={i} className="flex items-start">
+                          <span className="mr-1.5 text-blue-500">•</span>
+                          <span>{reason}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                  
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <p className="text-sm font-medium text-green-600">Pros</p>
+                      <ul className="mt-1 space-y-1 text-sm">
+                        {rec.pros.map((pro: string, i: number) => (
+                          <li key={i} className="flex items-start">
+                            <CheckIcon className="h-4 w-4 mr-1.5 text-green-500 flex-shrink-0" />
+                            <span>{pro}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-red-600">Cons</p>
+                      <ul className="mt-1 space-y-1 text-sm">
+                        {rec.cons.map((con: string, i: number) => (
+                          <li key={i} className="flex items-start">
+                            <XIcon className="h-4 w-4 mr-1.5 text-red-500 flex-shrink-0" />
+                            <span>{con}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+              <CardFooter>
+                <Button className="w-full" variant={index === 0 ? "default" : "outline"}>
+                  Get More Details
+                </Button>
+              </CardFooter>
+            </Card>
+          ))}
         </div>
-      </div>
-      
-      <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-        <h3 className="font-bold text-lg mb-4">Alternative Plans</h3>
-        
-        {planRecommendation.alternativePlans.map((plan: any, index: number) => (
-          <div key={index} className="mb-4 p-4 border border-gray-200 rounded-lg">
-            <div className="flex justify-between items-center mb-2">
-              <h4 className="font-semibold text-lg">{plan.name}</h4>
-              <div className="text-right">
-                <p className="text-sm text-gray-500">Monthly Cost</p>
-                <p className="font-semibold">{formatCurrency(plan.monthlyCost)}</p>
-              </div>
-            </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-              <div>
-                <h5 className="font-medium text-green-700 mb-2">Pros</h5>
-                <ul className="space-y-1">
-                  {plan.pros.map((pro: string, i: number) => (
-                    <li key={i} className="flex items-start">
-                      <Check className="w-4 h-4 text-green-500 mr-2 flex-shrink-0 mt-0.5" />
-                      <span>{pro}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-              
-              <div>
-                <h5 className="font-medium text-red-700 mb-2">Cons</h5>
-                <ul className="space-y-1">
-                  {plan.cons.map((con: string, i: number) => (
-                    <li key={i} className="flex items-start">
-                      <AlertCircle className="w-4 h-4 text-red-500 mr-2 flex-shrink-0 mt-0.5" />
-                      <span>{con}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            </div>
-            
-            <div className="mt-3 pt-2 border-t border-gray-100">
-              <p className={`text-right ${plan.estimatedSavings > 0 ? 'text-green-600' : 'text-red-600'} font-medium`}>
-                {plan.estimatedSavings > 0 
-                  ? `Save ${formatCurrency(plan.estimatedSavings)} monthly` 
-                  : `Costs ${formatCurrency(Math.abs(plan.estimatedSavings))} more monthly`}
-              </p>
-            </div>
-          </div>
-        ))}
       </div>
     </div>
   );

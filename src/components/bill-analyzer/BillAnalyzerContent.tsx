@@ -1,118 +1,61 @@
-
-import { useState } from 'react';
-import { BillAnalysisHeader } from './BillAnalysisHeader';
-import { BillTabs } from './BillTabs';
-import { BillSummary } from './BillSummary';
-import { LineDetails } from './LineDetails';
-import { RecommendationsTab } from './RecommendationsTab';
-import { CarrierComparison } from './CarrierComparison';
-import { prepareLineItemsData, prepareCategoryData } from './utils/chartDataUtils';
-import { formatCurrency } from './utils/dataUtils';
+import React, { useState, useCallback } from 'react';
+import { BillTabs } from "@/components/bill-analyzer/BillTabs";
+import { calculateCarrierSavings } from "@/components/bill-analyzer/utils/dataUtils";
 
 interface BillAnalyzerContentProps {
   billData: any;
-  calculateCarrierSavings: (carrierId: string) => any;
+  alternativeCarrierPlans: any[];
+  getCarrierPlanPrice: (plan: any, numberOfLines: number) => number;
+  findBestCarrierMatch: (planName: string, carrierId: string) => string;
 }
 
-export function BillAnalyzerContent({ 
-  billData, 
-  calculateCarrierSavings 
-}: BillAnalyzerContentProps) {
-  const [activeTab, setActiveTab] = useState('summary');
-  const [expandedLine, setExpandedLine] = useState<number | null>(null);
-  const [expandedSection, setExpandedSection] = useState('charges');
-  const [showCarrierComparison, setShowCarrierComparison] = useState(false);
-  const [activeCarrierTab, setActiveCarrierTab] = useState('usmobile');
-
-  const toggleLineExpansion = (index: number) => {
-    if (expandedLine === index) {
-      setExpandedLine(null);
-    } else {
-      setExpandedLine(index);
-    }
-  };
-
-  const toggleSectionExpansion = (section: string) => {
-    if (expandedSection === section) {
-      setExpandedSection('');
-    } else {
-      setExpandedSection(section);
-    }
-  };
-
+const CustomBillTabs = ({ billData, calculateCarrierSavings }: any) => {
+  const [activeTab, setActiveTab] = useState("overview");
+  
   const handleTabChange = (tab: string) => {
     setActiveTab(tab);
-    if (tab === 'alternatives') {
-      setShowCarrierComparison(true);
-    }
   };
+  
+  return (
+    <BillTabs 
+      billData={billData}
+      calculateCarrierSavings={calculateCarrierSavings}
+      activeTab={activeTab}
+      onTabChange={handleTabChange}
+    />
+  );
+};
 
-  const handleCompareCarriers = () => {
-    setActiveTab('alternatives');
-    setShowCarrierComparison(true);
-  };
+export function BillAnalyzerContent({
+  billData,
+  alternativeCarrierPlans,
+  getCarrierPlanPrice,
+  findBestCarrierMatch,
+}: BillAnalyzerContentProps) {
 
-  function prepareCurrentLineItemsData() {
-    return prepareLineItemsData(billData?.phoneLines);
-  }
+  const memoizedCalculateCarrierSavings = useCallback(
+    (carrierId: string) =>
+      calculateCarrierSavings(
+        carrierId,
+        billData,
+        getCarrierPlanPrice,
+        findBestCarrierMatch,
+        alternativeCarrierPlans
+      ),
+    [billData, alternativeCarrierPlans, getCarrierPlanPrice, findBestCarrierMatch]
+  );
 
-  function prepareCurrentCategoryData() {
-    return prepareCategoryData(billData?.chargesByCategory);
+  if (!billData) {
+    return <div>No bill data available.</div>;
   }
 
   return (
-    <div className="flex flex-col">
-      <BillAnalysisHeader 
-        accountNumber={billData.accountNumber}
-        billingPeriod={billData.billingPeriod}
-        totalAmount={billData.totalAmount}
-        formatCurrency={formatCurrency}
+    <div className="container mx-auto py-8">
+      <h1 className="text-2xl font-bold mb-4">Bill Analysis</h1>
+      <CustomBillTabs 
+        billData={billData} 
+        calculateCarrierSavings={memoizedCalculateCarrierSavings} 
       />
-      
-      <BillTabs 
-        activeTab={activeTab}
-        onTabChange={handleTabChange}
-      />
-      
-      <div className="p-6">
-        {activeTab === 'summary' && (
-          <BillSummary 
-            billData={billData}
-            expandedSection={expandedSection}
-            toggleSectionExpansion={toggleSectionExpansion}
-            formatCurrency={formatCurrency}
-            prepareLineItemsData={prepareCurrentLineItemsData}
-            prepareCategoryData={prepareCurrentCategoryData}
-            onCompareCarriers={handleCompareCarriers}
-          />
-        )}
-        
-        {activeTab === 'lines' && (
-          <LineDetails 
-            phoneLines={billData.phoneLines}
-            expandedLine={expandedLine}
-            toggleLineExpansion={toggleLineExpansion}
-            formatCurrency={formatCurrency}
-          />
-        )}
-        
-        {activeTab === 'recommendations' && (
-          <RecommendationsTab 
-            planRecommendation={billData.planRecommendation}
-            formatCurrency={formatCurrency}
-          />
-        )}
-
-        {activeTab === 'alternatives' && showCarrierComparison && (
-          <CarrierComparison 
-            billData={billData}
-            activeCarrierTab={activeCarrierTab}
-            setActiveCarrierTab={setActiveCarrierTab}
-            calculateCarrierSavings={calculateCarrierSavings}
-            formatCurrency={formatCurrency}
-          />
-        )}
-      </div>
     </div>
   );
 }
