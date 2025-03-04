@@ -123,6 +123,38 @@ export const useVerizonBillAnalyzer = () => {
       }
     };
     
+    // Add owner names to phoneLines if present in accountInfo
+    if (rawData.accountInfo?.customerName && enhancedData.phoneLines) {
+      enhancedData.customerName = rawData.accountInfo.customerName;
+      
+      // If there's an owner name field, prioritize using that
+      enhancedData.phoneLines = enhancedData.phoneLines.map((line: any, index: number) => {
+        if (!line.ownerName && index === 0 && rawData.accountInfo?.customerName) {
+          return {
+            ...line,
+            ownerName: rawData.accountInfo.customerName
+          };
+        }
+        return line;
+      });
+    }
+    
+    // Add any upcoming changes from bill
+    if (rawData.upcomingChanges && rawData.upcomingChanges.length > 0) {
+      enhancedData.upcomingChanges = rawData.upcomingChanges;
+    }
+    
+    // Process category data for charts using the improved parser data
+    if (rawData.chargesByCategory) {
+      enhancedData.chargesByCategory = {
+        "Plan Charges": rawData.chargesByCategory.plans || 0,
+        "Device Payments": rawData.chargesByCategory.devices || 0,
+        "Services & Add-ons": rawData.chargesByCategory.services || 0,
+        "Taxes & Fees": rawData.chargesByCategory.taxes || 0
+      };
+    }
+    
+    // Ensure we have detailed phone lines
     if (!enhancedData.phoneLines || !Array.isArray(enhancedData.phoneLines) || enhancedData.phoneLines.length === 0) {
       enhancedData.phoneLines = [
         {
@@ -146,34 +178,9 @@ export const useVerizonBillAnalyzer = () => {
           }
         }
       ];
-    } else {
-      enhancedData.phoneLines = enhancedData.phoneLines.map((line: any, index: number) => {
-        if (line.details && 
-            line.details.planCost !== undefined && 
-            line.details.planDiscount !== undefined) {
-          return {
-            ...line,
-            details: {
-              planCost: line.details.planCost,
-              planDiscount: line.details.planDiscount,
-            }
-          };
-        }
-        
-        const baseCost = 40 + (index * 5);
-        const discount = index === 0 ? 10 : 5;
-        
-        return {
-          ...line,
-          monthlyTotal: baseCost - discount,
-          details: {
-            planCost: baseCost,
-            planDiscount: discount,
-          }
-        };
-      });
     }
     
+    // Limit to maximum 8 lines for UI display
     if (enhancedData.phoneLines.length > 8) {
       enhancedData.phoneLines = enhancedData.phoneLines.slice(0, 8);
     }
@@ -224,8 +231,10 @@ export const useVerizonBillAnalyzer = () => {
       setIsLoading(true);
       setErrorMessage(null);
       
+      // Calculate charges by category from manual inputs
       const chargesByCategory = calculateChargesByCategory(manualData.phoneLines);
       
+      // Build a structure compatible with the enhanced bill parser
       const enhancedData = {
         ...manualData,
         accountNumber: 'Manual Entry',
@@ -267,7 +276,12 @@ export const useVerizonBillAnalyzer = () => {
           ]
         },
         chargesByCategory,
-        networkPreference: manualData.networkPreference || null
+        networkPreference: manualData.networkPreference || null,
+        accountInfo: {
+          customerName: "Manual Entry User",
+          accountNumber: "Manual-" + Date.now().toString().substring(0, 6),
+          billingPeriod: new Date().toLocaleDateString()
+        }
       };
       
       setBillData(enhancedData);
@@ -287,16 +301,24 @@ export const useVerizonBillAnalyzer = () => {
 
   const calculateChargesByCategory = (phoneLines: any[]) => {
     let planCharges = 0;
+    let devicePayments = 0;
+    let services = 0;
     
     phoneLines.forEach(line => {
       if (line.details) {
         let planDiscount = line.details.planDiscount || 0;
         planCharges += (line.details.planCost || 0) - planDiscount;
+        
+        devicePayments += (line.details.devicePayment || 0) - (line.details.deviceCredit || 0);
+        services += (line.details.protection || 0);
       }
     });
     
     return {
-      "Plan Charges": planCharges
+      "Plan Charges": planCharges,
+      "Device Payments": devicePayments,
+      "Services & Add-ons": services,
+      "Taxes & Fees": (planCharges + devicePayments + services) * 0.08 // Estimate taxes at 8%
     };
   };
 
