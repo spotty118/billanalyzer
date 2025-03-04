@@ -26,7 +26,7 @@ export function AppSidebar() {
         "flex items-center justify-between px-4 py-6",
         isCollapsed && "justify-center"
       )}>
-        {!isCollapsed && <span className="font-bold text-lg dark:text-white">VeriPlan</span>}
+        {!isCollapsed && <span className="font-bold text-lg dark:text-white">Carrier Bill</span>}
         <button 
           onClick={toggleSidebar}
           className="rounded-full p-1 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-400"
