@@ -1,3 +1,4 @@
+
 import { ArrowLeftRight, AlertCircle, Check, Star, Zap, Lightbulb } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { 
@@ -11,6 +12,18 @@ import {
   findBestCarrierMatch, 
   alternativeCarrierPlans
 } from "@/config/alternativeCarriers";
+import {
+  BarChart,
+  Bar,
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer
+} from 'recharts';
 
 interface CarrierComparisonProps {
   billData: any;
@@ -40,6 +53,58 @@ export function CarrierComparison({
       default: return <ArrowLeftRight className="h-5 w-5 inline-block mr-2" />;
     }
   };
+
+  // Generate price comparison data for charts
+  const generateComparisonData = () => {
+    const data = [];
+    const lineCount = billData.phoneLines?.length || 1;
+    
+    // Generate data for 1-5 lines regardless of user's actual line count
+    // to show potential savings for different family sizes
+    for (let i = 1; i <= 5; i++) {
+      const carriers = supportedCarriers.map(carrier => {
+        const savings = calculateCarrierSavings(carrier.id);
+        // Scale prices based on line count
+        const scaleFactor = i / lineCount;
+        const price = savings.price * scaleFactor;
+        const currentPrice = billData.totalAmount * scaleFactor;
+        
+        return {
+          id: carrier.id,
+          name: carrier.name,
+          price: price,
+          saving: currentPrice - price
+        };
+      });
+      
+      const entry = {
+        lines: i,
+        current: billData.totalAmount * (i / lineCount)
+      };
+      
+      carriers.forEach(carrier => {
+        entry[carrier.id] = carrier.price;
+        entry[`${carrier.id}Saving`] = carrier.saving;
+      });
+      
+      data.push(entry);
+    }
+    
+    return data;
+  };
+  
+  const carrierSavingsData = supportedCarriers.map(carrier => {
+    const savings = calculateCarrierSavings(carrier.id);
+    return {
+      id: carrier.id,
+      name: carrier.name,
+      monthly: savings.monthlySavings,
+      annual: savings.annualSavings,
+      price: savings.price
+    };
+  }).sort((a, b) => b.annual - a.annual);
+  
+  const priceComparisonData = generateComparisonData();
 
   return (
     <div className="space-y-6">
@@ -221,6 +286,50 @@ export function CarrierComparison({
                   </div>
                 </div>
                 
+                <div className="mt-8">
+                  <h4 className="font-semibold mb-3">Savings with Different Line Counts</h4>
+                  <p className="text-sm text-gray-600 mb-4">
+                    See how your savings would change with more or fewer lines:
+                  </p>
+                  <div className="h-64">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart
+                        data={priceComparisonData}
+                        margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
+                      >
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis dataKey="lines" label={{ value: 'Number of Lines', position: 'insideBottom', offset: -5 }} />
+                        <YAxis label={{ value: 'Monthly Savings ($)', angle: -90, position: 'insideLeft' }} />
+                        <Tooltip formatter={(value) => [`$${Math.round(value * 100) / 100}`, 'Monthly Savings']} />
+                        <Bar dataKey={`${carrier.id}Saving`} fill="#38B0DE" name={`${carrier.name} Savings`} />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                </div>
+                
+                <div className="mt-8">
+                  <h4 className="font-semibold mb-3">Cost Comparison</h4>
+                  <p className="text-sm text-gray-600 mb-4">
+                    Comparing your current plan with {carrier.name} for different family sizes:
+                  </p>
+                  <div className="h-64">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <LineChart
+                        data={priceComparisonData}
+                        margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
+                      >
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis dataKey="lines" label={{ value: 'Number of Lines', position: 'insideBottom', offset: -5 }} />
+                        <YAxis label={{ value: 'Monthly Cost ($)', angle: -90, position: 'insideLeft' }} />
+                        <Tooltip formatter={(value) => [`$${Math.round(value * 100) / 100}`, '']} />
+                        <Legend />
+                        <Line type="monotone" dataKey="current" stroke="#0052CC" name="Your Current Plan" />
+                        <Line type="monotone" dataKey={carrier.id} stroke="#00A36C" name={carrier.name} />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </div>
+                </div>
+                
                 <p className="mt-4 text-sm text-blue-700">
                   Showing plan details for {carrier.name} {carrierPlan.name} (alternative carrier #{supportedCarriers.findIndex(c => c.id === activeCarrierTab) + 1} of {supportedCarriers.length})
                 </p>
@@ -228,6 +337,46 @@ export function CarrierComparison({
             );
           })}
         </Tabs>
+        
+        <div className="mt-10">
+          <h3 className="text-lg font-semibold mb-4">All Carriers Comparison</h3>
+          <div className="h-72">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart
+                data={carrierSavingsData}
+                layout="vertical"
+                margin={{ top: 5, right: 30, left: 100, bottom: 5 }}
+              >
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis type="number" label={{ value: 'Annual Savings ($)', position: 'insideBottom', offset: -5 }} />
+                <YAxis type="category" dataKey="name" width={100} />
+                <Tooltip formatter={(value) => [`$${Math.round(value * 100) / 100}`, 'Annual Savings']} />
+                <Bar dataKey="annual" fill="#4CAF50" name="Annual Savings" />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+          
+          <div className="grid grid-cols-2 gap-4 mt-6">
+            <div className="border p-4 rounded-md bg-white">
+              <h3 className="text-md font-medium mb-2">Your Current Plan</h3>
+              <ul className="list-disc pl-5 space-y-1 text-sm">
+                <li>Current monthly cost: {formatCurrency(billData.totalAmount)}</li>
+                <li>Carrier: {billData.carrierName || 'Verizon'}</li>
+                <li>{billData.phoneLines?.length || 0} lines on your account</li>
+                <li>Primary plan: {billData.phoneLines?.[0]?.planName || 'Unknown'}</li>
+              </ul>
+            </div>
+            <div className="border p-4 rounded-md bg-white">
+              <h3 className="text-md font-medium mb-2">US Mobile Highlights</h3>
+              <ul className="list-disc pl-5 space-y-1 text-sm">
+                <li>Three network options to choose from</li>
+                <li>All prices include taxes and fees</li>
+                <li>No contracts, easy online activation</li>
+                <li>Customizable plans for your needs</li>
+              </ul>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );
