@@ -45,7 +45,7 @@ async function sendPdfToClaude(fileContent: ArrayBuffer) {
     // Create a unique file ID for this upload
     const fileId = `file_${Math.random().toString(36).substring(2, 15)}`;
     
-    // Send to Claude using the file approach which works better for PDFs
+    // Send to Claude using the document approach which works better for PDFs
     const response = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
       headers: {
@@ -66,10 +66,12 @@ async function sendPdfToClaude(fileContent: ArrayBuffer) {
                 text: "This is a Verizon bill PDF. Please analyze it and extract all the information into a structured JSON format."
               },
               {
-                type: "file",
-                file_id: fileId,
-                media_type: "application/pdf",
-                data: base64Content
+                type: "image",
+                source: {
+                  type: "base64",
+                  media_type: "application/pdf",
+                  data: base64Content
+                }
               }
             ]
           }
