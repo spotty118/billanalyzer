@@ -36,6 +36,14 @@ export const VerizonBillAnalyzer = () => {
   const [uploadProgress, setUploadProgress] = useState(0);
   const [billText, setBillText] = useState('');
 
+  const formatCurrency = (value: number): string => {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+      minimumFractionDigits: 2
+    }).format(value);
+  };
+
   const handleStartOver = () => {
     resetBillData();
     setInputMethod(null);
@@ -141,7 +149,12 @@ export const VerizonBillAnalyzer = () => {
           </div>
           <BillAnalyzerContent 
             billData={billData}
+            ocrProvider={ocrProvider}
+            resetBillData={resetBillData}
+            formatCurrency={formatCurrency}
             calculateCarrierSavings={calculateCarrierSavings}
+            aiRecommendationsFetched={aiRecommendationsFetched}
+            setAiRecommendationsFetched={setAiRecommendationsFetched}
             networkPreference={networkPreference}
           />
           

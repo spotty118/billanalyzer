@@ -15,6 +15,7 @@ interface BillTabsProps {
   };
   aiRecommendationsFetched: boolean;
   setAiRecommendationsFetched: (fetched: boolean) => void;
+  networkPreference?: string | null;
 }
 
 export function BillTabs({ 
@@ -22,7 +23,8 @@ export function BillTabs({
   formatCurrency, 
   calculateCarrierSavings,
   aiRecommendationsFetched,
-  setAiRecommendationsFetched 
+  setAiRecommendationsFetched,
+  networkPreference
 }: BillTabsProps) {
   
   return (
@@ -46,7 +48,7 @@ export function BillTabs({
           billData={billData} 
           formatCurrency={formatCurrency} 
           calculateCarrierSavings={calculateCarrierSavings}
-          networkPreference={billData?.networkPreference}
+          networkPreference={networkPreference || billData?.networkPreference}
           aiRecommendationsFetched={aiRecommendationsFetched}
           setAiRecommendationsFetched={setAiRecommendationsFetched}
         />

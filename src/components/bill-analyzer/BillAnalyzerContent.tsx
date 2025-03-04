@@ -1,5 +1,4 @@
 
-import React from 'react';
 import { BillAnalysisHeader } from './BillAnalysisHeader';
 import { BillTabs } from './BillTabs';
 
@@ -16,6 +15,7 @@ interface BillAnalyzerContentProps {
   };
   aiRecommendationsFetched: boolean;
   setAiRecommendationsFetched: (fetched: boolean) => void;
+  networkPreference?: string | null;
 }
 
 export const BillAnalyzerContent = ({ 
@@ -25,7 +25,8 @@ export const BillAnalyzerContent = ({
   formatCurrency,
   calculateCarrierSavings,
   aiRecommendationsFetched,
-  setAiRecommendationsFetched
+  setAiRecommendationsFetched,
+  networkPreference
 }: BillAnalyzerContentProps) => {
   return (
     <div className="space-y-6">
@@ -42,6 +43,7 @@ export const BillAnalyzerContent = ({
         calculateCarrierSavings={calculateCarrierSavings}
         aiRecommendationsFetched={aiRecommendationsFetched}
         setAiRecommendationsFetched={setAiRecommendationsFetched}
+        networkPreference={networkPreference}
       />
     </div>
   );

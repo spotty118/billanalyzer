@@ -1,16 +1,21 @@
+
 interface BillAnalysisHeaderProps {
-  accountNumber: string;
-  billingPeriod: string;
-  totalAmount: number;
+  billData: any;
+  resetBillData: () => void;
   formatCurrency: (value: number) => string;
+  ocrProvider: string | null;
 }
 
 export function BillAnalysisHeader({ 
-  accountNumber, 
-  billingPeriod, 
-  totalAmount, 
-  formatCurrency 
+  billData, 
+  resetBillData, 
+  formatCurrency,
+  ocrProvider
 }: BillAnalysisHeaderProps) {
+  const accountNumber = billData?.accountInfo?.accountNumber || billData?.accountNumber || 'N/A';
+  const billingPeriod = billData?.accountInfo?.billingPeriod || billData?.billingPeriod || 'N/A';
+  const totalAmount = billData?.totalAmount || 0;
+
   return (
     <div className="bg-blue-600 p-6 rounded-t-lg text-white">
       <div className="flex flex-wrap justify-between items-center gap-4">
