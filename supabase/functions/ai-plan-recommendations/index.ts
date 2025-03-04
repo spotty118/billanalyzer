@@ -44,16 +44,30 @@ serve(async (req) => {
     console.log("Number of lines:", billData.phoneLines?.length || 0);
     console.log("Network preference:", networkPreference);
     
-    // Get up-to-date carrier information via OpenRouter (Gemini)
-    const aiRecommendations = await getAIRecommendations(billData, networkPreference);
+    // Generate fallback recommendations in case API fails
+    const fallbackRecommendations = generateFallbackRecommendations(billData, networkPreference);
     
-    return new Response(JSON.stringify(aiRecommendations), {
-      status: 200,
-      headers: {
-        ...CORS_HEADERS,
-        'Content-Type': 'application/json'
-      }
-    });
+    // Get up-to-date carrier information via OpenRouter (Gemini)
+    try {
+      const aiRecommendations = await getAIRecommendations(billData, networkPreference);
+      return new Response(JSON.stringify(aiRecommendations), {
+        status: 200,
+        headers: {
+          ...CORS_HEADERS,
+          'Content-Type': 'application/json'
+        }
+      });
+    } catch (aiError) {
+      console.error("Error with AI recommendations, using fallback:", aiError);
+      // Return fallback recommendations if AI fails
+      return new Response(JSON.stringify(fallbackRecommendations), {
+        status: 200,
+        headers: {
+          ...CORS_HEADERS,
+          'Content-Type': 'application/json'
+        }
+      });
+    }
   } catch (error) {
     console.error('Error processing request:', error);
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
@@ -71,6 +85,54 @@ serve(async (req) => {
     });
   }
 });
+
+function generateFallbackRecommendations(billData: any, networkPreference: string | null) {
+  // Generate static recommendations based on network preference
+  const currentDate = new Date().toISOString();
+  
+  // Default recommendations that don't rely on external API
+  return {
+    recommendations: [
+      {
+        carrier: networkPreference === 'verizon' ? "US Mobile Warp 5G" : 
+                 networkPreference === 'tmobile' ? "US Mobile Lightspeed 5G" : 
+                 networkPreference === 'att' ? "US Mobile DarkStar 5G" : "US Mobile Warp 5G",
+        planName: "Premium Unlimited",
+        network: networkPreference || "verizon",
+        monthlyPrice: 44,
+        features: ["Unlimited Premium Data", "100GB Hotspot", "International Data"],
+        reasons: ["Best value on Verizon's network", "Lower price than current plan"],
+        pros: ["No contracts", "Lower monthly cost", "All premium features included"],
+        cons: ["May require new SIM card", "Different customer service experience"]
+      },
+      {
+        carrier: "Visible+",
+        planName: "Unlimited",
+        network: "verizon",
+        monthlyPrice: 45,
+        features: ["50GB Premium Data", "Unlimited regular data", "Mobile hotspot"],
+        reasons: ["Simple pricing", "Taxes and fees included"],
+        pros: ["No hidden fees", "Easy activation process", "Good Verizon coverage"],
+        cons: ["Limited premium data", "Customer service via chat only"]
+      }
+    ],
+    marketInsights: {
+      currentPromos: ["US Mobile offering $10 off for 3 months", "Visible offering 15% off for students"],
+      trendingPlans: ["US Mobile Premium Unlimited", "Visible+"],
+      networkPerformance: {
+        verizon: "Strong coverage nationwide with some congestion in urban areas",
+        tmobile: "Fast 5G speeds in urban areas, expanding rural coverage",
+        att: "Consistent performance across urban and many rural areas"
+      }
+    },
+    personalizedAdvice: "Consider switching to a plan that offers better value for similar features. Current market options offer competitive pricing with premium features.",
+    meta: {
+      generatedAt: currentDate,
+      source: "fallback",
+      billDataTimestamp: billData.extractionDate || currentDate
+    }
+  };
+}
 
 async function getAIRecommendations(billData: any, networkPreference: string | null) {
   if (!OPENROUTER_API_KEY) {
@@ -93,7 +155,7 @@ IMPORTANT NOTES ABOUT CURRENT MARKET CONDITIONS (OCTOBER 2024):
 - T-Mobile offers Go5G, Go5G Plus, and Go5G Next plans
 - AT&T offers Value Plus, Unlimited Starter, Unlimited Extra, and Unlimited Premium
 
-IMPORTANT: Your response must be a valid JSON object that can be parsed with JSON.parse(). Structure it like this:
+IMPORTANT: Your response must be a valid JSON object. Structure it exactly like this:
 {
   "recommendations": [
     {
@@ -170,7 +232,9 @@ YOU MUST ensure your response contains ONLY valid JSON that can be parsed with J
           content: "Please analyze this customer's bill data and provide plan recommendations:" + 
                   `\n\n${JSON.stringify(billSummary, null, 2)}`
         }
-      ]
+      ],
+      temperature: 0.2, // Lower temperature for more consistent, deterministic results
+      response_format: { type: "json_object" } // Explicitly request JSON format
     };
     
     console.log("Sending recommendation request to OpenRouter API (Gemini)...");
@@ -200,11 +264,28 @@ YOU MUST ensure your response contains ONLY valid JSON that can be parsed with J
     // Extract the JSON content from Gemini's response
     const recommendationsText = openRouterResponse.choices[0].message.content;
     console.log("Recommendations text length:", recommendationsText.length);
-    console.log("Recommendations sample:", recommendationsText.substring(0, 500));
+    console.log("Recommendations first 100 chars:", recommendationsText.substring(0, 100));
     
     try {
       // Try to parse the response as JSON
-      const jsonData = JSON.parse(recommendationsText);
+      let jsonData;
+      
+      // Handle potential issues with the JSON formatting
+      try {
+        // Direct parse attempt
+        jsonData = JSON.parse(recommendationsText);
+      } catch (firstParseError) {
+        console.log("Initial JSON parse failed, trying alternate methods");
+        
+        // Try to extract JSON if surrounded by markdown code blocks or other text
+        const jsonMatch = recommendationsText.match(/```(?:json)?([\s\S]*?)```|(\{[\s\S]*\})/);
+        if (jsonMatch) {
+          const extractedJson = jsonMatch[1] || jsonMatch[2];
+          jsonData = JSON.parse(extractedJson.trim());
+        } else {
+          throw new Error("Failed to extract valid JSON from the response");
+        }
+      }
       
       // Add metadata about the recommendations
       const enrichedData = {
@@ -220,7 +301,9 @@ YOU MUST ensure your response contains ONLY valid JSON that can be parsed with J
       return enrichedData;
     } catch (jsonError) {
       console.error("Error parsing JSON from Gemini response:", jsonError);
-      console.error("Gemini response content:", recommendationsText.substring(0, 500) + "...");
+      console.error("Gemini response content (first 500 chars):", recommendationsText.substring(0, 500));
+      
+      // Use the fallback recommendations instead of failing
       throw new Error("Failed to parse JSON from Gemini's response");
     }
   } catch (error) {
