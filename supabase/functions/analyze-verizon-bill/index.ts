@@ -192,6 +192,7 @@ YOU MUST ensure your response contains ONLY valid JSON that can be parsed with J
     // Extract the JSON content from Claude's response
     const analysisText = claudeResponse.content[0].text;
     console.log("Analysis text length:", analysisText.length);
+    console.log("Analysis text sample:", analysisText.substring(0, 500));
     
     try {
       // Try to parse the response as JSON directly
@@ -216,6 +217,9 @@ YOU MUST ensure your response contains ONLY valid JSON that can be parsed with J
       jsonData.analysisSource = "claude-3-7-sonnet-20250219";
       jsonData.processingMethod = "text-extraction";
       jsonData.extractionDate = new Date().toISOString();
+      
+      console.log("Successfully parsed JSON data from Claude's response");
+      console.log("JSON data keys:", Object.keys(jsonData));
       
       return jsonData;
     } catch (jsonError) {
@@ -292,55 +296,24 @@ serve(async (req) => {
       console.log("Text extracted successfully from PDF");
     }
     
-    // Define an async function for bill analysis
-    const analyzeBill = async () => {
-      try {
-        // Send the extracted text to Claude for analysis
-        const analysisResult = await analyzeBillText(extractedText);
-        console.log("Analysis complete");
-        
-        // Include the processing method in the result
-        if (isDirectTextInput) {
-          analysisResult.processingMethod = "direct-text-input";
-        }
-        
-        return analysisResult;
-      } catch (error) {
-        console.error("Error in analysis process:", error);
-        throw error;
-      }
-    };
+    // Analyze the bill using Claude
+    const analysisResult = await analyzeBillText(extractedText);
+    console.log("Analysis complete");
     
-    // For Deno Deploy Edge Runtime, use waitUntil to continue processing in the background
-    if (isEdgeRuntime) {
-      // @ts-ignore: EdgeRuntime is available in Deno Deploy
-      const analysisPromise = analyzeBill();
-      // @ts-ignore: EdgeRuntime is available in Deno Deploy
-      EdgeRuntime.waitUntil(analysisPromise);
-      
-      // Return a quick response
-      return new Response(JSON.stringify({ 
-        status: "processing",
-        message: "Bill analysis started, check logs for results"
-      }), {
-        status: 202,
-        headers: {
-          ...CORS_HEADERS,
-          'Content-Type': 'application/json'
-        }
-      });
-    } else {
-      // For standard Deno runtime, complete the analysis before responding
-      const analysisResult = await analyzeBill();
-      
-      return new Response(JSON.stringify(analysisResult), {
-        status: 200,
-        headers: {
-          ...CORS_HEADERS,
-          'Content-Type': 'application/json'
-        }
-      });
+    // Include the processing method in the result
+    if (isDirectTextInput) {
+      analysisResult.processingMethod = "direct-text-input";
     }
+    
+    // Return the analysis result
+    return new Response(JSON.stringify(analysisResult), {
+      status: 200,
+      headers: {
+        ...CORS_HEADERS,
+        'Content-Type': 'application/json'
+      }
+    });
+    
   } catch (error) {
     console.error('Error processing request:', error);
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';

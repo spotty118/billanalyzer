@@ -33,6 +33,11 @@ export const useVerizonBillAnalyzer = () => {
   };
 
   const addManualLineCharges = (data: any) => {
+    if (!data.networkPreference) {
+      toast.error('Network preference is required');
+      return;
+    }
+    
     const formattedData = {
       accountNumber: data.accountNumber || `ACCT-${Date.now().toString().substring(0, 8)}`,
       billingPeriod: data.billingPeriod || new Date().toLocaleDateString(),
@@ -100,7 +105,7 @@ export const useVerizonBillAnalyzer = () => {
       }
       
       const analysisResponse = await response.json();
-      console.log('Analysis response received');
+      console.log('Analysis response received:', analysisResponse);
       
       if (analysisResponse.status === "processing") {
         console.log("Bill is being processed asynchronously");
@@ -115,29 +120,31 @@ export const useVerizonBillAnalyzer = () => {
         };
       }
       
-      const data = analysisResponse;
-      
-      if (data.error) {
-        throw new Error(data.error);
+      if (analysisResponse.error) {
+        throw new Error(analysisResponse.error);
       }
       
-      setOcrProvider(data.analysisSource || 'claude');
+      if (!analysisResponse.totalAmount && !analysisResponse.accountInfo) {
+        throw new Error("Invalid response format from analysis service");
+      }
       
-      return data;
+      setOcrProvider(analysisResponse.analysisSource || 'claude');
+      
+      return analysisResponse;
     } catch (error) {
       console.error('Error processing file:', error);
       throw error;
     }
   };
 
-  const processBillText = async (text: string): Promise<any> => {
+  const processBillText = async (text: string, networkPreference: NetworkPreference): Promise<any> => {
     try {
       const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1nemZpb3VhbWlkYXFjdG5xbnJlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzkyMzE3NjQsImV4cCI6MjA1NDgwNzc2NH0._0hxm1UlSMt3wPx8JwaFDvGmpfjI3p5m0HDm6YfaL6Q';
       
       console.log('Sending text to analyze with Claude...', text.substring(0, 100) + '...');
       const response = await fetch('https://mgzfiouamidaqctnqnre.supabase.co/functions/v1/analyze-verizon-bill', {
         method: 'POST',
-        body: JSON.stringify({ text }),
+        body: JSON.stringify({ text, networkPreference }),
         headers: {
           'apikey': supabaseAnonKey,
           'Authorization': `Bearer ${supabaseAnonKey}`,
@@ -163,9 +170,41 @@ export const useVerizonBillAnalyzer = () => {
       }
       
       const analysisResponse = await response.json();
-      console.log('Analysis response received', analysisResponse);
+      console.log('Analysis response received:', analysisResponse);
       
-      return analysisResponse;
+      // If processing asynchronously, return a placeholder
+      if (analysisResponse.status === "processing") {
+        console.log("Bill is being processed asynchronously");
+        return {
+          status: "processing",
+          message: "Your bill is being analyzed. This may take a moment.",
+          timestamp: new Date().toISOString(),
+          accountNumber: `PROC-${Date.now().toString().substring(0, 6)}`,
+          totalAmount: 0,
+          phoneLines: [],
+          networkPreference,
+          processingMethod: "direct-text-input"
+        };
+      }
+      
+      // Handle error in response
+      if (analysisResponse.error) {
+        throw new Error(analysisResponse.error);
+      }
+      
+      // Validate response format
+      if (!analysisResponse.totalAmount && !analysisResponse.accountInfo) {
+        console.error("Invalid response format:", analysisResponse);
+        throw new Error("Invalid response format from analysis service");
+      }
+      
+      // Ensure the response has the network preference
+      const enrichedResponse = {
+        ...analysisResponse,
+        networkPreference
+      };
+      
+      return enrichedResponse;
     } catch (error) {
       console.error('Error processing bill text:', error);
       throw error;
@@ -218,7 +257,7 @@ export const useVerizonBillAnalyzer = () => {
 
     try {
       toast.info("Analyzing bill text with Claude AI...");
-      const analysisResult = await processBillText(text);
+      const analysisResult = await processBillText(text, networkPreference);
       
       if (!analysisResult || typeof analysisResult !== 'object') {
         throw new Error('Invalid analysis result received');
