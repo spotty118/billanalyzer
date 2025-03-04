@@ -18,9 +18,24 @@ async function sendPdfToClaude(fileContent: ArrayBuffer) {
   try {
     console.log("Sending PDF directly to Claude for analysis...");
     
-    // Convert ArrayBuffer to base64
+    // Convert ArrayBuffer to base64 safely
     const buffer = new Uint8Array(fileContent);
-    const base64Content = btoa(String.fromCharCode(...buffer));
+    
+    // Using a safer approach to convert to base64
+    let binary = '';
+    const bytes = new Uint8Array(buffer);
+    const len = bytes.byteLength;
+    
+    // Process in smaller chunks to avoid call stack issues
+    const chunkSize = 1024;
+    for (let i = 0; i < len; i += chunkSize) {
+      const chunk = bytes.slice(i, Math.min(i + chunkSize, len));
+      for (let j = 0; j < chunk.length; j++) {
+        binary += String.fromCharCode(chunk[j]);
+      }
+    }
+    
+    const base64Content = btoa(binary);
     
     console.log(`Calling Claude API with model: claude-3-7-sonnet-20250219 and API key length: ${ANTHROPIC_API_KEY.length} chars`);
     
