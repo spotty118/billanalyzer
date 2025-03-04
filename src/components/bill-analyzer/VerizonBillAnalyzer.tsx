@@ -1,10 +1,11 @@
+
 import { useState } from 'react';
 import { BillUploader } from './BillUploader';
 import { BillAnalyzerContent } from './BillAnalyzerContent';
 import { ManualEntryForm } from './ManualEntryForm';
 import { useVerizonBillAnalyzer } from '@/hooks/use-verizon-bill-analyzer';
 import { Button } from '@/components/ui/button';
-import { Upload, PencilLine, RefreshCw } from 'lucide-react';
+import { Upload, PencilLine, RefreshCw, Clock } from 'lucide-react';
 import { toast } from "sonner";
 
 const VerizonBillAnalyzer = () => {
@@ -66,12 +67,19 @@ const VerizonBillAnalyzer = () => {
           
           <div className="flex flex-col sm:flex-row gap-4 w-full max-w-md">
             <Button 
-              onClick={() => setInputMethod('upload')}
-              className="flex-1 h-32 flex-col space-y-3 p-6"
+              onClick={() => toast.info("Verizon bill upload coming soon!")}
+              className="flex-1 h-32 flex-col space-y-3 p-6 relative"
               variant="outline"
+              disabled
             >
-              <Upload className="h-10 w-10 text-blue-500" />
-              <span className="font-medium">Upload Verizon Bill</span>
+              <Upload className="h-10 w-10 text-gray-400" />
+              <span className="font-medium text-gray-400">Upload Verizon Bill</span>
+              <div className="absolute inset-0 flex items-center justify-center bg-gray-100/70 rounded-md">
+                <div className="bg-gray-800/80 text-white px-3 py-1 rounded-full flex items-center gap-1.5 text-sm font-medium">
+                  <Clock className="h-3.5 w-3.5" />
+                  Coming Soon
+                </div>
+              </div>
             </Button>
             
             <Button 
@@ -97,12 +105,21 @@ const VerizonBillAnalyzer = () => {
           >
             ← Back to selection
           </Button>
-          <BillUploader 
-            fileSelected={fileSelected} 
-            isLoading={isLoading} 
-            onFileChange={handleFileChange}
-            errorMessage={errorMessage}
-          />
+          <div className="flex flex-col items-center justify-center p-10 space-y-8">
+            <div className="w-16 h-16 flex items-center justify-center bg-gray-200 rounded-full">
+              <Clock className="w-8 h-8 text-gray-500" />
+            </div>
+            <h3 className="text-xl font-medium text-gray-700">Verizon Bill Upload Coming Soon</h3>
+            <p className="text-gray-500 text-center max-w-md">
+              We're working on enabling direct bill uploads. For now, please use the manual entry option.
+            </p>
+            <Button 
+              onClick={() => setInputMethod('manual')} 
+              variant="default"
+            >
+              Switch to Manual Entry
+            </Button>
+          </div>
         </div>
       ) : (
         <div>
