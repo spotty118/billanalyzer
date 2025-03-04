@@ -4,8 +4,8 @@ import { BillTabs } from './BillTabs';
 
 interface BillAnalyzerContentProps {
   billData: any;
-  ocrProvider: string | null;
-  resetBillData: () => void;
+  ocrProvider: string | null; // Keep this to pass it along if needed later
+  resetBillData: () => void; // Keep this to pass it along if needed later
   formatCurrency: (value: number) => string;
   calculateCarrierSavings: (carrierId: string) => {
     monthlySavings: number;
@@ -20,8 +20,6 @@ interface BillAnalyzerContentProps {
 
 export const BillAnalyzerContent = ({ 
   billData, 
-  ocrProvider, 
-  resetBillData, 
   formatCurrency,
   calculateCarrierSavings,
   aiRecommendationsFetched,
