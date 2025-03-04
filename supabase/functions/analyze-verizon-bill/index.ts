@@ -30,7 +30,7 @@ async function sendPdfToClaude(fileContent: ArrayBuffer) {
         "anthropic-version": "2023-06-01"
       },
       body: JSON.stringify({
-        model: "claude-3-haiku-20240307",
+        model: "claude-3-sonnet-20240229",
         max_tokens: 4000,
         system: `You are an expert Verizon bill analyzer. Extract and organize the key information from the bill, including account info, billing period, total amount due, and details for each phone line (number, plan, device, charges). Format your response as a clean JSON object that can be directly parsed.`,
         messages: [
