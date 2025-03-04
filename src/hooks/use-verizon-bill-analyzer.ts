@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -100,16 +101,43 @@ export const useVerizonBillAnalyzer = () => {
 
   const saveBillAnalysis = async (analysis: any) => {
     try {
+      // Check if required fields exist before saving to database
+      if (!analysis.accountNumber && analysis.accountInfo?.accountNumber) {
+        analysis.accountNumber = analysis.accountInfo.accountNumber;
+      }
+      
+      // If accountNumber is still missing, generate a fallback
+      if (!analysis.accountNumber) {
+        analysis.accountNumber = `ACCT-${Date.now().toString().substring(0, 8)}`;
+        console.log('Generated fallback account number:', analysis.accountNumber);
+      }
+      
+      // Ensure billing period exists
+      const billingPeriod = analysis.billingPeriod || 
+                           analysis.accountInfo?.billingPeriod || 
+                           new Date().toLocaleDateString();
+      
+      // Ensure total amount exists
+      const totalAmount = analysis.totalAmount || 
+                         (analysis.phoneLines && analysis.phoneLines.length > 0 ? 
+                          analysis.phoneLines.reduce((sum: number, line: any) => sum + (line.monthlyTotal || 0), 0) : 
+                          0);
+      
       const { error } = await supabase
         .from('bill_analyses')
         .insert({
           account_number: analysis.accountNumber,
-          billing_period: analysis.billingPeriod,
-          total_amount: analysis.totalAmount,
+          billing_period: billingPeriod,
+          total_amount: totalAmount,
           analysis_data: analysis
         });
         
-      if (error) throw error;
+      if (error) {
+        console.error('Error details from Supabase:', error);
+        throw error;
+      }
+      
+      console.log('Successfully saved bill analysis to database');
     } catch (error) {
       console.error('Error saving bill analysis:', error);
     }

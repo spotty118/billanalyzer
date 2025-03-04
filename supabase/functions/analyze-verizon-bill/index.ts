@@ -53,14 +53,50 @@ async function sendToClaude(fileContent: ArrayBuffer) {
       body: JSON.stringify({
         model: "claude-3-7-sonnet-20250219", // Using the requested model
         max_tokens: 4000,
-        system: `You are an expert Verizon bill analyzer. Extract and organize the key information from the bill, including account info, billing period, total amount due, and details for each phone line (number, plan, device, charges). Format your response as a clean JSON object that can be directly parsed.`,
+        system: `You are an expert Verizon bill analyzer. Extract and organize the key information from the bill, including account info, billing period, total amount due, and details for each phone line (number, plan, device, charges). Format your response as a clean JSON object that can be directly parsed.
+
+IMPORTANT: Your response must be a valid JSON object that can be parsed with JSON.parse(). Structure it like this:
+{
+  "accountInfo": {
+    "customerName": string,
+    "accountNumber": string,
+    "billingPeriod": string,
+    "billDate": string,
+    "dueDate": string
+  },
+  "totalAmount": number,
+  "phoneLines": [
+    {
+      "phoneNumber": string,
+      "ownerName": string,
+      "deviceName": string,
+      "planName": string,
+      "monthlyTotal": number,
+      "details": {
+        "planCost": number,
+        "planDiscount": number,
+        "devicePayment": number,
+        "deviceCredit": number,
+        "protection": number
+      }
+    }
+  ],
+  "chargesByCategory": {
+    "Plan Charges": number,
+    "Device Payments": number,
+    "Services & Add-ons": number,
+    "Taxes & Fees": number
+  }
+}
+
+NEVER return mock data, always return the structure above but with empty strings or zeros if you cannot determine the values.`,
         messages: [
           {
             role: "user",
             content: [
               {
                 type: "text",
-                text: "I've uploaded a Verizon bill PDF but we can't process it directly. Please analyze this bill based on my description: It's a standard Verizon wireless bill showing account details, charges for multiple lines, device payments, and total due. Please extract all the standard information you would find in a typical Verizon bill and return it in a structured JSON format. Include placeholders for information that would typically be found in a bill but isn't specified in my request."
+                text: "I've uploaded a Verizon bill PDF but we can't process it directly. Please analyze this bill based on my description: It's a standard Verizon wireless bill showing account details, charges for multiple lines, device payments, and total due. Please extract all the standard information you would find in a typical Verizon bill and return it in a structured JSON format."
               }
             ]
           }
