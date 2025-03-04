@@ -1,11 +1,12 @@
 
+import React from 'react';
 import { BillAnalysisHeader } from './BillAnalysisHeader';
 import { BillTabs } from './BillTabs';
 
 interface BillAnalyzerContentProps {
   billData: any;
-  ocrProvider: string | null; // Keep this to pass it along if needed later
-  resetBillData: () => void; // Keep this to pass it along if needed later
+  ocrProvider: string | null;
+  resetBillData: () => void;
   formatCurrency: (value: number) => string;
   calculateCarrierSavings: (carrierId: string) => {
     monthlySavings: number;
@@ -15,22 +16,24 @@ interface BillAnalyzerContentProps {
   };
   aiRecommendationsFetched: boolean;
   setAiRecommendationsFetched: (fetched: boolean) => void;
-  networkPreference?: string | null;
 }
 
 export const BillAnalyzerContent = ({ 
   billData, 
+  ocrProvider, 
+  resetBillData, 
   formatCurrency,
   calculateCarrierSavings,
   aiRecommendationsFetched,
-  setAiRecommendationsFetched,
-  networkPreference
+  setAiRecommendationsFetched
 }: BillAnalyzerContentProps) => {
   return (
     <div className="space-y-6">
       <BillAnalysisHeader
         billData={billData}
+        resetBillData={resetBillData}
         formatCurrency={formatCurrency}
+        ocrProvider={ocrProvider}
       />
       
       <BillTabs
@@ -39,7 +42,6 @@ export const BillAnalyzerContent = ({
         calculateCarrierSavings={calculateCarrierSavings}
         aiRecommendationsFetched={aiRecommendationsFetched}
         setAiRecommendationsFetched={setAiRecommendationsFetched}
-        networkPreference={networkPreference}
       />
     </div>
   );
