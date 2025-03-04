@@ -66,7 +66,13 @@ export const prepareCategoryData = (chargesByCategory: any = {}) => {
     if (typeof value === 'number' && value > 0) {
       result.push({
         name: key,
-        value: value
+        value: Math.abs(value) // Use absolute value to ensure positive display values
+      });
+    } else if (typeof value === 'number' && value < 0) {
+      // Add a separate entry for discounts
+      result.push({
+        name: key.includes('Discounts') ? key : 'Discounts & Credits',
+        value: Math.abs(value)
       });
     }
   }
@@ -86,20 +92,72 @@ export const prepareCategoryData = (chargesByCategory: any = {}) => {
 
 // Helper function to extract perks and promotional credits
 export const extractPerksAndCredits = (billData: any = {}) => {
-  const perks = billData.perks || [];
-  const promotions = billData.promotions || [];
+  const perks = [];
+  const promotions = [];
   
-  // Extract perks from phone lines if not present at top level
+  // Extract perks from parsed bill data
+  if (billData.perks && Array.isArray(billData.perks) && billData.perks.length > 0) {
+    billData.perks.forEach((perk: any) => {
+      perks.push({
+        name: perk.name,
+        description: perk.description || `Included with ${perk.includedWith || 'your plan'}`,
+        monthlyValue: perk.monthlyValue || 0,
+        includedWith: perk.includedWith || 'Plan'
+      });
+    });
+  }
+  
+  // Extract promotions from parsed bill data
+  if (billData.promotions && Array.isArray(billData.promotions) && billData.promotions.length > 0) {
+    billData.promotions.forEach((promo: any) => {
+      promotions.push({
+        name: promo.name,
+        description: promo.description || '',
+        monthlyValue: promo.monthlyValue || 0,
+        remainingMonths: promo.remainingMonths || 0,
+        appliedTo: promo.appliedTo || ''
+      });
+    });
+  }
+  
+  // If no perks found at top level, check in phone lines
   if (perks.length === 0 && billData.phoneLines) {
     billData.phoneLines.forEach((line: any) => {
       if (line.details && Array.isArray(line.details.perks)) {
         line.details.perks.forEach((perk: any) => {
-          perks.push({
-            name: perk.name,
-            description: perk.description || `Included with ${line.phoneNumber}`,
-            monthlyValue: perk.cost || 0,
-            includedWith: line.phoneNumber
-          });
+          if (perk.name) {
+            perks.push({
+              name: perk.name,
+              description: perk.description || `Included with ${line.phoneNumber}`,
+              monthlyValue: perk.cost || 0,
+              includedWith: line.phoneNumber
+            });
+          }
+        });
+      }
+    });
+  }
+  
+  // If no promotions found at top level, look for credits in the bill details
+  if (promotions.length === 0 && billData.phoneLines) {
+    billData.phoneLines.forEach((line: any) => {
+      if (line.details && line.details.deviceCredit && line.details.deviceCredit > 0) {
+        promotions.push({
+          name: "Device Credit",
+          description: `Credit for ${line.deviceName || 'device'}`,
+          monthlyValue: line.details.deviceCredit,
+          remainingMonths: 0, // We don't have this info
+          appliedTo: line.phoneNumber
+        });
+      }
+      
+      if (line.details && line.details.planDiscount && line.details.planDiscount > 0) {
+        promotions.push({
+          name: "Plan Discount",
+          description: `Discount on ${line.planName || 'plan'}`,
+          monthlyValue: line.details.planDiscount,
+          remainingMonths: 0, // We don't have this info
+          appliedTo: line.phoneNumber
         });
       }
     });
