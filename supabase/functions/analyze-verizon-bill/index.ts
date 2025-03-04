@@ -97,47 +97,15 @@ function arrayBufferToBase64(buffer: ArrayBuffer): string {
   return base64;
 }
 
-// Function to sanitize sensitive information from text
-function sanitizeSensitiveData(text: string): string {
-  if (!text) return text;
-  
-  // Replace account numbers (various formats)
-  text = text.replace(/Account:?\s*\d+-\d+/gi, "Account: XXXX-XXXXX");
-  text = text.replace(/Account number:?\s*\d+-\d+/gi, "Account number: XXXX-XXXXX");
-  text = text.replace(/Account:?\s*\d{10}/gi, "Account: XXXXXXXXXX");
-  
-  // Replace phone numbers
-  text = text.replace(/(\d{3})[-.]\d{3}[-.]\d{4}/g, "$1-XXX-XXXX");
-  text = text.replace(/\b\d{10}\b/g, "XXX-XXX-XXXX");
-  
-  // Replace names and addresses (common patterns in bills)
-  text = text.replace(/([A-Z][a-z]+\s[A-Z][a-z]+)\s+\d+\s+([A-Z][a-z]+\s+[A-Za-z]+)/g, "NAME REMOVED ADDRESS REMOVED");
-  text = text.replace(/\b[A-Z][A-Za-z]+ [A-Z][A-Za-z]+\b/g, "NAME REMOVED");
-  
-  // Replace full addresses with street numbers
-  text = text.replace(/\d+\s+[A-Za-z\s]+(?:Road|Rd|Street|St|Avenue|Ave|Lane|Ln|Drive|Dr|Circle|Cir|Boulevard|Blvd|Highway|Hwy|Way|Court|Ct|Plaza|Plz|Terrace|Ter)\b[,\s\w]+\d{5}(?:-\d{4})?/gi, "ADDRESS REMOVED");
-  
-  // Replace city, state zip formats
-  text = text.replace(/[A-Z][A-Za-z\s]+,\s+[A-Z]{2}\s+\d{5}(?:-\d{4})?/g, "CITY, ST ZIPCODE");
-  
-  // Replace email addresses
-  text = text.replace(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g, "EMAIL@REMOVED.COM");
-  
-  return text;
-}
-
 async function analyzeBillText(extractedText: string, networkPreference?: string) {
   if (!ANTHROPIC_API_KEY) {
     console.error("Missing Anthropic API key");
     throw new Error("Claude API key not configured");
   }
   
-  // Sanitize the text before sending to analysis
-  const sanitizedText = sanitizeSensitiveData(extractedText);
-  
   try {
     console.log("Sending extracted text to Claude API for analysis...");
-    console.log("Text sample (first 200 chars):", sanitizedText.substring(0, 200));
+    console.log("Text sample (first 200 chars):", extractedText.substring(0, 200));
     
     const systemPrompt = `You are an expert Verizon bill analyzer. Analyze the provided Verizon bill text and extract key information into a structured JSON format.
 
@@ -203,8 +171,6 @@ IMPORTANT: Your response must be a valid JSON object that can be parsed with JSO
   ]
 }
 
-DO NOT include any actual customer names, addresses, or full account numbers in the output, use placeholders instead. For example, use "Customer" for names, "XXX-XXX-XXXX" for partial phone numbers, and "XXXX1234" for partial account numbers.
-
 Extract all values directly from the bill text. If you cannot find a specific value in the document, use an empty string for strings or 0 for numbers. Make sure to identify all discounts, credits, device payments, protection plans, and perks, even if they have $0 cost.
 
 Pay special attention to:
@@ -230,7 +196,7 @@ YOU MUST ensure your response contains ONLY valid JSON that can be parsed with J
               type: "text",
               text: "Here is the text extracted from a Verizon bill. Please analyze it and extract the structured information according to the format specified:" + 
                   (networkPreference ? `\n\nThe customer's preferred network is: ${networkPreference}.\n\n` : "\n\n") + 
-                  sanitizedText
+                  extractedText
             }
           ]
         }
@@ -284,36 +250,14 @@ YOU MUST ensure your response contains ONLY valid JSON that can be parsed with J
         }
       }
       
-      // Final sanitization check for any missed PII
-      if (jsonData.accountInfo) {
-        if (jsonData.accountInfo.customerName && !jsonData.accountInfo.customerName.includes("REMOVED")) {
-          jsonData.accountInfo.customerName = "Customer";
-        }
-        
-        if (jsonData.accountInfo.accountNumber && !jsonData.accountInfo.accountNumber.includes("X")) {
-          jsonData.accountInfo.accountNumber = "ACCOUNT-XXXXX";
-        }
-      }
-      
-      // Sanitize phone numbers in phoneLines
+      // Ensure proper structure for phoneLines and details
       if (jsonData.phoneLines) {
         jsonData.phoneLines = jsonData.phoneLines.map((line: any) => {
-          // Sanitize phone number if it doesn't already contain X's
-          if (line.phoneNumber && !line.phoneNumber.includes("X")) {
-            const lastFour = line.phoneNumber.slice(-4);
-            line.phoneNumber = `XXX-XXX-${lastFour}`;
-          }
-          
-          // Sanitize owner name
-          if (line.ownerName && !line.ownerName.includes("REMOVED")) {
-            line.ownerName = "User";
-          }
-          
-          // Ensure all required properties exist with defaults
           if (!line.details) {
             line.details = {};
           }
           
+          // Ensure all required properties exist with defaults
           line.details = {
             planCost: line.details.planCost || 0,
             planDiscount: line.details.planDiscount || 0,
@@ -367,7 +311,6 @@ YOU MUST ensure your response contains ONLY valid JSON that can be parsed with J
       jsonData.analysisSource = "our-ai";
       jsonData.processingMethod = "text-extraction";
       jsonData.extractionDate = new Date().toISOString();
-      jsonData.privacyProtected = true;
       
       console.log("Successfully parsed JSON data from Claude's response");
       console.log("JSON data keys:", Object.keys(jsonData));

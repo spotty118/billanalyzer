@@ -20,7 +20,7 @@ const Progress = React.forwardRef<
       className="h-full w-full flex-1 bg-primary transition-all relative"
       style={{ transform: `translateX(-${100 - (value || 0)}%)` }}
     >
-      <div className="absolute inset-0 bg-gradient-to-r from-blue-500 via-blue-600 to-primary-600 animate-pulse" />
+      <div className="absolute inset-0 bg-gradient-to-r from-primary/80 to-primary" />
     </ProgressPrimitive.Indicator>
   </ProgressPrimitive.Root>
 ))

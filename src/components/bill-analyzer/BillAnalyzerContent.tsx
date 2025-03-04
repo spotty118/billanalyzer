@@ -2,8 +2,6 @@
 import { useState, useCallback } from 'react';
 import { BillTabs } from "@/components/bill-analyzer/BillTabs";
 import { NetworkPreference } from './VerizonBillAnalyzer';
-import { Badge } from '@/components/ui/badge';
-import { ShieldCheck } from 'lucide-react';
 
 interface BillAnalyzerContentProps {
   billData: any;
@@ -63,21 +61,8 @@ export function BillAnalyzerContent({
     );
   }
 
-  // Check if the bill data has been privacy-protected
-  const isPrivacyProtected = billData.privacyProtected || 
-    (billData.accountInfo?.customerName === "Customer") || 
-    (billData.accountInfo?.accountNumber?.includes("X"));
-
   return (
     <div className="container mx-auto py-8 max-w-7xl animate-fade-in">
-      {isPrivacyProtected && (
-        <div className="mb-4 flex justify-end">
-          <Badge variant="outline" className="flex items-center gap-1 text-green-600 bg-green-50 border-green-200">
-            <ShieldCheck size={12} />
-            Personal Information Protected
-          </Badge>
-        </div>
-      )}
       <CustomBillTabs 
         billData={billData} 
         calculateCarrierSavings={memoizedCalculateCarrierSavings}
