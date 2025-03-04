@@ -1,9 +1,9 @@
+
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Plus, Trash, Save, Percent, DollarSign } from 'lucide-react';
+import { Plus, Trash, Save } from 'lucide-react';
 import { verizonPlansData, getPlanPrice } from '@/data/verizonPlans';
 
 interface LineCharge {
@@ -13,17 +13,11 @@ interface LineCharge {
   planCost: number;
   planDiscount: number;
   planDiscountType: 'fixed' | 'percentage';
-  devicePayment: number;
-  deviceCredit: number;
   protection: number;
-  surcharges: number;
-  taxes: number;
 }
 
 interface ManualEntryFormProps {
   onSubmit: (data: {
-    accountNumber: string;
-    billingPeriod: string;
     totalAmount: number;
     phoneLines: Array<{
       phoneNumber: string;
@@ -34,22 +28,13 @@ interface ManualEntryFormProps {
         planCost: number;
         planDiscount: number;
         planDiscountType?: 'fixed' | 'percentage';
-        devicePayment: number;
-        deviceCredit: number;
         protection: number;
-        surcharges: number;
-        taxes: number;
       }
     }>
   }) => void;
 }
 
 export function ManualEntryForm({ onSubmit }: ManualEntryFormProps) {
-  const [accountNumber, setAccountNumber] = useState('');
-  const [billingPeriod, setBillingPeriod] = useState('');
-  const [includeAccountFees, setIncludeAccountFees] = useState(true);
-  const [accountFees, setAccountFees] = useState(0);
-  
   const [lines, setLines] = useState<LineCharge[]>([
     {
       phoneNumber: '',
@@ -58,11 +43,7 @@ export function ManualEntryForm({ onSubmit }: ManualEntryFormProps) {
       planCost: verizonPlansData['unlimited-plus'].prices[1],
       planDiscount: 0,
       planDiscountType: 'fixed',
-      devicePayment: 0,
-      deviceCredit: 0,
-      protection: 0,
-      surcharges: 0,
-      taxes: 0
+      protection: 0
     }
   ]);
 
@@ -81,11 +62,7 @@ export function ManualEntryForm({ onSubmit }: ManualEntryFormProps) {
       planCost: planCost,
       planDiscount: 0,
       planDiscountType: 'fixed',
-      devicePayment: 0,
-      deviceCredit: 0,
-      protection: 0,
-      surcharges: 0,
-      taxes: 0
+      protection: 0
     }]);
   };
 
@@ -118,17 +95,12 @@ export function ManualEntryForm({ onSubmit }: ManualEntryFormProps) {
     return (
       line.planCost - 
       planDiscountAmount + 
-      line.devicePayment - 
-      line.deviceCredit + 
-      line.protection + 
-      line.surcharges + 
-      line.taxes
+      line.protection
     );
   };
 
   const calculateBillTotal = (): number => {
-    const linesTotal = lines.reduce((sum, line) => sum + calculateLineTotal(line), 0);
-    return includeAccountFees ? linesTotal + accountFees : linesTotal;
+    return lines.reduce((sum, line) => sum + calculateLineTotal(line), 0);
   };
 
   const toggleDiscountType = (index: number) => {
@@ -161,8 +133,6 @@ export function ManualEntryForm({ onSubmit }: ManualEntryFormProps) {
     e.preventDefault();
     
     const formattedData = {
-      accountNumber: accountNumber || 'Manual Entry',
-      billingPeriod: billingPeriod || new Date().toLocaleDateString(),
       totalAmount: calculateBillTotal(),
       phoneLines: lines.map(line => {
         const planDiscountAmount = line.planDiscountType === 'percentage' 
@@ -178,34 +148,15 @@ export function ManualEntryForm({ onSubmit }: ManualEntryFormProps) {
             planCost: line.planCost,
             planDiscount: planDiscountAmount,
             planDiscountType: line.planDiscountType,
-            devicePayment: line.devicePayment,
-            deviceCredit: line.deviceCredit,
             protection: line.protection,
-            surcharges: line.surcharges,
-            taxes: line.taxes
+            devicePayment: 0,
+            deviceCredit: 0,
+            surcharges: 0,
+            taxes: 0
           }
         };
       })
     };
-
-    if (includeAccountFees && accountFees > 0) {
-      formattedData.phoneLines.push({
-        phoneNumber: 'Account Fees',
-        deviceName: '',
-        planName: 'Account-Level Charges',
-        monthlyTotal: accountFees,
-        details: {
-          planCost: accountFees,
-          planDiscount: 0,
-          planDiscountType: 'fixed',
-          devicePayment: 0,
-          deviceCredit: 0,
-          protection: 0,
-          surcharges: 0,
-          taxes: 0
-        }
-      });
-    }
     
     onSubmit(formattedData);
   };
@@ -215,55 +166,6 @@ export function ManualEntryForm({ onSubmit }: ManualEntryFormProps) {
       <h2 className="text-2xl font-semibold mb-6">Enter Your Verizon Bill Details</h2>
       
       <form onSubmit={handleSubmit} className="space-y-8">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Account Number (Optional)</label>
-            <Input 
-              value={accountNumber}
-              onChange={e => setAccountNumber(e.target.value)}
-              placeholder="e.g. 123456789-00001"
-            />
-          </div>
-          
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Billing Period (Optional)</label>
-            <Input 
-              value={billingPeriod}
-              onChange={e => setBillingPeriod(e.target.value)}
-              placeholder="e.g. Jan 12 - Feb 11, 2025"
-            />
-          </div>
-        </div>
-        
-        <div className="flex items-center space-x-2">
-          <Checkbox 
-            id="accountFees" 
-            checked={includeAccountFees}
-            onCheckedChange={(checked) => setIncludeAccountFees(checked as boolean)}
-          />
-          <label htmlFor="accountFees" className="text-sm font-medium">
-            Include additional account-level fees
-          </label>
-        </div>
-        
-        {includeAccountFees && (
-          <div className="p-4 bg-gray-50 rounded-md">
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Account-Level Fees ($)</label>
-              <Input 
-                type="number"
-                value={accountFees.toString()}
-                onChange={e => setAccountFees(parseFloat(e.target.value) || 0)}
-                placeholder="0.00"
-                step="0.01"
-              />
-              <p className="text-xs text-gray-500">
-                Include late fees, account charges, and any other fees not specific to a phone line
-              </p>
-            </div>
-          </div>
-        )}
-        
         <div>
           <h3 className="text-lg font-medium mb-4">Phone Lines</h3>
           
@@ -321,7 +223,7 @@ export function ManualEntryForm({ onSubmit }: ManualEntryFormProps) {
                 </Select>
               </div>
               
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Plan Cost ($)</label>
                   <Input 
@@ -334,47 +236,11 @@ export function ManualEntryForm({ onSubmit }: ManualEntryFormProps) {
                 </div>
                 
                 <div className="space-y-2">
-                  <label className="text-sm font-medium">Plan Discount</label>
-                  <div className="flex">
-                    <Input 
-                      type="number"
-                      value={line.planDiscount.toString()}
-                      onChange={e => updateLine(index, 'planDiscount', e.target.value)}
-                      placeholder="0.00"
-                      step="0.01"
-                      className="rounded-r-none"
-                    />
-                    <Button 
-                      type="button"
-                      variant="outline"
-                      className="rounded-l-none border-l-0"
-                      onClick={() => toggleDiscountType(index)}
-                    >
-                      {line.planDiscountType === 'fixed' ? <DollarSign className="h-4 w-4" /> : <Percent className="h-4 w-4" />}
-                    </Button>
-                  </div>
-                  <p className="text-xs text-gray-500">
-                    {line.planDiscountType === 'fixed' ? 'Fixed $ amount' : 'Percentage %'}
-                  </p>
-                </div>
-                
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Device Payment ($)</label>
+                  <label className="text-sm font-medium">Plan Discount ($)</label>
                   <Input 
                     type="number"
-                    value={line.devicePayment.toString()}
-                    onChange={e => updateLine(index, 'devicePayment', e.target.value)}
-                    placeholder="0.00"
-                    step="0.01"
-                  />
-                </div>
-                
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Device Credit ($)</label>
-                  <Input 
-                    type="number"
-                    value={line.deviceCredit.toString()}
-                    onChange={e => updateLine(index, 'deviceCredit', e.target.value)}
+                    value={line.planDiscount.toString()}
+                    onChange={e => updateLine(index, 'planDiscount', e.target.value)}
                     placeholder="0.00"
                     step="0.01"
                   />
@@ -391,29 +257,7 @@ export function ManualEntryForm({ onSubmit }: ManualEntryFormProps) {
                   />
                 </div>
                 
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Surcharges ($)</label>
-                  <Input 
-                    type="number"
-                    value={line.surcharges.toString()}
-                    onChange={e => updateLine(index, 'surcharges', e.target.value)}
-                    placeholder="0.00"
-                    step="0.01"
-                  />
-                </div>
-                
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Taxes ($)</label>
-                  <Input 
-                    type="number"
-                    value={line.taxes.toString()}
-                    onChange={e => updateLine(index, 'taxes', e.target.value)}
-                    placeholder="0.00"
-                    step="0.01"
-                  />
-                </div>
-                
-                <div className="space-y-2 md:col-span-2">
+                <div className="space-y-2 md:col-span-3">
                   <label className="text-sm font-medium">Line Total</label>
                   <div className="h-10 px-3 py-2 rounded-md border bg-gray-100 flex items-center">
                     ${calculateLineTotal(line).toFixed(2)}

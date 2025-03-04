@@ -238,6 +238,8 @@ export const useVerizonBillAnalyzer = () => {
       
       const enhancedData = {
         ...manualData,
+        accountNumber: 'Manual Entry',
+        billingPeriod: new Date().toLocaleDateString(),
         billVersion: 'Manual Entry v1.0',
         usageAnalysis: {
           trend: "stable",
@@ -295,28 +297,20 @@ export const useVerizonBillAnalyzer = () => {
 
   const calculateChargesByCategory = (phoneLines: any[]) => {
     let planCharges = 0;
-    let devicePayments = 0;
     let protectionCharges = 0;
-    let taxes = 0;
     
     phoneLines.forEach(line => {
       if (line.details) {
         let planDiscount = line.details.planDiscount || 0;
         
         planCharges += (line.details.planCost || 0) - planDiscount;
-        devicePayments += (line.details.devicePayment || 0) - (line.details.deviceCredit || 0);
         protectionCharges += line.details.protection || 0;
-        taxes += (line.details.surcharges || 0) + (line.details.taxes || 0);
-      } else if (line.planName === 'Account-Level Charges') {
-        planCharges += line.monthlyTotal || 0;
       }
     });
     
     return {
       "Plan Charges": planCharges,
-      "Device Payments": devicePayments,
-      "Protection & Services": protectionCharges,
-      "Taxes & Fees": taxes
+      "Protection & Services": protectionCharges
     };
   };
 
