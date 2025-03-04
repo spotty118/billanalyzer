@@ -1,10 +1,8 @@
-
 import { useState } from 'react';
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { 
   findBestCarrierMatch, 
-  getCarrierPlanPrice, 
   alternativeCarrierPlans 
 } from "@/config/alternativeCarriers";
 import { NetworkPreference } from '@/components/bill-analyzer/VerizonBillAnalyzer';
@@ -314,15 +312,13 @@ export const useVerizonBillAnalyzer = () => {
     
     const numberOfLines = billData.phoneLines?.length || 1;
     
-    // Always use the premium plan for consistent pricing across carriers
-    const premiumPlans = {
+    const premiumPlans: Record<string, string> = {
       'darkstar': 'darkstar-premium',
       'warp': 'warp-premium',
       'lightspeed': 'lightspeed-premium'
     };
     
-    // Use the consistent plan ID for this carrier
-    const matchingPlanId = premiumPlans[carrierId] || findBestCarrierMatch(carrierId);
+    const matchingPlanId = premiumPlans[carrierId as keyof typeof premiumPlans] || findBestCarrierMatch(carrierId);
     
     const carrierPlan = alternativeCarrierPlans.find(plan => plan.id === matchingPlanId);
     
@@ -335,11 +331,9 @@ export const useVerizonBillAnalyzer = () => {
       };
     }
     
-    // Calculate the base price - all US Mobile premium plans should have the same price
     const basePricePerLine = 44; // Standard pricing for all premium plans
     const alternativePrice = basePricePerLine * numberOfLines;
     
-    // Apply network preference discount if applicable
     let finalPrice = alternativePrice;
     const networkPreference = billData.networkPreference as NetworkPreference;
     if (networkPreference) {
