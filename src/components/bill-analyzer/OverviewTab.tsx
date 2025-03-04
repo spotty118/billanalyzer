@@ -19,6 +19,32 @@ export function OverviewTab({ billData, formatCurrency }: OverviewTabProps) {
     return { id: planId, ...verizonPlansData[planId] };
   };
 
+  // Correct features for Verizon plans
+  const getCorrectPlanFeatures = (planName: string) => {
+    switch(planName) {
+      case 'Unlimited Welcome':
+        return [
+          'Unlimited talk, text & data', 
+          '5G access', 
+          'Mobile hotspot 5GB'
+        ];
+      case 'Unlimited Plus':
+        return [
+          'Unlimited talk, text & data', 
+          '5G Ultra Wideband', 
+          'Mobile hotspot 30GB'
+        ];
+      case 'Unlimited Ultimate':
+        return [
+          'Unlimited Premium Data', 
+          '5G Ultra Wideband', 
+          'Mobile hotspot 60GB'
+        ];
+      default:
+        return ['Unlimited talk, text & data'];
+    }
+  };
+
   return (
     <div className="space-y-8 animate-fade-in">
       <div className="bg-white p-6 rounded-xl shadow-md border border-gray-100">
@@ -86,6 +112,7 @@ export function OverviewTab({ billData, formatCurrency }: OverviewTabProps) {
             const planDetails = getPlanDetails(line.planName);
             const lineCount = billData.phoneLines?.length || 1;
             const price = planDetails ? getPlanPrice(planDetails.id, lineCount) : line.monthlyTotal || 0;
+            const correctFeatures = getCorrectPlanFeatures(line.planName);
             
             return (
               <div key={index} className="p-5 border border-gray-100 rounded-lg hover:shadow-md transition-shadow bg-gray-50">
@@ -111,18 +138,19 @@ export function OverviewTab({ billData, formatCurrency }: OverviewTabProps) {
                   </div>
                 </div>
                 
-                {planDetails && (
-                  <div className="mt-4 p-3 bg-white rounded-md shadow-sm">
-                    <p className="text-sm font-medium text-gray-700 mb-2">Features:</p>
-                    <ul className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                      {planDetails.features.map((feature, idx) => (
-                        <li key={idx} className="flex items-start text-sm">
-                          <span className="text-primary mr-2 font-bold">•</span> {feature}
-                        </li>
-                      ))}
-                    </ul>
+                <div className="mt-4 p-3 bg-white rounded-md shadow-sm">
+                  <p className="text-sm font-medium text-gray-700 mb-2">Features:</p>
+                  <ul className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                    {correctFeatures.map((feature, idx) => (
+                      <li key={idx} className="flex items-start text-sm">
+                        <span className="text-primary mr-2 font-bold">•</span> {feature}
+                      </li>
+                    ))}
+                  </ul>
+                  <div className="mt-2 pt-2 border-t border-gray-100">
+                    <p className="text-xs text-gray-500 italic">Note: Streaming services like Disney+, Hulu, and ESPN+ are available as optional $10/month perks and are not included with plans.</p>
                   </div>
-                )}
+                </div>
               </div>
             );
           })}
