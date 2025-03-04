@@ -23,9 +23,20 @@ export function OverviewTab({ billData, formatCurrency }: OverviewTabProps) {
   };
 
   // Correct features for Verizon plans
-  const getCorrectPlanFeatures = (planName: string) => {
+  const getCorrectPlanFeatures = (planName: string, deviceName: string) => {
     // Normalize plan name by trimming and removing trailing spaces
     const normalizedPlanName = planName?.trim().replace(/\s+$/, "");
+    
+    // Special case for iPad devices with More Unlimited plan
+    if (deviceName?.includes('IPAD') || deviceName?.includes('iPad')) {
+      if (normalizedPlanName?.toLowerCase().includes('more') || normalizedPlanName?.toLowerCase().includes('unlimited')) {
+        return [
+          'Unlimited tablet data',
+          '5G Ultra Wideband access', 
+          'Dedicated 15GB mobile hotspot'
+        ];
+      }
+    }
     
     switch(normalizedPlanName?.toLowerCase()) {
       case 'unlimited welcome':
@@ -46,14 +57,26 @@ export function OverviewTab({ billData, formatCurrency }: OverviewTabProps) {
           '5G Ultra Wideband', 
           'Mobile hotspot 60GB'
         ];
+      case 'more unlimited':
+        return [
+          'Unlimited Premium Data',
+          '5G Ultra Wideband access',
+          'Mobile hotspot 30GB'
+        ];
       default:
         return ['Unlimited talk, text & data'];
     }
   };
 
   // Normalize plan name to a valid Verizon plan
-  const normalizePlanName = (planName: string) => {
+  const normalizePlanName = (planName: string, deviceName: string) => {
     if (!planName || planName === "Unknown plan") return "Unlimited Plus";
+    
+    // Special case for iPad devices - show More Unlimited
+    if ((deviceName?.includes('IPAD') || deviceName?.includes('iPad')) && 
+        (planName.toLowerCase().includes('number') || planName.toLowerCase().includes('share'))) {
+      return "More Unlimited";
+    }
     
     // Check if planName is just "Plus" and convert to full name
     if (planName.trim() === "Plus") return "Unlimited Plus";
@@ -126,11 +149,11 @@ export function OverviewTab({ billData, formatCurrency }: OverviewTabProps) {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {billData.phoneLines?.map((line: any, index: number) => {
             // Make sure we have a valid plan name
-            const planName = normalizePlanName(line.planName);
+            const planName = normalizePlanName(line.planName, line.deviceName);
             const planDetails = getPlanDetails(planName);
             const lineCount = billData.phoneLines?.length || 1;
             const price = planDetails ? getPlanPrice(planDetails.id, lineCount) : line.monthlyTotal || 0;
-            const correctFeatures = getCorrectPlanFeatures(planName);
+            const correctFeatures = getCorrectPlanFeatures(planName, line.deviceName);
             
             return (
               <div key={index} className="p-5 border border-gray-100 rounded-lg hover:shadow-md transition-shadow bg-gray-50">
