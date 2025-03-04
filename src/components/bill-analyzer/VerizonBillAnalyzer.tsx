@@ -93,7 +93,7 @@ const VerizonBillAnalyzer = () => {
             <h1 className="text-2xl font-bold">Bill Analysis</h1>
             {ocrProvider && (
               <div className="flex items-center gap-2 mt-1">
-                <Badge variant={ocrProvider === 'claude' ? "success" : "secondary"}>
+                <Badge variant={ocrProvider === 'claude' ? "secondary" : "outline"}>
                   {ocrProvider === 'claude' ? 'Claude AI OCR' : 'Standard Extraction'}
                 </Badge>
               </div>
