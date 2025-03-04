@@ -28,10 +28,25 @@ export const RecommendationsTab = ({
   aiRecommendationsFetched,
   setAiRecommendationsFetched
 }: RecommendationsTabProps) => {
-  // Use the carrierLogos in the implementation
+  // Calculate savings for each carrier
+  const verizonSavings = calculateCarrierSavings('verizon');
+  const tmobileSavings = calculateCarrierSavings('tmobile');
+  const attSavings = calculateCarrierSavings('att');
+  
+  // Check if we need to trigger AI recommendations
+  if (!aiRecommendationsFetched) {
+    setAiRecommendationsFetched(true);
+  }
+  
   return (
     <div className="space-y-6">
       <h2 className="text-2xl font-bold">Plan Recommendations</h2>
+      <p className="text-gray-600">
+        Based on your current plan and usage with {billData?.carrierName || "your carrier"}, 
+        here are recommended plans that could save you money.
+        {networkPreference && <span> Prioritizing {networkPreference} network coverage.</span>}
+      </p>
+      
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {/* Verizon Plan Card */}
         <div className="border rounded-lg p-6 shadow-sm">
@@ -43,7 +58,16 @@ export const RecommendationsTab = ({
             />
           </div>
           <h3 className="font-bold text-lg text-center mb-2">Verizon Recommendation</h3>
-          {/* Plan details would go here */}
+          <div className="space-y-2">
+            <p className="font-medium">{verizonSavings.planName}</p>
+            <p>Monthly cost: {formatCurrency(verizonSavings.price)}</p>
+            <p className="text-green-600 font-bold">
+              Potential savings: {formatCurrency(verizonSavings.monthlySavings)}/month
+            </p>
+            <p className="text-sm text-gray-500">
+              {formatCurrency(verizonSavings.annualSavings)} annual savings
+            </p>
+          </div>
         </div>
         
         {/* T-Mobile Plan Card */}
@@ -56,7 +80,16 @@ export const RecommendationsTab = ({
             />
           </div>
           <h3 className="font-bold text-lg text-center mb-2">T-Mobile Recommendation</h3>
-          {/* Plan details would go here */}
+          <div className="space-y-2">
+            <p className="font-medium">{tmobileSavings.planName}</p>
+            <p>Monthly cost: {formatCurrency(tmobileSavings.price)}</p>
+            <p className="text-green-600 font-bold">
+              Potential savings: {formatCurrency(tmobileSavings.monthlySavings)}/month
+            </p>
+            <p className="text-sm text-gray-500">
+              {formatCurrency(tmobileSavings.annualSavings)} annual savings
+            </p>
+          </div>
         </div>
         
         {/* AT&T Plan Card */}
@@ -69,7 +102,16 @@ export const RecommendationsTab = ({
             />
           </div>
           <h3 className="font-bold text-lg text-center mb-2">AT&T Recommendation</h3>
-          {/* Plan details would go here */}
+          <div className="space-y-2">
+            <p className="font-medium">{attSavings.planName}</p>
+            <p>Monthly cost: {formatCurrency(attSavings.price)}</p>
+            <p className="text-green-600 font-bold">
+              Potential savings: {formatCurrency(attSavings.monthlySavings)}/month
+            </p>
+            <p className="text-sm text-gray-500">
+              {formatCurrency(attSavings.annualSavings)} annual savings
+            </p>
+          </div>
         </div>
       </div>
     </div>
