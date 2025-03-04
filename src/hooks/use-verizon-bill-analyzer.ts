@@ -1,7 +1,7 @@
+
 import { useState } from 'react';
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-
 import { NetworkPreference } from '@/components/bill-analyzer/VerizonBillAnalyzer';
 
 export const useVerizonBillAnalyzer = () => {
@@ -18,9 +18,10 @@ export const useVerizonBillAnalyzer = () => {
     let savings = 0;
     let price = currentMonthlyTotal;
     
+    // Calculate savings based on number of lines and carrier
     if (carrierId === 'usmobile') {
-      savings = currentMonthlyTotal * 0.4;
-      price = currentMonthlyTotal * 0.6;
+      savings = currentMonthlyTotal * (numberOfLines > 3 ? 0.45 : 0.4);
+      price = currentMonthlyTotal - savings;
     }
     
     return {
@@ -223,17 +224,23 @@ export const useVerizonBillAnalyzer = () => {
         throw new Error('Invalid analysis result received');
       }
       
-      setBillData(analysisResult);
+      // Add network preference to analysis result
+      const resultWithNetwork = {
+        ...analysisResult,
+        networkPreference
+      };
+      
+      setBillData(resultWithNetwork);
       
       try {
-        await saveBillAnalysis(analysisResult);
+        await saveBillAnalysis(resultWithNetwork);
         console.log("Bill text analysis saved to database");
       } catch (dbError) {
         console.error("Error saving to database, but analysis completed:", dbError);
       }
       
       toast.success('Bill analysis completed successfully');
-      return analysisResult;
+      return resultWithNetwork;
     } catch (error) {
       console.error('Error processing bill text:', error);
       const errorMsg = error instanceof Error ? error.message : 'Unknown error';
