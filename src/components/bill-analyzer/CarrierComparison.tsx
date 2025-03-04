@@ -1,4 +1,3 @@
-
 import { ArrowLeftRight, AlertCircle, Check, Star, Zap, Lightbulb } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { 
@@ -10,8 +9,7 @@ import {
 import { 
   supportedCarriers, 
   findBestCarrierMatch, 
-  alternativeCarrierPlans,
-  getCarrierPlanPrice
+  alternativeCarrierPlans
 } from "@/config/alternativeCarriers";
 
 interface CarrierComparisonProps {
@@ -78,7 +76,6 @@ export function CarrierComparison({
             if (!carrierPlan) return null;
             
             const annualMonthlyEquivalent = carrierPlan.annualPrice ? carrierPlan.annualPrice / 12 : 0;
-            const numberOfLines = billData?.phoneLines?.length || 1;
             
             return (
               <TabsContent key={carrier.id} value={carrier.id} forceMount>
