@@ -30,10 +30,10 @@ export const BillAnalyzerContent = ({
   return (
     <div className="space-y-6">
       <BillAnalysisHeader
-        billData={billData}
-        resetBillData={resetBillData}
+        accountNumber={billData.accountNumber || 'Unknown'}
+        billingPeriod={billData.billingPeriod || 'Current period'}
+        totalAmount={billData.totalAmount || 0}
         formatCurrency={formatCurrency}
-        ocrProvider={ocrProvider}
       />
       
       <BillTabs
