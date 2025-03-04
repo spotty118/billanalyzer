@@ -141,8 +141,12 @@ export const VerizonBillAnalyzer = () => {
           </div>
           <BillAnalyzerContent 
             billData={billData}
+            ocrProvider={ocrProvider}
+            resetBillData={resetBillData}
+            formatCurrency={formatCurrency}
             calculateCarrierSavings={calculateCarrierSavings}
-            networkPreference={networkPreference}
+            aiRecommendationsFetched={aiRecommendationsFetched}
+            setAiRecommendationsFetched={setAiRecommendationsFetched}
           />
           
           {billData?.billVersion && (

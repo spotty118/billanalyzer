@@ -1,4 +1,5 @@
 
+// Update the interface if needed to ensure NetworkPreference type is imported
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { OverviewTab } from "./OverviewTab";
 import { LineItemsTab } from "./LineItemsTab";

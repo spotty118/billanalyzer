@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -68,6 +67,14 @@ interface AIRecommendationsData {
     billDataTimestamp: string;
   };
 }
+
+const carrierLogos = {
+  verizon: '/verizon-logo.png',
+  tmobile: '/tmobile-logo.png',
+  att: '/att-logo.png',
+  usmobile: '/usmobile-logo.png',
+  visible: '/visible-logo.png'
+};
 
 export function RecommendationsTab({ 
   billData, 

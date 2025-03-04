@@ -1,5 +1,4 @@
 
-import React from 'react';
 import { BillAnalysisHeader } from './BillAnalysisHeader';
 import { BillTabs } from './BillTabs';
 
@@ -20,8 +19,6 @@ interface BillAnalyzerContentProps {
 
 export const BillAnalyzerContent = ({ 
   billData, 
-  ocrProvider, 
-  resetBillData, 
   formatCurrency,
   calculateCarrierSavings,
   aiRecommendationsFetched,
