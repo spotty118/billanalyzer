@@ -45,6 +45,26 @@ export function OverviewTab({ billData, formatCurrency }: OverviewTabProps) {
     }
   };
 
+  // Determine the best matching plan name if it's not provided
+  const getBestMatchingPlanName = (line: any) => {
+    if (line.planName && line.planName !== 'Unknown plan') {
+      return line.planName;
+    }
+    
+    // Default to Unlimited Plus if no valid plan name is found
+    return 'Unlimited Plus';
+  };
+
+  // Sanitize device name for better display
+  const sanitizeDeviceName = (deviceName: string) => {
+    if (!deviceName) return 'Unknown Device';
+    
+    // Remove any carrier prefixes
+    return deviceName
+      .replace(/^(Verizon|AT&T|T-Mobile)\s+/i, '')
+      .replace('Apple ', '');
+  };
+
   return (
     <div className="space-y-8 animate-fade-in">
       <div className="bg-white p-6 rounded-xl shadow-md border border-gray-100">
@@ -63,11 +83,11 @@ export function OverviewTab({ billData, formatCurrency }: OverviewTabProps) {
               </li>
               <li className="flex justify-between items-center border-b border-gray-200 pb-2">
                 <span className="text-gray-600">Bill Date:</span>
-                <span className="font-medium text-gray-800">{billData.billDate || 'Not available'}</span>
+                <span className="font-medium text-gray-800">{billData.billDate || billData.accountInfo?.billDate || 'Not available'}</span>
               </li>
               <li className="flex justify-between items-center border-b border-gray-200 pb-2">
                 <span className="text-gray-600">Account Number:</span>
-                <span className="font-medium text-gray-800">{billData.accountNumber || 'Not available'}</span>
+                <span className="font-medium text-gray-800">{billData.accountNumber || billData.accountInfo?.accountNumber || 'Not available'}</span>
               </li>
               <li className="flex justify-between items-center">
                 <span className="text-gray-600">Carrier:</span>
@@ -109,10 +129,12 @@ export function OverviewTab({ billData, formatCurrency }: OverviewTabProps) {
         <h3 className="text-xl font-bold mb-5 text-gray-800">Plan Details</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {billData.phoneLines?.map((line: any, index: number) => {
-            const planDetails = getPlanDetails(line.planName);
+            const planName = getBestMatchingPlanName(line);
+            const planDetails = getPlanDetails(planName);
             const lineCount = billData.phoneLines?.length || 1;
             const price = planDetails ? getPlanPrice(planDetails.id, lineCount) : line.monthlyTotal || 0;
-            const correctFeatures = getCorrectPlanFeatures(line.planName);
+            const correctFeatures = getCorrectPlanFeatures(planName);
+            const deviceName = sanitizeDeviceName(line.deviceName);
             
             return (
               <div key={index} className="p-5 border border-gray-100 rounded-lg hover:shadow-md transition-shadow bg-gray-50">
@@ -126,7 +148,7 @@ export function OverviewTab({ billData, formatCurrency }: OverviewTabProps) {
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
                   <div className="bg-white p-3 rounded-md shadow-sm">
                     <p className="text-sm text-gray-500 mb-1">Plan Name</p>
-                    <p className="font-semibold text-gray-800">{line.planName || 'Not specified'}</p>
+                    <p className="font-semibold text-gray-800">{planName}</p>
                   </div>
                   <div className="bg-white p-3 rounded-md shadow-sm">
                     <p className="text-sm text-gray-500 mb-1">Monthly Cost</p>
@@ -134,7 +156,7 @@ export function OverviewTab({ billData, formatCurrency }: OverviewTabProps) {
                   </div>
                   <div className="bg-white p-3 rounded-md shadow-sm">
                     <p className="text-sm text-gray-500 mb-1">Device</p>
-                    <p className="font-semibold text-gray-800">{line.deviceName || 'Not specified'}</p>
+                    <p className="font-semibold text-gray-800">{deviceName}</p>
                   </div>
                 </div>
                 
