@@ -15,6 +15,7 @@ export const useVerizonBillAnalyzer = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [ocrProvider, setOcrProvider] = useState<string | null>(null);
+  const [aiRecommendationsFetched, setAiRecommendationsFetched] = useState(false);
 
   const calculateCarrierSavings = (carrierId: string) => {
     const numberOfLines = billData?.phoneLines?.length || 1;
@@ -146,6 +147,7 @@ export const useVerizonBillAnalyzer = () => {
     setFileSelected(false);
     setErrorMessage(null);
     setOcrProvider(null);
+    setAiRecommendationsFetched(false);
   };
 
   const processVerizonBill = async (file: File, networkPreference?: NetworkPreference): Promise<any> => {
@@ -559,6 +561,8 @@ export const useVerizonBillAnalyzer = () => {
     isLoading,
     errorMessage,
     ocrProvider,
+    aiRecommendationsFetched,
+    setAiRecommendationsFetched,
     handleFileChange,
     analyzeBillText,
     resetBillData,

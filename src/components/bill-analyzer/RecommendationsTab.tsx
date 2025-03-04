@@ -19,9 +19,10 @@ interface RecommendationsTabProps {
     price: number;
   };
   networkPreference?: NetworkPreference;
+  aiRecommendationsFetched: boolean;
+  setAiRecommendationsFetched: (fetched: boolean) => void;
 }
 
-// Updated to include Visible plans
 const carriers = [
   { id: "warp", name: "US Mobile Warp", logo: "🌀", network: "verizon" },
   { id: "lightspeed", name: "US Mobile LightSpeed", logo: "⚡", network: "tmobile" },
@@ -35,7 +36,6 @@ const networkToCarrierMap = {
   att: "darkstar"
 };
 
-// Define a type for the features array
 type FeaturesList = string[];
 
 interface AIRecommendation {
@@ -72,7 +72,9 @@ export function RecommendationsTab({
   billData, 
   formatCurrency, 
   calculateCarrierSavings,
-  networkPreference
+  networkPreference,
+  aiRecommendationsFetched,
+  setAiRecommendationsFetched
 }: RecommendationsTabProps) {
   const [recommendations, setRecommendations] = useState<any[]>([]);
   const [aiRecommendations, setAiRecommendations] = useState<AIRecommendationsData | null>(null);
@@ -80,13 +82,11 @@ export function RecommendationsTab({
   const [activeTab, setActiveTab] = useState("standard");
   const [progress, setProgress] = useState(0);
 
-  // Function to fetch AI recommendations
   const fetchAIRecommendations = async () => {
     setIsLoadingAI(true);
     setProgress(10);
     
     try {
-      // Get the anon key from environment or use a default
       const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1nemZpb3VhbWlkYXFjdG5xbnJlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzkyMzE3NjQsImV4cCI6MjA1NDgwNzc2NH0._0hxm1UlSMt3wPx8JwaFDvGmpfjI3p5m0HDm6YfaL6Q';
       
       setProgress(30);
@@ -120,6 +120,7 @@ export function RecommendationsTab({
       
       setAiRecommendations(data);
       setActiveTab("ai");
+      setAiRecommendationsFetched(true);
       toast.success("Got fresh carrier recommendations!");
       
     } catch (error) {
@@ -146,15 +147,12 @@ export function RecommendationsTab({
         }
       }
       
-      // Calculate savings amounts for all carriers
       const currentBillAmount = billData.totalAmount || 0;
       
       const allRecommendations = carriersForRecommendation.map(carrier => {
-        // Get the plan name for the carrier
         const plans = alternativeCarrierPlans.filter(plan => plan.carrierId === carrier.id);
         let selectedPlan;
         
-        // For Visible, select Visible+ as default, for others select Premium plans
         if (carrier.id === "visible") {
           selectedPlan = plans.find(plan => plan.id === "visible-plus") || plans[0];
         } else {
@@ -163,14 +161,12 @@ export function RecommendationsTab({
         
         if (!selectedPlan) return null;
         
-        // Calculate savings based on selected plan's base price
         const planBasePrice = selectedPlan.basePrice;
         const lineCount = billData.phoneLines?.length || 1;
-        const totalPlanPrice = planBasePrice * lineCount; // No multi-line discounts
+        const totalPlanPrice = planBasePrice * lineCount;
         const monthlySavings = currentBillAmount - totalPlanPrice;
         const annualSavings = monthlySavings * 12;
         
-        // Get features for this carrier from the alternativeCarrierPlans data
         let features: FeaturesList = [];
         if (selectedPlan) {
           features = selectedPlan.features;
@@ -226,7 +222,7 @@ export function RecommendationsTab({
           planName: selectedPlan.name,
           monthlySavings,
           annualSavings,
-          monthlyPrice: totalPlanPrice / lineCount, // Price per line
+          monthlyPrice: totalPlanPrice / lineCount,
           preferred: networkPreference && carrier.network === networkPreference,
           reasons,
           pros,
@@ -253,16 +249,15 @@ export function RecommendationsTab({
           reasons: ["Your current plan appears to be competitive"],
           pros: ["No need to switch carriers", "Familiar billing"],
           cons: ["You may be missing perks from other carriers"],
-          features: [] // Empty array of features for current plan
+          features: []
         }
       ]);
       
-      // Auto-fetch AI recommendations if we have bill data
-      if (!aiRecommendations && !isLoadingAI) {
+      if (!aiRecommendations && !isLoadingAI && !aiRecommendationsFetched) {
         fetchAIRecommendations();
       }
     }
-  }, [billData, calculateCarrierSavings, networkPreference, aiRecommendations, isLoadingAI]);
+  }, [billData, calculateCarrierSavings, networkPreference, aiRecommendations, isLoadingAI, aiRecommendationsFetched, setAiRecommendationsFetched]);
 
   const renderStandardRecommendations = () => (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -387,7 +382,6 @@ export function RecommendationsTab({
 
     return (
       <div className="space-y-8">
-        {/* Market Insights Panel */}
         <Card className="border border-blue-200 bg-blue-50/30">
           <CardHeader>
             <CardTitle className="text-blue-800">Market Insights</CardTitle>
@@ -444,13 +438,11 @@ export function RecommendationsTab({
           </CardContent>
         </Card>
         
-        {/* Personalized Advice */}
         <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
           <h3 className="text-lg font-semibold mb-2">Personalized Advice</h3>
           <p className="text-gray-700">{aiRecommendations.personalizedAdvice}</p>
         </div>
 
-        {/* AI Recommendations */}
         <div>
           <h3 className="text-lg font-semibold mb-4">AI-Powered Recommendations</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -555,7 +547,6 @@ export function RecommendationsTab({
           </div>
         </div>
         
-        {/* Generated timestamp */}
         {aiRecommendations.meta && (
           <div className="text-xs text-gray-400 text-right mt-4">
             Data updated: {new Date(aiRecommendations.meta.generatedAt).toLocaleString()}
