@@ -40,10 +40,10 @@ export const alternativeCarrierPlans: CarrierPlan[] = [
     basePrice: 44,
     pricePerLine: {
       line1: 44,
-      line2: 35,
-      line3: 25,
-      line4: 20, 
-      line5Plus: 18,
+      line2: 44,
+      line3: 44,
+      line4: 44, 
+      line5Plus: 44,
     },
     dataAllowance: {
       premium: 'unlimited',
@@ -78,8 +78,8 @@ export const alternativeCarrierPlans: CarrierPlan[] = [
       line1: 25,
       line2: 25,
       line3: 25,
-      line4: 20, 
-      line5Plus: 18,
+      line4: 25, 
+      line5Plus: 25,
     },
     dataAllowance: {
       premium: 35,
@@ -148,10 +148,10 @@ export const alternativeCarrierPlans: CarrierPlan[] = [
     basePrice: 44,
     pricePerLine: {
       line1: 44,
-      line2: 35,
-      line3: 25,
-      line4: 20, 
-      line5Plus: 18,
+      line2: 44,
+      line3: 44,
+      line4: 44, 
+      line5Plus: 44,
     },
     dataAllowance: {
       premium: 100,
@@ -186,8 +186,8 @@ export const alternativeCarrierPlans: CarrierPlan[] = [
       line1: 25,
       line2: 25,
       line3: 25,
-      line4: 20, 
-      line5Plus: 18,
+      line4: 25, 
+      line5Plus: 25,
     },
     dataAllowance: {
       premium: 35,
@@ -256,10 +256,10 @@ export const alternativeCarrierPlans: CarrierPlan[] = [
     basePrice: 44,
     pricePerLine: {
       line1: 44,
-      line2: 35,
-      line3: 25,
-      line4: 20, 
-      line5Plus: 18,
+      line2: 44,
+      line3: 44,
+      line4: 44, 
+      line5Plus: 44,
     },
     dataAllowance: {
       premium: 100,
@@ -294,8 +294,8 @@ export const alternativeCarrierPlans: CarrierPlan[] = [
       line1: 25,
       line2: 25,
       line3: 25,
-      line4: 20, 
-      line5Plus: 18,
+      line4: 25, 
+      line5Plus: 25,
     },
     dataAllowance: {
       premium: 35,
@@ -359,27 +359,9 @@ export const alternativeCarrierPlans: CarrierPlan[] = [
 export function getCarrierPlanPrice(plan: CarrierPlan, numberOfLines: number): number {
   if (numberOfLines <= 0) return 0;
   
-  let pricePerLine;
-  switch (numberOfLines) {
-    case 1: pricePerLine = plan.pricePerLine.line1; break;
-    case 2: pricePerLine = plan.pricePerLine.line2; break;
-    case 3: pricePerLine = plan.pricePerLine.line3; break;
-    case 4: pricePerLine = plan.pricePerLine.line4; break;
-    default: pricePerLine = plan.pricePerLine.line5Plus; break;
-  }
-  
-  const basePrice = pricePerLine * numberOfLines;
-  
-  // Apply discount if one exists
-  if (plan.discountType && plan.discountValue) {
-    if (plan.discountType === 'percentage') {
-      return basePrice * (1 - (plan.discountValue / 100));
-    } else if (plan.discountType === 'fixed') {
-      return Math.max(0, basePrice - plan.discountValue);
-    }
-  }
-  
-  return basePrice;
+  // For US Mobile plans, simply multiply the base price by the number of lines
+  // as they don't offer multi-line discounts
+  return plan.basePrice * numberOfLines;
 }
 
 export function formatCarrierPlanPrice(plan: CarrierPlan, numberOfLines: number): string {
