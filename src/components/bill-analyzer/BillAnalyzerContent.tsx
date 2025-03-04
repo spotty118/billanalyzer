@@ -1,13 +1,10 @@
 
-import { BillAnalysisHeader } from './BillAnalysisHeader';
-import { BillTabs } from './BillTabs';
-import type { NetworkPreference } from '@/hooks/use-verizon-bill-analyzer';
+import { useState, useCallback } from 'react';
+import { BillTabs } from "@/components/bill-analyzer/BillTabs";
+import { NetworkPreference } from './VerizonBillAnalyzer';
 
 interface BillAnalyzerContentProps {
   billData: any;
-  ocrProvider?: string | null;
-  resetBillData?: () => void;
-  formatCurrency: (value: number) => string;
   calculateCarrierSavings: (carrierId: string) => {
     monthlySavings: number;
     annualSavings: number;
@@ -15,34 +12,61 @@ interface BillAnalyzerContentProps {
     price: number;
   };
   networkPreference?: NetworkPreference;
-  aiRecommendationsFetched: boolean;
-  setAiRecommendationsFetched: (fetched: boolean) => void;
 }
 
-export const BillAnalyzerContent = ({ 
-  billData, 
-  formatCurrency,
+const CustomBillTabs = ({ billData, calculateCarrierSavings, networkPreference, activeTab, onTabChange }: any) => {
+  console.log("CustomBillTabs - calculateCarrierSavings available:", !!calculateCarrierSavings);
+  return (
+    <BillTabs 
+      billData={billData}
+      calculateCarrierSavings={calculateCarrierSavings}
+      networkPreference={networkPreference}
+      activeTab={activeTab}
+      onTabChange={onTabChange}
+    />
+  );
+};
+
+export function BillAnalyzerContent({
+  billData,
   calculateCarrierSavings,
   networkPreference,
-  aiRecommendationsFetched,
-  setAiRecommendationsFetched
-}: BillAnalyzerContentProps) => {
+}: BillAnalyzerContentProps) {
+  const [activeTab, setActiveTab] = useState("overview");
+  console.log("BillAnalyzerContent - calculateCarrierSavings available:", !!calculateCarrierSavings);
+
+  const handleTabChange = (tab: string) => {
+    setActiveTab(tab);
+  };
+
+  // Ensure we're properly handling the carrier savings calculation by memoizing it
+  const memoizedCalculateCarrierSavings = useCallback(
+    (carrierId: string) => {
+      console.log(`Calling calculateCarrierSavings for ${carrierId}`);
+      // Call the provided function directly 
+      return calculateCarrierSavings(carrierId);
+    },
+    [calculateCarrierSavings]
+  );
+
+  if (!billData) {
+    return (
+      <div className="bg-white p-8 rounded-xl shadow-sm border border-gray-100 text-center">
+        <p className="text-gray-500 text-lg">No bill data available.</p>
+        <p className="text-gray-400 mt-2">Please upload a bill to analyze.</p>
+      </div>
+    );
+  }
+
   return (
-    <div className="space-y-6">
-      <BillAnalysisHeader
-        accountNumber={billData.accountNumber || billData.accountInfo?.accountNumber || 'Unknown'}
-        billingPeriod={billData.billingPeriod || billData.accountInfo?.billingPeriod || 'Current period'}
-        totalAmount={billData.totalAmount || 0}
-        formatCurrency={formatCurrency}
-      />
-      
-      <BillTabs
-        billData={billData}
-        formatCurrency={formatCurrency}
-        calculateCarrierSavings={calculateCarrierSavings}
-        aiRecommendationsFetched={aiRecommendationsFetched}
-        setAiRecommendationsFetched={setAiRecommendationsFetched}
+    <div className="container mx-auto py-8 max-w-7xl animate-fade-in">
+      <CustomBillTabs 
+        billData={billData} 
+        calculateCarrierSavings={memoizedCalculateCarrierSavings}
+        networkPreference={networkPreference}
+        activeTab={activeTab}
+        onTabChange={handleTabChange}
       />
     </div>
   );
-};
+}

@@ -9,33 +9,6 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      ai_recommendations: {
-        Row: {
-          account_number: string
-          created_at: string
-          id: number
-          plan_details: Json | null
-          recommendations: Json
-          updated_at: string
-        }
-        Insert: {
-          account_number: string
-          created_at?: string
-          id?: number
-          plan_details?: Json | null
-          recommendations: Json
-          updated_at?: string
-        }
-        Update: {
-          account_number?: string
-          created_at?: string
-          id?: number
-          plan_details?: Json | null
-          recommendations?: Json
-          updated_at?: string
-        }
-        Relationships: []
-      }
       bill_analyses: {
         Row: {
           account_number: string

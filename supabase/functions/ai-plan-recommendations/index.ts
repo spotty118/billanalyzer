@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 
 const CORS_HEADERS = {
@@ -6,8 +5,8 @@ const CORS_HEADERS = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-// Get OpenRouter API key from environment variable
-const OPENROUTER_API_KEY = Deno.env.get('OPENROUTER_API_KEY');
+// Get Claude API key from environment variable
+const ANTHROPIC_API_KEY = Deno.env.get('ANTHROPIC_API_KEY');
 
 serve(async (req) => {
   // Handle CORS preflight request
@@ -44,7 +43,7 @@ serve(async (req) => {
     console.log("Number of lines:", billData.phoneLines?.length || 0);
     console.log("Network preference:", networkPreference);
     
-    // Get up-to-date carrier information via OpenRouter with Gemini
+    // Get up-to-date carrier information via Claude
     const aiRecommendations = await getAIRecommendations(billData, networkPreference);
     
     return new Response(JSON.stringify(aiRecommendations), {
@@ -73,13 +72,13 @@ serve(async (req) => {
 });
 
 async function getAIRecommendations(billData: any, networkPreference: string | null) {
-  if (!OPENROUTER_API_KEY) {
-    console.error("Missing OpenRouter API key");
-    throw new Error("OpenRouter API key not configured");
+  if (!ANTHROPIC_API_KEY) {
+    console.error("Missing Anthropic API key");
+    throw new Error("Claude API key not configured");
   }
   
   try {
-    console.log("Sending bill data to OpenRouter API for Gemini recommendations...");
+    console.log("Sending bill data to Claude API for recommendations...");
     
     const systemPrompt = `You are an expert in cellphone plans and wireless carriers. You provide detailed, accurate, and up-to-date recommendations based on customer's current wireless bill and preferences.
 
@@ -136,7 +135,7 @@ Recommend AT LEAST 2 different carriers with appropriate plans, prioritizing the
 
 YOU MUST ensure your response contains ONLY valid JSON that can be parsed with JSON.parse(). Do not include any explanatory text, markdown formatting, or code blocks before or after the JSON.`;
 
-    // Prepare the bill summary to send to OpenRouter
+    // Prepare the bill summary to send to Claude
     const numberOfLines = billData.phoneLines?.length || 1;
     const currentMonthlyTotal = billData.totalAmount || 0;
     const averagePerLine = currentMonthlyTotal / numberOfLines;
@@ -157,49 +156,50 @@ YOU MUST ensure your response contains ONLY valid JSON that can be parsed with J
       })) || []
     };
     
-    // Set up the OpenRouter API request using Gemini
-    const openRouterRequest = {
-      model: "google/gemini-2.0-flash-001",
+    // Set up the Claude API request
+    const claudeRequest = {
+      model: "claude-3-7-sonnet-20250219",
       max_tokens: 4000,
+      system: systemPrompt,
       messages: [
         {
-          role: "system",
-          content: systemPrompt
-        },
-        {
           role: "user",
-          content: "Please analyze this customer's bill data and provide plan recommendations:" + 
-                  `\n\n${JSON.stringify(billSummary, null, 2)}`
+          content: [
+            {
+              type: "text",
+              text: "Please analyze this customer's bill data and provide plan recommendations:" + 
+                    `\n\n${JSON.stringify(billSummary, null, 2)}`
+            }
+          ]
         }
       ]
     };
     
-    console.log("Sending recommendation request to OpenRouter API with Gemini model...");
+    console.log("Sending recommendation request to Claude API...");
     
-    // Send request to OpenRouter API
-    const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+    // Send request to Claude API
+    const response = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "Authorization": `Bearer ${OPENROUTER_API_KEY}`,
-        "HTTP-Referer": "https://mgzfiouamidaqctnqnre.supabase.co",
-        "X-Title": "Mobile Plan Recommendations"
+        "x-api-key": ANTHROPIC_API_KEY,
+        "anthropic-version": "2023-06-01"
       },
-      body: JSON.stringify(openRouterRequest)
+      body: JSON.stringify(claudeRequest)
     });
     
     if (!response.ok) {
       const errorText = await response.text();
-      console.error("OpenRouter API error response:", errorText);
-      throw new Error(`OpenRouter API error: ${response.status} ${response.statusText}`);
+      console.error("Claude API error response:", errorText);
+      throw new Error(`Claude API error: ${response.status} ${response.statusText}`);
     }
     
-    // Parse the response from OpenRouter
-    const openRouterResponse = await response.json();
-    console.log("OpenRouter Gemini recommendations response received successfully");
+    // Parse the response from Claude
+    const claudeResponse = await response.json();
+    console.log("Claude API recommendations response received successfully");
     
-    // Extract the JSON content from Gemini's response
-    const recommendationsText = openRouterResponse.choices[0].message.content;
+    // Extract the JSON content from Claude's response
+    const recommendationsText = claudeResponse.content[0].text;
     console.log("Recommendations text length:", recommendationsText.length);
     console.log("Recommendations sample:", recommendationsText.substring(0, 500));
     
@@ -212,20 +212,20 @@ YOU MUST ensure your response contains ONLY valid JSON that can be parsed with J
         ...jsonData,
         meta: {
           generatedAt: new Date().toISOString(),
-          source: "gemini-2.0-flash-001",
+          source: "claude-3-7-sonnet",
           billDataTimestamp: billData.extractionDate || new Date().toISOString()
         }
       };
       
-      console.log("Successfully parsed recommendations from Gemini's response");
+      console.log("Successfully parsed recommendations from Claude's response");
       return enrichedData;
     } catch (jsonError) {
-      console.error("Error parsing JSON from Gemini response:", jsonError);
-      console.error("Gemini response content:", recommendationsText.substring(0, 500) + "...");
-      throw new Error("Failed to parse JSON from Gemini's response");
+      console.error("Error parsing JSON from Claude response:", jsonError);
+      console.error("Claude response content:", recommendationsText.substring(0, 500) + "...");
+      throw new Error("Failed to parse JSON from Claude's response");
     }
   } catch (error) {
-    console.error("Error using OpenRouter/Gemini for recommendations:", error);
+    console.error("Error using Claude for recommendations:", error);
     throw new Error(`AI recommendations failed: ${error.message}`);
   }
 }
