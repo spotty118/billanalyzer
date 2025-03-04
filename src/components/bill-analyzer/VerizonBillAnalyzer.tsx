@@ -189,7 +189,7 @@ const VerizonBillAnalyzer = () => {
           </div>
           
           <p className="text-xs text-gray-400 mt-6">
-            All methods will provide you with a detailed analysis and potential savings
+            All methods will provide you with a detailed analysis and potential savings. Your data isn't saved and is immediately destroyed after use.
           </p>
         </div>
       ) : inputMethod === 'upload' ? (
