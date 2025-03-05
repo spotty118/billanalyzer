@@ -134,13 +134,15 @@ export function RecommendationsTab({
       
       if (networkPreference && networkToCarrierMap[networkPreference as ValidNetworkPreference]) {
         const preferredCarrierId = networkToCarrierMap[networkPreference as ValidNetworkPreference];
-        const preferredCarrierIndex = carriersForRecommendation.findIndex(c => c.id === preferredCarrierId);
         
-        if (preferredCarrierIndex !== -1) {
-          const preferredCarrier = carriersForRecommendation[preferredCarrierIndex];
-          carriersForRecommendation.splice(preferredCarrierIndex, 1);
-          carriersForRecommendation.unshift(preferredCarrier);
-        }
+        carriersForRecommendation.sort((a, b) => {
+          const aMatchesPreference = getCarrierNetwork(a.id) === networkPreference;
+          const bMatchesPreference = getCarrierNetwork(b.id) === networkPreference;
+          
+          if (aMatchesPreference && !bMatchesPreference) return -1;
+          if (!aMatchesPreference && bMatchesPreference) return 1;
+          return 0;
+        });
       }
       
       const currentBillAmount = billData.totalAmount || 0;
@@ -317,10 +319,39 @@ export function RecommendationsTab({
     }
   }, [billData, calculateCarrierSavings, networkPreference, aiRecommendations, isLoadingAI]);
 
+  const getCarrierNetwork = (carrierId: string): string => {
+    const networkMap: Record<string, string> = {
+      "warp": "verizon",
+      "lightspeed": "tmobile",
+      "darkstar": "att",
+      "visible": "verizon",
+      "cricket": "att",
+      "straighttalk": "multi",
+      "total": "verizon"
+    };
+    
+    return networkMap[carrierId] || "";
+  };
+
+  const getCarrierRank = (index: number, isPreferred: boolean, recommendations: any[]): number => {
+    if (isPreferred) return 1;
+    
+    let rank = 1;
+    for (let i = 0; i < index; i++) {
+      if (!recommendations[i].preferred) {
+        rank++;
+      }
+    }
+    return rank;
+  };
+
   const renderStandardRecommendations = () => (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-      {recommendations.map((rec, index) => (
-        <Card key={index} className={`border ${index === 0 && rec.preferred ? 'border-blue-400 shadow-md' : 'border-gray-200'}`}>
+      {recommendations.map((rec, index) => {
+        const actualRank = getCarrierRank(index, rec.preferred, recommendations);
+        
+        return (
+        <Card key={index} className={`border ${rec.preferred ? 'border-green-400 shadow-md' : 'border-gray-200'}`}>
           <CardHeader className="pb-2">
             <div className="flex justify-between items-center">
               <div className="flex items-center gap-2">
@@ -329,14 +360,14 @@ export function RecommendationsTab({
               </div>
               <div className="flex gap-2">
                 {rec.preferred ? (
-                  <Badge className="bg-green-500">Best Network Match</Badge>
+                  <Badge className="bg-green-500 hover:bg-green-600">Best Network Match</Badge>
                 ) : (
                   <Badge className={
-                    index === 0 ? "bg-blue-600" : 
-                    index === 1 ? "bg-blue-500" : 
-                    index === 2 ? "bg-blue-400" : "bg-blue-300"
+                    actualRank === 2 ? "bg-blue-600 hover:bg-blue-700" : 
+                    actualRank === 3 ? "bg-blue-500 hover:bg-blue-600" : 
+                    actualRank === 4 ? "bg-blue-400 hover:bg-blue-500" : "bg-blue-300 hover:bg-blue-400"
                   }>
-                    {getOrdinalSuffix(index + (rec.preferred ? 0 : 1))} Best Value
+                    {getOrdinalSuffix(actualRank)} Best Value
                   </Badge>
                 )}
               </div>
@@ -412,12 +443,12 @@ export function RecommendationsTab({
             </div>
           </CardContent>
           <CardFooter>
-            <Button className="w-full" variant={index === 0 && rec.preferred ? "default" : "outline"}>
+            <Button className="w-full" variant={rec.preferred ? "default" : "outline"}>
               Get More Details
             </Button>
           </CardFooter>
         </Card>
-      ))}
+      )})}
     </div>
   );
 
@@ -509,8 +540,14 @@ export function RecommendationsTab({
         <div>
           <h3 className="text-lg font-semibold mb-4">AI-Powered Recommendations</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {aiRecommendations.recommendations.map((rec, index) => (
-              <Card key={index} className={`border ${index === 0 && networkPreference === rec.network ? 'border-blue-400 shadow-md' : 'border-gray-200'}`}>
+            {aiRecommendations.recommendations.map((rec, index) => {
+              const isPreferred = networkPreference === rec.network;
+              const aiRecs = aiRecommendations.recommendations;
+              const actualRank = getCarrierRank(index, isPreferred, 
+                aiRecs.map(r => ({ preferred: networkPreference === r.network })));
+              
+              return (
+              <Card key={index} className={`border ${isPreferred ? 'border-green-400 shadow-md' : 'border-gray-200'}`}>
                 <CardHeader className="pb-2">
                   <div className="flex justify-between items-center">
                     <div className="flex items-center gap-2">
@@ -522,15 +559,15 @@ export function RecommendationsTab({
                       <CardTitle>{rec.carrier}</CardTitle>
                     </div>
                     <div className="flex gap-2">
-                      {networkPreference === rec.network ? (
-                        <Badge className="bg-green-500">Best Network Match</Badge>
+                      {isPreferred ? (
+                        <Badge className="bg-green-500 hover:bg-green-600">Best Network Match</Badge>
                       ) : (
                         <Badge className={
-                          index === 0 ? "bg-blue-600" : 
-                          index === 1 ? "bg-blue-500" : 
-                          index === 2 ? "bg-blue-400" : "bg-blue-300"
+                          actualRank === 2 ? "bg-blue-600 hover:bg-blue-700" : 
+                          actualRank === 3 ? "bg-blue-500 hover:bg-blue-600" : 
+                          actualRank === 4 ? "bg-blue-400 hover:bg-blue-500" : "bg-blue-300 hover:bg-blue-400"
                         }>
-                          {getOrdinalSuffix(index + (networkPreference === rec.network ? 0 : 1))} Best Value
+                          {getOrdinalSuffix(actualRank)} Best Value
                         </Badge>
                       )}
                     </div>
@@ -606,12 +643,12 @@ export function RecommendationsTab({
                   </div>
                 </CardContent>
                 <CardFooter>
-                  <Button className="w-full" variant={index === 0 && networkPreference === rec.network ? "default" : "outline"}>
+                  <Button className="w-full" variant={isPreferred ? "default" : "outline"}>
                     Get More Details
                   </Button>
                 </CardFooter>
               </Card>
-            ))}
+            )})}
           </div>
         </div>
         

@@ -59,7 +59,7 @@ export function BillAnalyzerContent({
   }
 
   return (
-    <div className={`container mx-auto ${isMobile ? 'px-1 py-2' : 'py-8 px-4'} max-w-7xl animate-fade-in`}>
+    <div className={`container mx-auto ${isMobile ? 'px-1 py-2' : 'py-6 px-4'} max-w-7xl animate-fade-in`}>
       <CustomBillTabs 
         billData={billData} 
         calculateCarrierSavings={memoizedCalculateCarrierSavings}
