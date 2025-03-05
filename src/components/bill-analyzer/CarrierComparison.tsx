@@ -2,7 +2,7 @@
 import React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Check, Zap, Star, Lightbulb, Eye, CircleDot, Smartphone } from "lucide-react";
+import { Check, Zap, Star, Lightbulb, Eye, CircleDot, Smartphone, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { alternativeCarrierPlans, supportedCarriers } from "@/config/alternativeCarriers";
 
@@ -75,6 +75,26 @@ export function CarrierComparison({
         <span className="hidden sm:inline">{carrier.name}</span>
       </TabsTrigger>
     ));
+  };
+
+  const handleViewPlan = (planName: string, carrierId: string) => {
+    console.log(`Viewing plan: ${planName} from ${carrierId}`);
+    // Open carrier's website in a new tab
+    const carrierUrls: Record<string, string> = {
+      "usmobile": "https://www.usmobile.com/plans",
+      "visible": "https://www.visible.com/plans",
+      "cricket": "https://www.cricketwireless.com/cell-phone-plans",
+      "total": "https://www.totalwireless.com/plans",
+      "verizon": "https://www.verizon.com/plans/",
+      "att": "https://www.att.com/plans/wireless/",
+      "tmobile": "https://www.t-mobile.com/cell-phone-plans",
+      "xfinity": "https://www.xfinity.com/mobile/plans",
+      "metropcs": "https://www.metrobyt-mobile.com/cell-phone-plans",
+      "boost": "https://www.boostmobile.com/plans"
+    };
+    
+    const url = carrierUrls[carrierId] || `https://www.google.com/search?q=${encodeURIComponent(`${carrierId} ${planName} plan`)}`;
+    window.open(url, '_blank');
   };
 
   const renderCarrierContent = () => {
@@ -176,7 +196,14 @@ export function CarrierComparison({
                   </div>
                 )}
                 
-                <Button className="w-full mt-2">Select Plan</Button>
+                <div className="flex flex-wrap gap-2">
+                  <Button 
+                    onClick={() => handleViewPlan(plan.name, carrier.id)}
+                    className="flex items-center gap-1"
+                  >
+                    View Plan <ExternalLink className="h-4 w-4 ml-1" />
+                  </Button>
+                </div>
               </div>
             );
           })}

@@ -1,252 +1,282 @@
 
+import React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Check, ArrowDown, Smartphone, Layout } from "lucide-react";
+import { Check, ArrowRight, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { NetworkPreference } from './VerizonBillAnalyzer';
-
-interface Recommendation {
-  title: string;
-  description: string;
-  savingsMonthly?: number;
-  savingsAnnual?: number;
-  action?: string;
-  priority: 'high' | 'medium' | 'low';
-}
 
 interface RecommendationsTabProps {
   billData: any;
   formatCurrency: (value: number) => string;
-  calculateCarrierSavings: (carrierId: string) => {
-    monthlySavings: number;
-    annualSavings: number;
-    planName: string;
-    price: number;
-  };
-  networkPreference?: NetworkPreference;
+  networkPreference?: string | null;
   carrierType?: string;
 }
 
 export function RecommendationsTab({ 
-  billData, 
-  formatCurrency, 
-  calculateCarrierSavings,
+  billData,
+  formatCurrency,
   networkPreference,
   carrierType = "verizon"
 }: RecommendationsTabProps) {
-  // If there's no bill data, display a message
-  if (!billData || !billData.phoneLines || billData.phoneLines.length === 0) {
+  const recommendations = billData?.recommendations || [];
+  const insights = billData?.marketInsights || {};
+  const advice = billData?.personalizedAdvice || '';
+  
+  if (!billData || recommendations.length === 0) {
     return (
       <Card className="shadow-md">
         <CardHeader>
-          <CardTitle>Personalized Recommendations</CardTitle>
+          <CardTitle>Recommended Plans</CardTitle>
           <CardDescription>
-            We'll analyze your {carrierType.charAt(0).toUpperCase() + carrierType.slice(1)} bill to find potential savings
+            Based on your {carrierType.charAt(0).toUpperCase() + carrierType.slice(1)} usage patterns and preferences
           </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="text-center py-6">
             <p className="text-muted-foreground">
-              No bill data available. Please upload a bill or enter line details to receive personalized recommendations.
+              {billData ? 
+                "We're still analyzing your bill to generate personalized recommendations." :
+                "No bill data available. Please upload a bill or enter line details to see recommendations."}
             </p>
           </div>
         </CardContent>
       </Card>
     );
   }
-
-  // Get savings information
-  let warpSavings;
-  let prioritySavings;
   
-  if (networkPreference && calculateCarrierSavings) {
-    if (networkPreference === 'verizon') {
-      warpSavings = calculateCarrierSavings('warp');
-      prioritySavings = calculateCarrierSavings('priority');
-    } else if (networkPreference === 'tmobile') {
-      warpSavings = calculateCarrierSavings('warp');
-      prioritySavings = calculateCarrierSavings('priority');
-    } else if (networkPreference === 'att') {
-      warpSavings = calculateCarrierSavings('warp');
-      prioritySavings = calculateCarrierSavings('priority');
-    }
-  }
-
-  // Check if any of the phone lines has a premium plan
-  const hasPremiumPlans = billData.phoneLines?.some((line: any) => {
-    // This logic can be adjusted based on your plan identification method
-    const planName = line.planName?.toLowerCase() || '';
-    return planName.includes('unlimited') && (
-      planName.includes('premium') || 
-      planName.includes('plus') || 
-      planName.includes('pro') || 
-      planName.includes('elite') ||
-      planName.includes('do more') ||
-      planName.includes('get more') ||
-      planName.includes('play more')
-    );
-  });
-
-  // Check if any lines have device payments
-  const hasDevicePayments = billData.phoneLines?.some((line: any) => 
-    line.details?.devicePayment && line.details.devicePayment > 0
-  );
-
-  // Number of lines
-  const numberOfLines = billData.phoneLines?.length || 0;
-  const totalMonthlyAmount = billData.totalAmount || 0;
-  const averagePerLine = totalMonthlyAmount / (numberOfLines || 1);
+  const handleViewPlan = (planName: string, carrier: string) => {
+    console.log(`Viewing plan: ${planName} from ${carrier}`);
+    // Open a new tab with the plan details
+    const carrierUrls: Record<string, string> = {
+      "US Mobile Warp 5G": "https://www.usmobile.com/plans",
+      "US Mobile Lightspeed 5G": "https://www.usmobile.com/plans",
+      "US Mobile DarkStar 5G": "https://www.usmobile.com/plans",
+      "Visible+": "https://www.visible.com/plans",
+      "Cricket Wireless": "https://www.cricketwireless.com/cell-phone-plans",
+      "Total Wireless": "https://www.totalwireless.com/plans",
+      "verizon": "https://www.verizon.com/plans/",
+      "att": "https://www.att.com/plans/wireless/",
+      "tmobile": "https://www.t-mobile.com/cell-phone-plans",
+      "xfinity": "https://www.xfinity.com/mobile/plans",
+      "visible": "https://www.visible.com/plans",
+      "cricket": "https://www.cricketwireless.com/cell-phone-plans",
+      "metropcs": "https://www.metrobyt-mobile.com/cell-phone-plans",
+      "boost": "https://www.boostmobile.com/plans"
+    };
+    
+    const url = carrierUrls[carrier] || `https://www.google.com/search?q=${encodeURIComponent(`${carrier} ${planName} plan`)}`;
+    window.open(url, '_blank');
+  };
   
-  // Build recommendations
-  const recommendations: Recommendation[] = [];
+  const handleComparePlans = (planName: string, carrier: string) => {
+    console.log(`Comparing plan: ${planName} from ${carrier} with other plans`);
+    // For now, we'll just open the carrier's plan comparison page
+    const compareUrls: Record<string, string> = {
+      "US Mobile Warp 5G": "https://www.usmobile.com/plans",
+      "US Mobile Lightspeed 5G": "https://www.usmobile.com/plans",
+      "US Mobile DarkStar 5G": "https://www.usmobile.com/plans",
+      "Visible+": "https://www.visible.com/plans",
+      "Cricket Wireless": "https://www.cricketwireless.com/cell-phone-plans",
+      "Total Wireless": "https://www.totalwireless.com/plans"
+    };
+    
+    const url = compareUrls[carrier] || `https://www.whistleout.com/CellPhones/Search?mins=0&sms=0&data=0&simonly=true`;
+    window.open(url, '_blank');
+  };
   
-  // Carrier switch recommendation (if we have savings data)
-  if (warpSavings && warpSavings.monthlySavings > 0) {
-    recommendations.push({
-      title: `Switch to a more affordable carrier`,
-      description: `Based on your usage, switching to US Mobile's ${warpSavings.planName} plan could save you ${formatCurrency(warpSavings.monthlySavings)} per month while providing similar features.`,
-      savingsMonthly: warpSavings.monthlySavings,
-      savingsAnnual: warpSavings.annualSavings,
-      action: "View Plan",
-      priority: warpSavings.monthlySavings > 30 ? 'high' : 'medium'
-    });
-  }
-
-  // Premium plan recommendation
-  if (hasPremiumPlans) {
-    recommendations.push({
-      title: "Downgrade premium-tier plans",
-      description: `Some of your lines have premium unlimited plans. Consider downgrading to a basic unlimited plan if you don't use the premium features.`,
-      savingsMonthly: 10 * numberOfLines,
-      savingsAnnual: 10 * 12 * numberOfLines,
-      action: "Compare Plans",
-      priority: 'medium'
-    });
-  }
-
-  // Device payment recommendation
-  if (hasDevicePayments) {
-    recommendations.push({
-      title: "Consider BYOD discounts",
-      description: "When your device payments end, consider keeping your phone longer and taking advantage of bring-your-own-device discounts.",
-      savingsMonthly: 5 * numberOfLines,
-      savingsAnnual: 5 * 12 * numberOfLines,
-      priority: 'low'
-    });
-  }
-
-  // Autopay recommendation
-  recommendations.push({
-    title: "Enable autopay for discounts",
-    description: `Most carriers offer $5-10 per line discounts when using autopay with a debit card or checking account.`,
-    savingsMonthly: 5 * numberOfLines,
-    savingsAnnual: 5 * 12 * numberOfLines,
-    action: "Learn More",
-    priority: 'medium'
-  });
-
-  // Multi-line discount recommendation (if there are less than 4 lines)
-  if (numberOfLines < 4 && numberOfLines > 1) {
-    recommendations.push({
-      title: "Add lines for better value",
-      description: `${carrierType.charAt(0).toUpperCase() + carrierType.slice(1)} plans typically offer the best value with 4+ lines. Consider adding lines for family members to lower your per-line cost.`,
-      savingsMonthly: averagePerLine * 0.15 * numberOfLines,
-      savingsAnnual: averagePerLine * 0.15 * 12 * numberOfLines,
-      priority: 'low'
-    });
-  }
-
-  // Sort recommendations by priority
-  const priorityOrder = { high: 0, medium: 1, low: 2 };
-  recommendations.sort((a, b) => priorityOrder[a.priority] - priorityOrder[b.priority]);
-
-  // Render individual recommendation cards
-  const renderRecommendationCard = (rec: Recommendation, index: number) => (
-    <div key={index} className={`rounded-lg border p-4 ${rec.priority === 'high' ? 'border-primary/30 bg-primary/5' : ''}`}>
-      <div className="flex flex-col space-y-3">
-        <div className="flex items-start justify-between">
-          <div className="flex items-start gap-3">
-            <div className={`rounded-full p-2 ${
-              rec.priority === 'high' ? 'bg-primary/20 text-primary' : 
-              rec.priority === 'medium' ? 'bg-yellow-100 text-yellow-700' : 
-              'bg-blue-100 text-blue-700'
-            }`}>
-              {rec.priority === 'high' ? (
-                <ArrowDown className="h-4 w-4" />
-              ) : (
-                <Smartphone className="h-4 w-4" />
-              )}
-            </div>
-            <div>
-              <h3 className="font-medium">{rec.title}</h3>
-              <p className="text-sm text-muted-foreground mt-1">{rec.description}</p>
-            </div>
-          </div>
-          
-          {rec.savingsMonthly && rec.savingsAnnual && (
-            <div className="text-right">
-              <div className="text-sm font-semibold text-green-600">
-                Save {formatCurrency(rec.savingsMonthly)}/mo
-              </div>
-              <div className="text-xs text-muted-foreground">
-                {formatCurrency(rec.savingsAnnual)}/yr
-              </div>
-            </div>
-          )}
-        </div>
-        
-        {rec.action && (
-          <Button variant="outline" size="sm" className="self-start mt-2">
-            {rec.action}
-          </Button>
-        )}
-      </div>
-    </div>
-  );
-
-  const totalPotentialSavings = recommendations.reduce((total, rec) => total + (rec.savingsMonthly || 0), 0);
-  const totalAnnualSavings = recommendations.reduce((total, rec) => total + (rec.savingsAnnual || 0), 0);
+  const handleLearnMore = (carrier: string) => {
+    console.log(`Learning more about: ${carrier}`);
+    // Open carrier's website in a new tab
+    const learnMoreUrls: Record<string, string> = {
+      "US Mobile Warp 5G": "https://www.usmobile.com/about",
+      "US Mobile Lightspeed 5G": "https://www.usmobile.com/about",
+      "US Mobile DarkStar 5G": "https://www.usmobile.com/about",
+      "Visible+": "https://www.visible.com/about",
+      "Cricket Wireless": "https://www.cricketwireless.com/why-cricket",
+      "Total Wireless": "https://www.totalwireless.com/why-total-wireless",
+      "Verizon": "https://www.verizon.com/about",
+      "AT&T": "https://www.att.com/about",
+      "T-Mobile": "https://www.t-mobile.com/about-us"
+    };
+    
+    const url = learnMoreUrls[carrier] || `https://www.google.com/search?q=${encodeURIComponent(`${carrier} wireless carrier`)}`;
+    window.open(url, '_blank');
+  };
 
   return (
-    <Card className="shadow-md">
-      <CardHeader className="pb-3">
-        <CardTitle>Personalized Recommendations</CardTitle>
-        <CardDescription>
-          Based on your {carrierType.charAt(0).toUpperCase() + carrierType.slice(1)} bill, we've found potential savings for you
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        <div className="space-y-6">
-          <div className="rounded-lg bg-green-50 border border-green-100 p-4">
-            <div className="flex flex-col md:flex-row md:items-center md:justify-between">
-              <div className="flex items-center gap-3">
-                <div className="rounded-full bg-green-100 p-2 text-green-700">
-                  <Layout className="h-5 w-5" />
+    <div className="space-y-6">
+      <Card className="shadow-md">
+        <CardHeader>
+          <CardTitle>Recommended Plans</CardTitle>
+          <CardDescription>
+            Based on your {carrierType.charAt(0).toUpperCase() + carrierType.slice(1)} usage patterns and preferences
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-6">
+            {recommendations.map((recommendation: any, index: number) => (
+              <div key={index} className="border rounded-lg p-4 space-y-4">
+                <div className="flex justify-between items-start">
+                  <div>
+                    <h3 className="text-lg font-bold">{recommendation.carrier}</h3>
+                    <p className="text-sm text-muted-foreground">{recommendation.planName} Plan</p>
+                    <div className="flex items-center text-sm text-blue-600 mt-1">
+                      <span>{recommendation.network?.charAt(0).toUpperCase() + recommendation.network?.slice(1) || 'Unknown'} Network</span>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-lg font-bold">${recommendation.monthlyPrice}/mo</div>
+                    {recommendation.originalPrice && recommendation.originalPrice > recommendation.monthlyPrice && (
+                      <div className="text-sm line-through text-gray-400">${recommendation.originalPrice}/mo</div>
+                    )}
+                  </div>
                 </div>
-                <div>
-                  <h3 className="font-medium">Total Potential Savings</h3>
-                  <p className="text-sm text-muted-foreground">If you implement all recommendations</p>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {recommendation.features && recommendation.features.map((feature: string, idx: number) => (
+                    <div key={idx} className="flex items-center gap-2">
+                      <Check className="h-4 w-4 text-green-500" />
+                      <span className="text-sm">{feature}</span>
+                    </div>
+                  ))}
+                </div>
+                
+                {recommendation.reasons && recommendation.reasons.length > 0 && (
+                  <div className="bg-blue-50 p-3 rounded-md">
+                    <h4 className="text-sm font-medium text-blue-800 mb-2">Why this plan is recommended for you:</h4>
+                    <ul className="space-y-1">
+                      {recommendation.reasons.map((reason: string, idx: number) => (
+                        <li key={idx} className="text-sm text-blue-700 flex items-start gap-2">
+                          <ArrowRight className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                          <span>{reason}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+                
+                {(recommendation.pros?.length > 0 || recommendation.cons?.length > 0) && (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {recommendation.pros?.length > 0 && (
+                      <div>
+                        <h4 className="text-sm font-medium text-green-800 mb-1">Pros</h4>
+                        <ul className="space-y-1">
+                          {recommendation.pros.map((pro: string, idx: number) => (
+                            <li key={idx} className="text-sm flex items-start gap-2">
+                              <Check className="h-4 w-4 text-green-500 mt-0.5 flex-shrink-0" />
+                              <span>{pro}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                    
+                    {recommendation.cons?.length > 0 && (
+                      <div>
+                        <h4 className="text-sm font-medium text-red-800 mb-1">Cons</h4>
+                        <ul className="space-y-1">
+                          {recommendation.cons.map((con: string, idx: number) => (
+                            <li key={idx} className="text-sm flex items-start gap-2">
+                              <span className="text-red-500 font-medium mt-0.5 flex-shrink-0">•</span>
+                              <span>{con}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                  </div>
+                )}
+                
+                <div className="pt-2 flex flex-wrap gap-2">
+                  <Button 
+                    variant="default" 
+                    onClick={() => handleViewPlan(recommendation.planName, recommendation.carrier)}
+                    className="flex-1"
+                  >
+                    View Plan
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    onClick={() => handleComparePlans(recommendation.planName, recommendation.carrier)}
+                    className="flex-1"
+                  >
+                    Compare Plans
+                  </Button>
+                  <Button 
+                    variant="ghost" 
+                    onClick={() => handleLearnMore(recommendation.carrier)}
+                    className="flex items-center gap-1"
+                  >
+                    <ExternalLink className="h-4 w-4" />
+                    Learn More
+                  </Button>
                 </div>
               </div>
-              <div className="mt-3 md:mt-0 text-right">
-                <div className="text-xl font-bold text-green-600">
-                  {formatCurrency(totalPotentialSavings)}/mo
-                </div>
-                <div className="text-sm text-muted-foreground">
-                  {formatCurrency(totalAnnualSavings)}/yr
-                </div>
-              </div>
-            </div>
+            ))}
           </div>
           
-          <div className="space-y-4">
-            <h3 className="font-medium text-lg">Recommended Actions</h3>
-            <div className="space-y-3">
-              {recommendations.map(renderRecommendationCard)}
+          {advice && (
+            <div className="bg-amber-50 p-4 rounded-lg mt-6 border border-amber-200">
+              <h3 className="font-medium text-amber-800 mb-2">Personalized Advice</h3>
+              <p className="text-sm text-amber-700">{advice}</p>
             </div>
-          </div>
-        </div>
-      </CardContent>
-    </Card>
+          )}
+        </CardContent>
+      </Card>
+      
+      {Object.keys(insights).length > 0 && (
+        <Card className="shadow-md">
+          <CardHeader>
+            <CardTitle>Market Insights</CardTitle>
+            <CardDescription>
+              Latest trends and promotions in the wireless market
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {insights.currentPromos && insights.currentPromos.length > 0 && (
+                <div>
+                  <h3 className="font-medium mb-2">Current Promotions</h3>
+                  <ul className="space-y-1">
+                    {insights.currentPromos.map((promo: string, idx: number) => (
+                      <li key={idx} className="text-sm flex items-start gap-2">
+                        <span className="text-blue-500 font-medium mt-0.5 flex-shrink-0">•</span>
+                        <span>{promo}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              
+              {insights.trendingPlans && insights.trendingPlans.length > 0 && (
+                <div>
+                  <h3 className="font-medium mb-2">Trending Plans</h3>
+                  <ul className="space-y-1">
+                    {insights.trendingPlans.map((plan: string, idx: number) => (
+                      <li key={idx} className="text-sm flex items-start gap-2">
+                        <span className="text-purple-500 font-medium mt-0.5 flex-shrink-0">•</span>
+                        <span>{plan}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              
+              {insights.networkPerformance && Object.keys(insights.networkPerformance).length > 0 && (
+                <div>
+                  <h3 className="font-medium mb-2">Network Performance</h3>
+                  <div className="space-y-2">
+                    {Object.entries(insights.networkPerformance).map(([network, performance]) => (
+                      <div key={network} className="text-sm">
+                        <span className="font-medium">{network.charAt(0).toUpperCase() + network.slice(1)}:</span> {performance}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+    </div>
   );
 }
