@@ -5,7 +5,6 @@ import { OverviewTab } from "./OverviewTab";
 import { LineItemsTab } from "./LineItemsTab";
 import { RecommendationsTab } from "./RecommendationsTab";
 import { CarrierComparison } from "./CarrierComparison";
-import { formatCurrency } from "./utils/dataUtils";
 import { NetworkPreference } from './VerizonBillAnalyzer';
 import { useMediaQuery } from "@/hooks/use-media-query";
 
@@ -20,6 +19,7 @@ interface BillTabsProps {
   networkPreference?: NetworkPreference;
   activeTab?: string;
   onTabChange?: (tab: string) => void;
+  formatCurrency: (value: number) => string;
 }
 
 export function BillTabs({ 
@@ -27,7 +27,8 @@ export function BillTabs({
   calculateCarrierSavings, 
   networkPreference,
   activeTab = "overview", 
-  onTabChange 
+  onTabChange,
+  formatCurrency 
 }: BillTabsProps) {
   const [activeCarrierTab, setActiveCarrierTab] = useState("warp");
   const isMobile = useMediaQuery("(max-width: 640px)");
