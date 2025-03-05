@@ -356,7 +356,7 @@ export function RecommendationsTab({
     return networkMap[carrierId] || "";
   };
 
-  const getCarrierRank = (index: number, rec: any, recommendations: any[]): number => {
+  const getCarrierRank = (rec: any, recommendations: any[]): number => {
     if (rec.preferred) {
       let preferredRank = 1;
       const prefCarriers = recommendations.filter(r => r.preferred);
@@ -400,7 +400,7 @@ export function RecommendationsTab({
   const renderStandardRecommendations = () => (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
       {recommendations.map((rec, index) => {
-        const actualRank = getCarrierRank(index, rec, recommendations);
+        const actualRank = getCarrierRank(rec, recommendations);
         
         return (
         <Card key={index} className={`border ${rec.preferred ? 'border-green-400 shadow-md' : 'border-gray-200'}`}>
@@ -616,7 +616,7 @@ export function RecommendationsTab({
                 carrierId: rec.carrier
               };
               
-              const actualRank = getCarrierRank(index, actualRec, aiRecs);
+              const actualRank = getCarrierRank(actualRec, aiRecs);
               
               return (
                 <Card key={index} className={`border ${isPreferred ? 'border-green-400 shadow-md' : 'border-gray-200'}`}>
