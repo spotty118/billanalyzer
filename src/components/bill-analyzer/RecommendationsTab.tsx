@@ -8,7 +8,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { NetworkPreference } from './VerizonBillAnalyzer';
 import { alternativeCarrierPlans, supportedCarriers } from '@/config/alternativeCarriers';
 import { toast } from "sonner";
-
 interface RecommendationsTabProps {
   billData: any;
   formatCurrency: (value: number) => string;
@@ -20,16 +19,13 @@ interface RecommendationsTabProps {
   };
   networkPreference?: NetworkPreference;
 }
-
 type ValidNetworkPreference = Exclude<NetworkPreference, null>;
 const networkToCarrierMap: Record<ValidNetworkPreference, string> = {
   verizon: "warp",
   tmobile: "lightspeed",
   att: "darkstar"
 };
-
 type FeaturesList = string[];
-
 interface AIRecommendation {
   carrier: string;
   planName: string;
@@ -40,7 +36,6 @@ interface AIRecommendation {
   pros: string[];
   cons: string[];
 }
-
 interface AIRecommendationsData {
   recommendations: AIRecommendation[];
   marketInsights: {
@@ -59,7 +54,6 @@ interface AIRecommendationsData {
     billDataTimestamp: string;
   };
 }
-
 export function RecommendationsTab({
   billData,
   formatCurrency,
@@ -71,13 +65,11 @@ export function RecommendationsTab({
   const [isLoadingAI, setIsLoadingAI] = useState(false);
   const [activeTab, setActiveTab] = useState("standard");
   const [progress, setProgress] = useState(0);
-
   const getOrdinalSuffix = (n: number): string => {
     const s = ["th", "st", "nd", "rd"];
     const v = n % 100;
     return n + (s[(v - 20) % 10] || s[v] || s[0]);
   };
-
   const fetchAIRecommendations = async () => {
     setIsLoadingAI(true);
     setProgress(10);
@@ -117,7 +109,6 @@ export function RecommendationsTab({
       setProgress(100);
     }
   };
-
   const sortRecommendations = (recommendations: any[]) => {
     return [...recommendations].sort((a, b) => {
       if (a.preferred && !b.preferred) return -1;
@@ -133,7 +124,6 @@ export function RecommendationsTab({
       return 0;
     });
   };
-
   const getCarrierNetwork = (carrierId: string): string => {
     const networkMap: Record<string, string> = {
       "warp": "verizon",
@@ -146,7 +136,6 @@ export function RecommendationsTab({
     };
     return networkMap[carrierId] || "";
   };
-
   const getCarrierRank = (rec: any, recommendations: any[]): number => {
     if (rec.preferred) {
       let preferredRank = 1;
@@ -178,7 +167,6 @@ export function RecommendationsTab({
       return rank;
     }
   };
-
   const renderStandardRecommendations = () => <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
       {recommendations.map((rec, index) => {
       const actualRank = getCarrierRank(rec, recommendations);
@@ -266,7 +254,6 @@ export function RecommendationsTab({
         </Card>;
     })}
     </div>;
-
   const renderAIRecommendations = () => {
     if (isLoadingAI) {
       return <div className="flex flex-col items-center justify-center p-10 space-y-4">
@@ -397,7 +384,6 @@ export function RecommendationsTab({
           </div>}
       </div>;
   };
-
   useEffect(() => {
     if (billData) {
       let carriersForRecommendation = [...supportedCarriers];
@@ -568,7 +554,6 @@ export function RecommendationsTab({
       }
     }
   }, [billData, calculateCarrierSavings, networkPreference, aiRecommendations, isLoadingAI]);
-
   if (!billData) return <div>No bill data available</div>;
   return <div className="space-y-6">
       <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
@@ -586,7 +571,7 @@ export function RecommendationsTab({
         
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList className="grid w-full max-w-md mx-auto mb-6">
-            <TabsTrigger value="standard">Standard Recommendations</TabsTrigger>
+            
             <TabsTrigger value="ai" disabled={isLoadingAI && !aiRecommendations}>
               AI-Powered Analysis
               {isLoadingAI && <RefreshCw className="ml-2 h-3 w-3 animate-spin" />}
