@@ -1,4 +1,5 @@
-import { ArrowLeftRight, AlertCircle, Check, Star, Zap, Lightbulb, Eye, CircleDot, Smartphone, SquareGantt } from 'lucide-react';
+
+import { ArrowLeftRight, AlertCircle, Check, Star, Zap, Lightbulb, Eye, CircleDot, Smartphone, BarChart2 } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { 
   Tabs, 
@@ -59,7 +60,7 @@ export function CarrierComparison({
       case 'Eye': return <Eye className="h-5 w-5 inline-block mr-2" />;
       case 'CircleDot': return <CircleDot className="h-5 w-5 inline-block mr-2" />;
       case 'Smartphone': return <Smartphone className="h-5 w-5 inline-block mr-2" />;
-      case 'SquareGantt': return <SquareGantt className="h-5 w-5 inline-block mr-2" />;
+      case 'BarChart2': return <BarChart2 className="h-5 w-5 inline-block mr-2" />;
       default: return <ArrowLeftRight className="h-5 w-5 inline-block mr-2" />;
     }
   };

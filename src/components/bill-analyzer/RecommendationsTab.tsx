@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -170,6 +171,30 @@ export function RecommendationsTab({
         let pros: string[] = [];
         let cons: string[] = [];
         
+        // Determine network mapping based on carrier ID
+        const networkMap = {
+          "warp": "verizon",
+          "lightspeed": "tmobile",
+          "darkstar": "att",
+          "visible": "verizon",
+          "cricket": "att",
+          "straighttalk": "multi", // Can use multiple networks
+          "total": "verizon"
+        };
+        
+        const carrierNetwork = networkMap[carrier.id] || "verizon";
+        
+        // Get carrier logo/emoji representation
+        const carrierLogo = {
+          "warp": "🌀",
+          "lightspeed": "⚡",
+          "darkstar": "★",
+          "visible": "👁️",
+          "cricket": "🦗",
+          "straighttalk": "💬",
+          "total": "📱"
+        }[carrier.id] || "📱";
+        
         if (carrier.id === "warp") {
           reasons.push("Unlimited data with no speed caps on Verizon's network");
           pros.push("No contracts or hidden fees");
@@ -232,19 +257,20 @@ export function RecommendationsTab({
           cons.push("Limited customer service options");
         }
         
-        if (networkPreference && carrier.network === networkPreference) {
+        if (networkPreference && carrierNetwork === networkPreference) {
           reasons.unshift(`Recommended for ${networkPreference.toUpperCase()} coverage in your area`);
         }
         
         return {
           carrier: carrier.name,
           carrierId: carrier.id,
-          logo: carrier.logo,
+          logo: carrierLogo,
           planName: selectedPlan.name,
           monthlySavings,
           annualSavings,
           monthlyPrice: totalPlanPrice / lineCount,
-          preferred: networkPreference && carrier.network === networkPreference,
+          network: carrierNetwork,
+          preferred: networkPreference && carrierNetwork === networkPreference,
           reasons,
           pros,
           cons,
@@ -263,6 +289,7 @@ export function RecommendationsTab({
           carrier: "Current Plan",
           carrierId: "current",
           logo: "✓",
+          network: "verizon",
           planName: billData.phoneLines?.[0]?.planName || "Current Plan",
           monthlySavings: 0,
           annualSavings: 0,
