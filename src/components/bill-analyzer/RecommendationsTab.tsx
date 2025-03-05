@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -22,7 +21,7 @@ interface RecommendationsTabProps {
   networkPreference?: NetworkPreference;
 }
 
-const networkToCarrierMap = {
+const networkToCarrierMap: Record<NetworkPreference, string> = {
   verizon: "warp",
   tmobile: "lightspeed",
   att: "darkstar"
@@ -171,21 +170,19 @@ export function RecommendationsTab({
         let pros: string[] = [];
         let cons: string[] = [];
         
-        // Determine network mapping based on carrier ID
-        const networkMap = {
+        const networkMap: Record<string, string> = {
           "warp": "verizon",
           "lightspeed": "tmobile",
           "darkstar": "att",
           "visible": "verizon",
           "cricket": "att",
-          "straighttalk": "multi", // Can use multiple networks
+          "straighttalk": "multi",
           "total": "verizon"
         };
         
         const carrierNetwork = networkMap[carrier.id] || "verizon";
         
-        // Get carrier logo/emoji representation
-        const carrierLogo = {
+        const carrierLogoMap: Record<string, string> = {
           "warp": "🌀",
           "lightspeed": "⚡",
           "darkstar": "★",
@@ -193,7 +190,9 @@ export function RecommendationsTab({
           "cricket": "🦗",
           "straighttalk": "💬",
           "total": "📱"
-        }[carrier.id] || "📱";
+        };
+        
+        const carrierLogo = carrierLogoMap[carrier.id] || "📱";
         
         if (carrier.id === "warp") {
           reasons.push("Unlimited data with no speed caps on Verizon's network");
