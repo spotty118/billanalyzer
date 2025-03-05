@@ -256,9 +256,9 @@ YOU MUST ensure your response contains ONLY valid JSON that can be parsed with J
       })) || []
     };
     
-    // Set up the OpenRouter API request using the CORRECT Gemini model
+    // Set up the OpenRouter API request - EXPLICITLY USING THE REQUESTED MODEL
     const openRouterRequest = {
-      model: "google/gemini-2.0-flash-thinking-exp:free", // Updated to use the correct model
+      model: "google/gemini-2.0-flash-thinking-exp:free", // USING EXACTLY THE REQUESTED MODEL
       messages: [
         {
           role: "system",
@@ -274,8 +274,8 @@ YOU MUST ensure your response contains ONLY valid JSON that can be parsed with J
       response_format: { type: "json_object" } // Explicitly request JSON format
     };
     
-    console.log("Sending recommendation request to OpenRouter API using Gemini Thinking Model...");
-    console.log("Using model: google/gemini-2.0-flash-thinking-exp:free");
+    console.log("Sending recommendation request to OpenRouter API");
+    console.log("IMPORTANT: Using model: google/gemini-2.0-flash-thinking-exp:free");
     
     // Send request to OpenRouter API
     const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
@@ -292,12 +292,15 @@ YOU MUST ensure your response contains ONLY valid JSON that can be parsed with J
     if (!response.ok) {
       const errorText = await response.text();
       console.error("OpenRouter API error response:", errorText);
+      console.error("OpenRouter API status:", response.status);
+      console.error("OpenRouter API statusText:", response.statusText);
       throw new Error(`OpenRouter API error: ${response.status} ${response.statusText}`);
     }
     
     // Parse the response from OpenRouter
     const openRouterResponse = await response.json();
     console.log("OpenRouter API recommendations response received successfully");
+    console.log("Model used:", openRouterResponse.model || "Model info not available");
     
     // Extract the JSON content from Gemini's response
     const recommendationsText = openRouterResponse.choices[0].message.content;

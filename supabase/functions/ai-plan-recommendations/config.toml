@@ -5,6 +5,3 @@ app_id = "ai-plan-recommendations"
 PORT = 54322
 SUPABASE_MAX_FUNCTION_TIME_SECONDS = 60
 SUPABASE_FUNCTION_MEMORY_MB = 1024
-
-[secrets]
-OPENROUTER_API_KEY = "<Your OpenRouter API Key>"
