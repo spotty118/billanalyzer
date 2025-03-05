@@ -1,5 +1,16 @@
-+ billanalyzer/
-+   __init__.py
-- app.py
-- models.py
-- ...
+- app.py         -->  [DELETE]
+    - models.py      -->  billanalyzer/models/models.py
+    - ...
+    + billanalyzer/
+    +   __init__.py
+    +   routes/
+    +     __init__.py
+    +     bill_routes.py       # Routes related to bill analysis
+    +   services/
+    +     __init__.py
+    +     bill_service.py      # Business logic for bill analysis
+    +   models/
+    +     __init__.py
+    +     models.py          # Database models
+    +   ...
+    + app.py                 # Main application entry point (Flask app initialization)
