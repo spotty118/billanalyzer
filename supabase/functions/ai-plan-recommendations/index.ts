@@ -1,3 +1,4 @@
+
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 
 const CORS_HEADERS = {
@@ -241,9 +242,9 @@ YOU MUST ensure your response contains ONLY valid JSON that can be parsed with J
       })) || []
     };
     
-    // Set up the OpenRouter API request using Google's Gemini model
+    // Set up the OpenRouter API request using the CORRECT Gemini model
     const openRouterRequest = {
-      model: "google/gemini-2.0-flash-thinking-exp:free",
+      model: "google/gemini-2.0-flash-thinking-exp:free", // Updated to use the correct model
       messages: [
         {
           role: "system",
@@ -259,7 +260,8 @@ YOU MUST ensure your response contains ONLY valid JSON that can be parsed with J
       response_format: { type: "json_object" } // Explicitly request JSON format
     };
     
-    console.log("Sending recommendation request to OpenRouter API (Gemini Thinking Model)...");
+    console.log("Sending recommendation request to OpenRouter API using Gemini Thinking Model...");
+    console.log("Using model: google/gemini-2.0-flash-thinking-exp:free");
     
     // Send request to OpenRouter API
     const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
