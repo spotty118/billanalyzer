@@ -6,7 +6,7 @@ import { CheckIcon, XIcon, RefreshCw } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { NetworkPreference } from './VerizonBillAnalyzer';
-import { alternativeCarrierPlans } from '@/config/alternativeCarriers';
+import { alternativeCarrierPlans, supportedCarriers } from '@/config/alternativeCarriers';
 import { toast } from "sonner";
 
 interface RecommendationsTabProps {
@@ -21,21 +21,12 @@ interface RecommendationsTabProps {
   networkPreference?: NetworkPreference;
 }
 
-// Updated to include Visible plans
-const carriers = [
-  { id: "warp", name: "US Mobile Warp", logo: "🌀", network: "verizon" },
-  { id: "lightspeed", name: "US Mobile LightSpeed", logo: "⚡", network: "tmobile" },
-  { id: "darkstar", name: "US Mobile DarkStar", logo: "★", network: "att" },
-  { id: "visible", name: "Visible", logo: "👁️", network: "verizon" },
-];
-
 const networkToCarrierMap = {
   verizon: "warp",
   tmobile: "lightspeed",
   att: "darkstar"
 };
 
-// Define a type for the features array
 type FeaturesList = string[];
 
 interface AIRecommendation {
@@ -80,13 +71,11 @@ export function RecommendationsTab({
   const [activeTab, setActiveTab] = useState("standard");
   const [progress, setProgress] = useState(0);
 
-  // Function to fetch AI recommendations
   const fetchAIRecommendations = async () => {
     setIsLoadingAI(true);
     setProgress(10);
     
     try {
-      // Get the anon key from environment or use a default
       const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1nemZpb3VhbWlkYXFjdG5xbnJlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzkyMzE3NjQsImV4cCI6MjA1NDgwNzc2NH0._0hxm1UlSMt3wPx8JwaFDvGmpfjI3p5m0HDm6YfaL6Q';
       
       setProgress(30);
@@ -133,7 +122,7 @@ export function RecommendationsTab({
 
   useEffect(() => {
     if (billData) {
-      let carriersForRecommendation = [...carriers];
+      let carriersForRecommendation = [...supportedCarriers];
       
       if (networkPreference && networkToCarrierMap[networkPreference]) {
         const preferredCarrierId = networkToCarrierMap[networkPreference];
@@ -146,31 +135,32 @@ export function RecommendationsTab({
         }
       }
       
-      // Calculate savings amounts for all carriers
       const currentBillAmount = billData.totalAmount || 0;
       
       const allRecommendations = carriersForRecommendation.map(carrier => {
-        // Get the plan name for the carrier
         const plans = alternativeCarrierPlans.filter(plan => plan.carrierId === carrier.id);
         let selectedPlan;
         
-        // For Visible, select Visible+ as default, for others select Premium plans
         if (carrier.id === "visible") {
           selectedPlan = plans.find(plan => plan.id === "visible-plus") || plans[0];
+        } else if (carrier.id === "cricket") {
+          selectedPlan = plans.find(plan => plan.id === "cricket-unlimited") || plans[0];
+        } else if (carrier.id === "straighttalk") {
+          selectedPlan = plans.find(plan => plan.id === "straighttalk-unlimited-plus") || plans[0];
+        } else if (carrier.id === "total") {
+          selectedPlan = plans.find(plan => plan.id === "total-unlimited") || plans[0];
         } else {
           selectedPlan = plans.find(plan => plan.name.includes('Premium')) || plans[0];
         }
         
         if (!selectedPlan) return null;
         
-        // Calculate savings based on selected plan's base price
         const planBasePrice = selectedPlan.basePrice;
         const lineCount = billData.phoneLines?.length || 1;
-        const totalPlanPrice = planBasePrice * lineCount; // No multi-line discounts
+        const totalPlanPrice = planBasePrice * lineCount;
         const monthlySavings = currentBillAmount - totalPlanPrice;
         const annualSavings = monthlySavings * 12;
         
-        // Get features for this carrier from the alternativeCarrierPlans data
         let features: FeaturesList = [];
         if (selectedPlan) {
           features = selectedPlan.features;
@@ -213,6 +203,33 @@ export function RecommendationsTab({
           }
           cons.push("Customer service is app/chat based");
           cons.push("Deprioritized during network congestion");
+        } else if (carrier.id === "cricket") {
+          reasons.push("AT&T network with HBO Max included");
+          pros.push("HBO Max streaming service included");
+          pros.push("Mexico & Canada usage included");
+          if (networkPreference === 'att') {
+            pros.push("Uses your preferred AT&T network");
+          }
+          cons.push("Speed capped at 8Mbps");
+          cons.push("SD video streaming by default");
+        } else if (carrier.id === "straighttalk") {
+          reasons.push("Choose your network (Verizon, AT&T, or T-Mobile)");
+          pros.push("Network flexibility - use the best in your area");
+          pros.push("Available at Walmart and other retailers");
+          if (networkPreference) {
+            pros.push(`Can use your preferred ${networkPreference.toUpperCase()} network`);
+          }
+          cons.push("Higher per-line cost than some alternatives");
+          cons.push("Limited international features");
+        } else if (carrier.id === "total") {
+          reasons.push("Verizon network with competitive pricing");
+          pros.push("Widely available at retail stores");
+          pros.push("International calling included");
+          if (networkPreference === 'verizon') {
+            pros.push("Uses your preferred Verizon network");
+          }
+          cons.push("Fewer premium features than postpaid plans");
+          cons.push("Limited customer service options");
         }
         
         if (networkPreference && carrier.network === networkPreference) {
@@ -226,7 +243,7 @@ export function RecommendationsTab({
           planName: selectedPlan.name,
           monthlySavings,
           annualSavings,
-          monthlyPrice: totalPlanPrice / lineCount, // Price per line
+          monthlyPrice: totalPlanPrice / lineCount,
           preferred: networkPreference && carrier.network === networkPreference,
           reasons,
           pros,
@@ -253,11 +270,10 @@ export function RecommendationsTab({
           reasons: ["Your current plan appears to be competitive"],
           pros: ["No need to switch carriers", "Familiar billing"],
           cons: ["You may be missing perks from other carriers"],
-          features: [] // Empty array of features for current plan
+          features: []
         }
       ]);
       
-      // Auto-fetch AI recommendations if we have bill data
       if (!aiRecommendations && !isLoadingAI) {
         fetchAIRecommendations();
       }
@@ -387,7 +403,6 @@ export function RecommendationsTab({
 
     return (
       <div className="space-y-8">
-        {/* Market Insights Panel */}
         <Card className="border border-blue-200 bg-blue-50/30">
           <CardHeader>
             <CardTitle className="text-blue-800">Market Insights</CardTitle>
@@ -444,13 +459,11 @@ export function RecommendationsTab({
           </CardContent>
         </Card>
         
-        {/* Personalized Advice */}
         <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
           <h3 className="text-lg font-semibold mb-2">Personalized Advice</h3>
           <p className="text-gray-700">{aiRecommendations.personalizedAdvice}</p>
         </div>
 
-        {/* AI Recommendations */}
         <div>
           <h3 className="text-lg font-semibold mb-4">AI-Powered Recommendations</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -555,7 +568,6 @@ export function RecommendationsTab({
           </div>
         </div>
         
-        {/* Generated timestamp */}
         {aiRecommendations.meta && (
           <div className="text-xs text-gray-400 text-right mt-4">
             Data updated: {new Date(aiRecommendations.meta.generatedAt).toLocaleString()}

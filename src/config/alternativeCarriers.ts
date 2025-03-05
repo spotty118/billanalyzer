@@ -1,4 +1,3 @@
-
 import { formatCurrency } from "@/data/verizonPlans";
 
 export interface CarrierPlan {
@@ -424,6 +423,188 @@ export const alternativeCarrierPlans: CarrierPlan[] = [
     network: 'Verizon',
     iconName: 'Eye',
     dataPriorityLevel: 'QCI 8 (50GB), then QCI 9',
+  },
+  
+  // Cricket Wireless Plans (AT&T)
+  {
+    id: 'cricket-basic',
+    carrierId: 'cricket',
+    carrierName: 'Cricket Wireless',
+    name: 'Basic Plan',
+    basePrice: 30,
+    pricePerLine: {
+      line1: 30,
+      line2: 30,
+      line3: 30,
+      line4: 30,
+      line5Plus: 30,
+    },
+    dataAllowance: {
+      premium: 5,
+      hotspot: 0,
+    },
+    features: [
+      "5GB data, then slowed",
+      "Unlimited talk & text",
+      "SD video streaming",
+      "Compatible with most AT&T devices"
+    ],
+    streamingPerks: [],
+    streamingQuality: '480p',
+    network: 'AT&T',
+    iconName: 'CircleDot',
+    dataPriorityLevel: 'QCI 9',
+  },
+  {
+    id: 'cricket-unlimited',
+    carrierId: 'cricket',
+    carrierName: 'Cricket Wireless',
+    name: 'Unlimited Plan',
+    basePrice: 55,
+    pricePerLine: {
+      line1: 55,
+      line2: 55,
+      line3: 55,
+      line4: 55,
+      line5Plus: 55,
+    },
+    dataAllowance: {
+      premium: 'unlimited',
+      hotspot: 15,
+    },
+    features: [
+      "Unlimited data (speeds max at 8Mbps)",
+      "15GB hotspot included",
+      "Unlimited talk & text to/from Mexico and Canada",
+      "HBO Max with Ads included"
+    ],
+    streamingPerks: [
+      "HBO Max with Ads"
+    ],
+    streamingQuality: '480p',
+    network: 'AT&T',
+    iconName: 'CircleDot',
+    dataPriorityLevel: 'QCI 9',
+  },
+  
+  // Straight Talk Plans (Verizon/AT&T/T-Mobile)
+  {
+    id: 'straighttalk-unlimited',
+    carrierId: 'straighttalk',
+    carrierName: 'Straight Talk',
+    name: 'Unlimited Plan',
+    basePrice: 45,
+    pricePerLine: {
+      line1: 45,
+      line2: 45,
+      line3: 45,
+      line4: 45,
+      line5Plus: 45,
+    },
+    dataAllowance: {
+      premium: 'unlimited',
+      hotspot: 10,
+    },
+    features: [
+      "Unlimited talk, text & data",
+      "First 10GB at high speeds, then reduced",
+      "10GB hotspot included",
+      "Multi-network compatibility (choose your SIM)"
+    ],
+    streamingPerks: [],
+    streamingQuality: '480p',
+    network: 'Both',
+    iconName: 'Smartphone',
+    dataPriorityLevel: 'QCI 9',
+  },
+  {
+    id: 'straighttalk-unlimited-plus',
+    carrierId: 'straighttalk',
+    carrierName: 'Straight Talk',
+    name: 'Unlimited Plus',
+    basePrice: 60,
+    pricePerLine: {
+      line1: 60,
+      line2: 60,
+      line3: 60,
+      line4: 60,
+      line5Plus: 60,
+    },
+    dataAllowance: {
+      premium: 'unlimited',
+      hotspot: 25,
+    },
+    features: [
+      "Unlimited talk, text & high-speed data",
+      "25GB hotspot data",
+      "International calling to select countries",
+      "Multi-network compatibility"
+    ],
+    streamingPerks: [],
+    streamingQuality: '720p',
+    network: 'Both',
+    iconName: 'Smartphone',
+    dataPriorityLevel: 'QCI 9',
+  },
+  
+  // Total Wireless Plans (Verizon)
+  {
+    id: 'total-single',
+    carrierId: 'total',
+    carrierName: 'Total Wireless',
+    name: 'Single Line Plan',
+    basePrice: 35,
+    pricePerLine: {
+      line1: 35,
+      line2: 35,
+      line3: 35,
+      line4: 35,
+      line5Plus: 35,
+    },
+    dataAllowance: {
+      premium: 10,
+      hotspot: 0,
+    },
+    features: [
+      "10GB of high-speed data, then 2G",
+      "Unlimited talk & text",
+      "Uses Verizon's nationwide network",
+      "No contracts"
+    ],
+    streamingPerks: [],
+    streamingQuality: '480p',
+    network: 'Verizon',
+    iconName: 'SquareGantt',
+    dataPriorityLevel: 'QCI 9',
+  },
+  {
+    id: 'total-unlimited',
+    carrierId: 'total',
+    carrierName: 'Total Wireless',
+    name: 'Unlimited Plan',
+    basePrice: 50,
+    pricePerLine: {
+      line1: 50,
+      line2: 50,
+      line3: 50,
+      line4: 50,
+      line5Plus: 50,
+    },
+    dataAllowance: {
+      premium: 'unlimited',
+      hotspot: 10,
+    },
+    features: [
+      "Unlimited data (may be slowed during congestion)",
+      "10GB hotspot data included",
+      "Unlimited talk & text to/from Mexico, Canada & more",
+      "Verizon network coverage"
+    ],
+    streamingPerks: [],
+    streamingQuality: '480p',
+    network: 'Verizon',
+    iconName: 'SquareGantt',
+    dataPriorityLevel: 'QCI 9',
   }
 ];
 
@@ -450,6 +631,12 @@ export function findBestCarrierMatch(carrierId: string): string {
     return 'lightspeed-premium';
   } else if (carrierId === 'visible') {
     return 'visible-plus';
+  } else if (carrierId === 'cricket') {
+    return 'cricket-unlimited';
+  } else if (carrierId === 'straighttalk') {
+    return 'straighttalk-unlimited-plus';
+  } else if (carrierId === 'total') {
+    return 'total-unlimited';
   }
   
   // Default to the first plan of the carrier if no match is found
@@ -457,20 +644,32 @@ export function findBestCarrierMatch(carrierId: string): string {
   return carrierPlans.length > 0 ? carrierPlans[0].id : '';
 }
 
-// Updated to include Visible and the three US Mobile sub-brands
+// Updated to include more prepaid carriers
 export const supportedCarriers = [
   { id: 'darkstar', name: 'US Mobile DarkStar', icon: 'Star', isPrimary: false },
   { id: 'warp', name: 'US Mobile Warp', icon: 'Zap', isPrimary: false },
   { id: 'lightspeed', name: 'US Mobile LightSpeed', icon: 'Lightbulb', isPrimary: false },
-  { id: 'visible', name: 'Visible', icon: 'Eye', isPrimary: false }
+  { id: 'visible', name: 'Visible', icon: 'Eye', isPrimary: false },
+  { id: 'cricket', name: 'Cricket Wireless', icon: 'CircleDot', isPrimary: false },
+  { id: 'straighttalk', name: 'Straight Talk', icon: 'Smartphone', isPrimary: false },
+  { id: 'total', name: 'Total Wireless', icon: 'SquareGantt', isPrimary: false }
 ];
 
 // Helper function to get all US Mobile carriers and sub-brands
 export function getUSMobileCarriers() {
-  return supportedCarriers.filter(carrier => carrier.id !== 'visible');
+  return supportedCarriers.filter(carrier => 
+    ['darkstar', 'warp', 'lightspeed'].includes(carrier.id)
+  );
 }
 
 // Helper function to get all Visible carriers
 export function getVisibleCarriers() {
   return supportedCarriers.filter(carrier => carrier.id === 'visible');
+}
+
+// Helper function to get all third-party prepaid carriers
+export function getThirdPartyCarriers() {
+  return supportedCarriers.filter(carrier => 
+    ['cricket', 'straighttalk', 'total'].includes(carrier.id)
+  );
 }

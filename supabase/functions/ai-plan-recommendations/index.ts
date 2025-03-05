@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 
 const CORS_HEADERS = {
@@ -90,7 +89,7 @@ function generateFallbackRecommendations(billData: any, networkPreference: strin
   // Generate static recommendations based on network preference
   const currentDate = new Date().toISOString();
   
-  // Default recommendations that don't rely on external API
+  // Add the new carriers to fallback recommendations
   return {
     recommendations: [
       {
@@ -114,18 +113,38 @@ function generateFallbackRecommendations(billData: any, networkPreference: strin
         reasons: ["Simple pricing", "Taxes and fees included"],
         pros: ["No hidden fees", "Easy activation process", "Good Verizon coverage"],
         cons: ["Limited premium data", "Customer service via chat only"]
+      },
+      {
+        carrier: "Cricket Wireless",
+        planName: "Unlimited Plan",
+        network: "att",
+        monthlyPrice: 55,
+        features: ["Unlimited Data", "15GB Hotspot", "HBO Max with Ads"],
+        reasons: ["Good AT&T coverage", "Streaming perks included"],
+        pros: ["HBO Max included", "Mexico & Canada usage", "No contracts"],
+        cons: ["Slower speeds (8Mbps max)", "Limited hotspot data"]
+      },
+      {
+        carrier: "Total Wireless",
+        planName: "Unlimited Plan",
+        network: "verizon",
+        monthlyPrice: 50,
+        features: ["Unlimited Data", "10GB Hotspot", "International Calling"],
+        reasons: ["Verizon network coverage", "Good balance of features"],
+        pros: ["No contracts", "International benefits", "Available at retail stores"],
+        cons: ["SD video streaming only", "Deprioritized during congestion"]
       }
     ],
     marketInsights: {
-      currentPromos: ["US Mobile offering $10 off for 3 months", "Visible offering 15% off for students"],
-      trendingPlans: ["US Mobile Premium Unlimited", "Visible+"],
+      currentPromos: ["US Mobile offering $10 off for 3 months", "Visible offering 15% off for students", "Cricket offering $50 BYOD credit"],
+      trendingPlans: ["US Mobile Premium Unlimited", "Visible+", "Cricket Unlimited with HBO Max"],
       networkPerformance: {
         verizon: "Strong coverage nationwide with some congestion in urban areas",
         tmobile: "Fast 5G speeds in urban areas, expanding rural coverage",
         att: "Consistent performance across urban and many rural areas"
       }
     },
-    personalizedAdvice: "Consider switching to a plan that offers better value for similar features. Current market options offer competitive pricing with premium features.",
+    personalizedAdvice: "Consider switching to a prepaid carrier that offers better value for similar features. Many now include premium features like hotspot data and streaming perks at lower prices than traditional postpaid plans.",
     meta: {
       generatedAt: currentDate,
       source: "fallback",
@@ -151,6 +170,9 @@ IMPORTANT NOTES ABOUT CURRENT MARKET CONDITIONS (OCTOBER 2024):
 - US Mobile offers Warp 5G (on Verizon), Lightspeed 5G (on T-Mobile), and DarkStar 5G (on AT&T)
 - US Mobile has flat pricing with NO multi-line discounts: $44/month for Premium, $25/month for Starter
 - Visible Basic costs $25/mo and Visible+ costs $45/mo with NO multi-line discounts
+- Cricket Wireless offers plans from $30-55/mo with special multi-line pricing
+- Straight Talk offers plans from $45-60/mo on multiple networks
+- Total Wireless offers plans from $35-50/mo on Verizon's network
 - Verizon's latest plans are Unlimited Welcome, Unlimited Plus, and Unlimited Ultimate
 - T-Mobile offers Go5G, Go5G Plus, and Go5G Next plans
 - AT&T offers Value Plus, Unlimited Starter, Unlimited Extra, and Unlimited Premium
@@ -171,7 +193,7 @@ IMPORTANT: Your response must be a valid JSON object. Structure it exactly like 
   ],
   "marketInsights": {
     "currentPromos": ["US Mobile offering $10 off for 3 months", "Verizon offering BOGO iPhone deals"],
-    "trendingPlans": ["US Mobile Premium Unlimited", "Visible+"],
+    "trendingPlans": ["US Mobile Premium Unlimited", "Visible+", "Cricket Unlimited"],
     "networkPerformance": {
       "verizon": "Strong coverage but congested in urban areas",
       "tmobile": "Fast 5G speeds, improving rural coverage",
@@ -181,11 +203,11 @@ IMPORTANT: Your response must be a valid JSON object. Structure it exactly like 
   "personalizedAdvice": "Based on your usage pattern with multiple lines and high data usage, you would benefit most from a premium unlimited plan with proper hotspot allocation."
 }
 
-Include Visible and Visible+ in your recommendations if they would be a good fit for the customer. Remember that:
+Include prepaid carriers like Cricket Wireless, Straight Talk, and Total Wireless in your recommendations if they would be a good fit for the customer. Remember that:
 - US Mobile has NO multi-line discounts - price is the same for each line
 - Visible has NO multi-line discounts - price is the same for each line
-- Visible Basic is $25/mo for unlimited data but deprioritized
-- Visible+ is $45/mo with 50GB of premium data
+- Cricket Wireless offers family discounts that increase with more lines
+- Straight Talk and Total Wireless have more traditional pricing models
 
 Base your recommendations on:
 1. The number of lines they have
@@ -194,7 +216,7 @@ Base your recommendations on:
 4. Special features they might need (hotspot, international)
 5. Latest promotions and deals from carriers
 
-Recommend AT LEAST 2 different carriers with appropriate plans, prioritizing their preferred network if specified.
+Recommend AT LEAST 3-4 different carriers with appropriate plans, prioritizing their preferred network if specified. Include at least one prepaid carrier option (Cricket, Straight Talk, Total, etc).
 
 YOU MUST ensure your response contains ONLY valid JSON that can be parsed with JSON.parse(). Do not include any explanatory text, markdown formatting, or code blocks before or after the JSON.`;
 

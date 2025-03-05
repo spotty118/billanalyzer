@@ -1,4 +1,4 @@
-import { ArrowLeftRight, AlertCircle, Check, Star, Zap, Lightbulb, Eye } from 'lucide-react';
+import { ArrowLeftRight, AlertCircle, Check, Star, Zap, Lightbulb, Eye, CircleDot, Smartphone, SquareGantt } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { 
   Tabs, 
@@ -57,6 +57,9 @@ export function CarrierComparison({
       case 'Zap': return <Zap className="h-5 w-5 inline-block mr-2" />;
       case 'Lightbulb': return <Lightbulb className="h-5 w-5 inline-block mr-2" />;
       case 'Eye': return <Eye className="h-5 w-5 inline-block mr-2" />;
+      case 'CircleDot': return <CircleDot className="h-5 w-5 inline-block mr-2" />;
+      case 'Smartphone': return <Smartphone className="h-5 w-5 inline-block mr-2" />;
+      case 'SquareGantt': return <SquareGantt className="h-5 w-5 inline-block mr-2" />;
       default: return <ArrowLeftRight className="h-5 w-5 inline-block mr-2" />;
     }
   };
@@ -142,7 +145,7 @@ export function CarrierComparison({
         
         <Tabs defaultValue={activeCarrierTab} value={activeCarrierTab} onValueChange={setActiveCarrierTab}>
           <TabsList className="mb-6 w-full">
-            <div className="grid grid-cols-4 gap-2 w-full">
+            <div className="grid grid-cols-7 gap-2 w-full">
               {supportedCarriers.map(carrier => (
                 <TabsTrigger 
                   key={carrier.id} 
@@ -319,6 +322,9 @@ export function CarrierComparison({
                             <li>• Visit carrier website for most current details</li>
                             <li>• No multi-line discounts available on these plans</li>
                             {carrier.id === 'visible' && <li>• Visible offers Party Pay for multi-line households</li>}
+                            {carrier.id === 'cricket' && <li>• Cricket offers discounted multi-line plans not shown here</li>}
+                            {carrier.id === 'straighttalk' && <li>• Straight Talk offers 365-day plans for additional savings</li>}
+                            {carrier.id === 'total' && <li>• Total Wireless offers family plans with shared data</li>}
                           </ul>
                         </div>
                       </div>
@@ -327,7 +333,26 @@ export function CarrierComparison({
                     <Button 
                       variant="outline" 
                       className="w-full mt-4 bg-gradient-to-r from-blue-500 to-indigo-600 text-white hover:from-blue-600 hover:to-indigo-700 border-0"
-                      onClick={() => window.open(carrier.id === 'visible' ? 'https://www.visible.com' : 'https://www.usmobile.com', '_blank')}
+                      onClick={() => {
+                        let websiteUrl = '';
+                        switch(carrier.id) {
+                          case 'visible':
+                            websiteUrl = 'https://www.visible.com';
+                            break;
+                          case 'cricket':
+                            websiteUrl = 'https://www.cricketwireless.com';
+                            break;
+                          case 'straighttalk':
+                            websiteUrl = 'https://www.straighttalk.com';
+                            break;
+                          case 'total':
+                            websiteUrl = 'https://www.totalwireless.com';
+                            break;
+                          default:
+                            websiteUrl = 'https://www.usmobile.com';
+                        }
+                        window.open(websiteUrl, '_blank');
+                      }}
                     >
                       Visit {carrier.name} Website
                     </Button>
@@ -418,12 +443,12 @@ export function CarrierComparison({
               </ul>
             </div>
             <div className="border p-4 rounded-md bg-white">
-              <h3 className="text-md font-medium mb-2">US Mobile Highlights</h3>
+              <h3 className="text-md font-medium mb-2">Prepaid Carrier Highlights</h3>
               <ul className="list-disc pl-5 space-y-1 text-sm">
-                <li>Three network options to choose from</li>
-                <li>All prices include taxes and fees</li>
-                <li>No contracts, easy online activation</li>
-                <li>Customizable plans for your needs</li>
+                <li>No contracts or credit checks required</li>
+                <li>Many include taxes and fees in advertised price</li>
+                <li>Most offer multi-line family plans with discounts</li>
+                <li>May have different coverage than postpaid plans</li>
               </ul>
             </div>
           </div>
