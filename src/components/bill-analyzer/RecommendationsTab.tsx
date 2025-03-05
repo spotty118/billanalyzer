@@ -73,6 +73,12 @@ export function RecommendationsTab({
   const [activeTab, setActiveTab] = useState("standard");
   const [progress, setProgress] = useState(0);
 
+  const getOrdinalSuffix = (n: number): string => {
+    const s = ["th", "st", "nd", "rd"];
+    const v = n % 100;
+    return n + (s[(v - 20) % 10] || s[v] || s[0]);
+  };
+
   const fetchAIRecommendations = async () => {
     setIsLoadingAI(true);
     setProgress(10);
@@ -322,8 +328,12 @@ export function RecommendationsTab({
                 {rec.preferred && (
                   <Badge className="bg-green-500">Best Network Match</Badge>
                 )}
-                {index === 0 && !rec.preferred && (
-                  <Badge className="bg-blue-500">Best Value</Badge>
+                {!rec.preferred && (
+                  <Badge className={index === 0 ? "bg-blue-600" : 
+                             index === 1 ? "bg-blue-500" : 
+                             index === 2 ? "bg-blue-400" : "bg-blue-300"}>
+                    {getOrdinalSuffix(index + 1)} Best Value
+                  </Badge>
                 )}
               </div>
             </div>
@@ -508,11 +518,14 @@ export function RecommendationsTab({
                       <CardTitle>{rec.carrier}</CardTitle>
                     </div>
                     <div className="flex gap-2">
-                      {networkPreference === rec.network && (
+                      {networkPreference === rec.network ? (
                         <Badge className="bg-green-500">Best Network Match</Badge>
-                      )}
-                      {index === 0 && networkPreference !== rec.network && (
-                        <Badge className="bg-blue-500">Best Value</Badge>
+                      ) : (
+                        <Badge className={index === 0 ? "bg-blue-600" : 
+                                 index === 1 ? "bg-blue-500" : 
+                                 index === 2 ? "bg-blue-400" : "bg-blue-300"}>
+                          {getOrdinalSuffix(index + 1)} Best Value
+                        </Badge>
                       )}
                     </div>
                   </div>
