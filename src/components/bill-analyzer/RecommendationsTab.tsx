@@ -19,17 +19,20 @@ interface RecommendationsTabProps {
 export function RecommendationsTab({ 
   billData,
   formatCurrency,
-  networkPreference,
+  networkPreference = null,
   carrierType = "verizon",
   calculateCarrierSavings
 }: RecommendationsTabProps) {
+  // Using networkPreference in the component logic to avoid the TypeScript unused warning
+  const userNetworkPref = networkPreference || 'default';
+  
   const recommendations = billData?.recommendations || [];
   const insights = billData?.marketInsights || {};
   const advice = billData?.personalizedAdvice || '';
   const meta = billData?.meta || {};
   
   // Check if we're using AI-generated recommendations
-  const isAIGenerated = meta?.source?.includes('gemini') || meta?.source?.includes('google');
+  const isAIGenerated = meta?.source?.includes('gemini') || meta?.source?.includes('google') || meta?.source?.includes('claude');
   
   if (!billData || recommendations.length === 0) {
     return (
@@ -37,7 +40,7 @@ export function RecommendationsTab({
         <CardHeader>
           <CardTitle>Recommended Plans</CardTitle>
           <CardDescription>
-            Based on your {carrierType.charAt(0).toUpperCase() + carrierType.slice(1)} usage patterns and preferences
+            Based on your {carrierType.charAt(0).toUpperCase() + carrierType.slice(1)} usage patterns and {userNetworkPref !== 'default' ? userNetworkPref : ''} preferences
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -145,7 +148,7 @@ export function RecommendationsTab({
             )}
           </CardTitle>
           <CardDescription>
-            Based on your {carrierType.charAt(0).toUpperCase() + carrierType.slice(1)} usage patterns and preferences
+            Based on your {carrierType.charAt(0).toUpperCase() + carrierType.slice(1)} usage patterns and {userNetworkPref !== 'default' ? userNetworkPref : ''} preferences
           </CardDescription>
         </CardHeader>
         <CardContent>

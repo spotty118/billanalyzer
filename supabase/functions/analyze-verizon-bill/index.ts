@@ -6,8 +6,9 @@ const CORS_HEADERS = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-// Get Claude API key from environment variable
+// Get API keys from environment variables
 const ANTHROPIC_API_KEY = Deno.env.get('ANTHROPIC_API_KEY');
+const OPENROUTER_API_KEY = Deno.env.get('OPENROUTER_API_KEY');
 
 // In EdgeRuntime, use the waitUntil function to continue processing after response is sent
 const isEdgeRuntime = typeof EdgeRuntime !== 'undefined';
@@ -98,7 +99,8 @@ function arrayBufferToBase64(buffer: ArrayBuffer): string {
   return base64;
 }
 
-async function analyzeBillText(extractedText: string, networkPreference?: string, carrierType?: string) {
+// Function to analyze bill using Claude
+async function analyzeBillWithClaude(extractedText: string, networkPreference?: string, carrierType?: string) {
   if (!ANTHROPIC_API_KEY) {
     console.error("Missing Anthropic API key");
     throw new Error("Claude API key not configured");
@@ -315,9 +317,12 @@ YOU MUST ensure your response contains ONLY valid JSON that can be parsed with J
       }
       
       // Add source information
-      jsonData.analysisSource = "our-ai";
+      jsonData.analysisSource = "claude";
       jsonData.processingMethod = "text-extraction";
       jsonData.extractionDate = new Date().toISOString();
+      jsonData.meta = {
+        source: "claude-ai"
+      };
       
       console.log("Successfully parsed JSON data from Claude's response");
       console.log("JSON data keys:", Object.keys(jsonData));
@@ -331,6 +336,458 @@ YOU MUST ensure your response contains ONLY valid JSON that can be parsed with J
   } catch (error) {
     console.error("Error using Claude for analysis:", error);
     throw new Error(`AI analysis failed: ${error.message}`);
+  }
+}
+
+// Function to analyze bill using Gemini (via OpenRouter) as a fallback
+async function analyzeBillWithGemini(extractedText: string, networkPreference?: string, carrierType?: string) {
+  if (!OPENROUTER_API_KEY) {
+    console.error("Missing OpenRouter API key");
+    throw new Error("OpenRouter API key not configured for Gemini access");
+  }
+  
+  try {
+    console.log("Attempting fallback with Gemini via OpenRouter...");
+    console.log("Text sample (first 200 chars):", extractedText.substring(0, 200));
+    console.log("Carrier type:", carrierType || "verizon");
+    
+    const systemPrompt = `You are an expert mobile carrier bill analyzer. Analyze the provided ${carrierType || "mobile carrier"} bill text and extract key information into a structured JSON format, following these guidelines exactly.
+
+Your response must be a valid JSON object that can be parsed with JSON.parse(). Structure it like this:
+{
+  "accountInfo": {
+    "customerName": string,
+    "accountNumber": string,
+    "billingPeriod": string,
+    "billDate": string,
+    "dueDate": string
+  },
+  "totalAmount": number,
+  "phoneLines": [
+    {
+      "phoneNumber": string,
+      "ownerName": string,
+      "deviceName": string,
+      "planName": string,
+      "monthlyTotal": number,
+      "details": {
+        "planCost": number,
+        "planDiscount": number,
+        "devicePayment": number,
+        "deviceCredit": number,
+        "protection": number,
+        "perks": [
+          {
+            "name": string,
+            "cost": number
+          }
+        ],
+        "surcharges": number,
+        "taxes": number,
+        "prorated": boolean,
+        "activationFee": number
+      }
+    }
+  ],
+  "chargesByCategory": {
+    "Plan Charges": number,
+    "Device Payments": number,
+    "Services & Add-ons": number,
+    "Taxes & Fees": number,
+    "Discounts & Credits": number
+  },
+  "recommendations": [
+    {
+      "carrier": string,
+      "planName": string,
+      "monthlyPrice": number,
+      "originalPrice": number,
+      "network": string,
+      "features": [string],
+      "reasons": [string],
+      "pros": [string],
+      "cons": [string]
+    }
+  ],
+  "marketInsights": {
+    "currentPromos": [string],
+    "trendingPlans": [string],
+    "networkPerformance": {
+      "verizon": string,
+      "tmobile": string,
+      "att": string
+    }
+  },
+  "personalizedAdvice": string,
+  "perks": [
+    {
+      "name": string,
+      "description": string,
+      "monthlyValue": number,
+      "includedWith": string
+    }
+  ],
+  "promotions": [
+    {
+      "name": string,
+      "description": string,
+      "monthlyValue": number,
+      "remainingMonths": number,
+      "appliedTo": string
+    }
+  ]
+}`;
+
+    // Set up the OpenRouter API request for Gemini Pro
+    const openRouterRequest = {
+      model: "google/gemini-pro",
+      messages: [
+        {
+          role: "system", 
+          content: systemPrompt
+        },
+        {
+          role: "user",
+          content: `Here is the text extracted from a ${carrierType || "mobile carrier"} bill. Please analyze it and extract the structured information according to the format specified:` + 
+              (networkPreference ? `\n\nThe customer's preferred network is: ${networkPreference}.\n\n` : "\n\n") + 
+              extractedText
+        }
+      ],
+      temperature: 0.1,
+      max_tokens: 4000
+    };
+    
+    console.log("Sending text to OpenRouter (Gemini Pro)...");
+    
+    // Send request to OpenRouter API
+    const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${OPENROUTER_API_KEY}`,
+        "HTTP-Referer": "https://supabase.functions/analyze-verizon-bill"
+      },
+      body: JSON.stringify(openRouterRequest)
+    });
+    
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error("OpenRouter API error response:", errorText);
+      throw new Error(`OpenRouter API error: ${response.status} ${response.statusText}`);
+    }
+    
+    // Parse the response from OpenRouter
+    const openRouterResponse = await response.json();
+    console.log("OpenRouter (Gemini) analysis response received successfully");
+    
+    // Extract the text content from OpenRouter's response
+    const analysisText = openRouterResponse.choices[0].message.content;
+    console.log("Analysis text length:", analysisText.length);
+    console.log("Analysis text sample:", analysisText.substring(0, 500));
+    
+    try {
+      // Try to parse the response as JSON
+      let jsonData;
+      
+      // First attempt: direct parsing
+      try {
+        jsonData = JSON.parse(analysisText);
+      } catch (parseError) {
+        console.log("Direct JSON parsing failed, attempting to extract JSON from text");
+        
+        // Second attempt: find JSON in the text with regex
+        const jsonMatch = analysisText.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+          jsonData = JSON.parse(jsonMatch[0]);
+        } else {
+          throw new Error("Unable to extract JSON from Gemini's response");
+        }
+      }
+      
+      // Add recommendations if they don't exist
+      if (!jsonData.recommendations) {
+        // Generate some generic recommendations based on the bill data
+        jsonData.recommendations = generateRecommendations(jsonData, networkPreference, carrierType);
+      }
+      
+      // Add market insights if they don't exist
+      if (!jsonData.marketInsights) {
+        jsonData.marketInsights = {
+          currentPromos: [
+            "New customer discount: $300 off when switching to US Mobile",
+            "BYOD credit: $200 per line when you bring your own device",
+            "Family plan discount: 20% off for 4+ lines",
+          ],
+          trendingPlans: [
+            "US Mobile Warp 5G Unlimited",
+            "US Mobile Custom Plan",
+            "US Mobile Family Plans",
+          ],
+          networkPerformance: {
+            verizon: "Excellent coverage but higher cost",
+            tmobile: "Good urban coverage with improved rural service",
+            att: "Strong overall network with good rural coverage",
+          }
+        };
+      }
+      
+      // Add personalized advice if it doesn't exist
+      if (!jsonData.personalizedAdvice) {
+        jsonData.personalizedAdvice = generatePersonalizedAdvice(jsonData, networkPreference);
+      }
+      
+      // Ensure proper structure for phoneLines and details
+      if (jsonData.phoneLines) {
+        jsonData.phoneLines = jsonData.phoneLines.map((line: any) => {
+          if (!line.details) {
+            line.details = {};
+          }
+          
+          // Ensure all required properties exist with defaults
+          line.details = {
+            planCost: line.details.planCost || 0,
+            planDiscount: line.details.planDiscount || 0,
+            devicePayment: line.details.devicePayment || 0,
+            deviceCredit: line.details.deviceCredit || 0,
+            protection: line.details.protection || 0,
+            perks: line.details.perks || [],
+            surcharges: line.details.surcharges || 0,
+            taxes: line.details.taxes || 0,
+            prorated: line.details.prorated || false,
+            activationFee: line.details.activationFee || 0,
+            ...line.details
+          };
+          
+          // Ensure monthlyTotal is calculated correctly
+          if (!line.monthlyTotal || typeof line.monthlyTotal !== 'number') {
+            const details = line.details;
+            line.monthlyTotal = (
+              (details.planCost || 0) - 
+              (details.planDiscount || 0) + 
+              (details.devicePayment || 0) - 
+              (details.deviceCredit || 0) + 
+              (details.protection || 0) + 
+              (details.surcharges || 0) + 
+              (details.taxes || 0) + 
+              (details.activationFee || 0)
+            );
+          }
+          
+          return line;
+        });
+      }
+      
+      // Ensure chargesByCategory exists
+      if (!jsonData.chargesByCategory) {
+        jsonData.chargesByCategory = {
+          "Plan Charges": 0,
+          "Device Payments": 0,
+          "Services & Add-ons": 0,
+          "Taxes & Fees": 0,
+          "Discounts & Credits": 0
+        };
+      }
+      
+      // Add network preference if provided
+      if (networkPreference) {
+        jsonData.networkPreference = networkPreference;
+      }
+      
+      // Add carrier type if provided
+      if (carrierType) {
+        jsonData.carrierType = carrierType;
+      }
+      
+      // Add source information
+      jsonData.analysisSource = "gemini";
+      jsonData.processingMethod = "text-extraction";
+      jsonData.extractionDate = new Date().toISOString();
+      jsonData.meta = {
+        source: "gemini-ai"
+      };
+      
+      console.log("Successfully parsed JSON data from Gemini's response");
+      console.log("JSON data keys:", Object.keys(jsonData));
+      
+      return jsonData;
+    } catch (jsonError) {
+      console.error("Error parsing JSON from Gemini response:", jsonError);
+      console.error("Gemini response content:", analysisText.substring(0, 500) + "...");
+      throw new Error("Failed to parse JSON from Gemini's response");
+    }
+  } catch (error) {
+    console.error("Error using Gemini for analysis:", error);
+    throw new Error(`Gemini analysis failed: ${error.message}`);
+  }
+}
+
+// Helper function to generate recommendations based on bill data
+function generateRecommendations(billData: any, networkPreference?: string, carrierType?: string) {
+  const linesCount = billData.phoneLines?.length || 1;
+  const totalAmount = billData.totalAmount || 0;
+  const avgLinePrice = linesCount > 0 ? totalAmount / linesCount : 0;
+  
+  const recommendations = [
+    {
+      carrier: "US Mobile",
+      planName: "Warp 5G",
+      monthlyPrice: 18.99,
+      originalPrice: 25,
+      network: networkPreference || "verizon",
+      features: [
+        "Unlimited talk & text",
+        "10GB high-speed data",
+        "Hotspot capability",
+        "No contract required",
+        "Premium network access"
+      ],
+      reasons: [
+        `Save approximately $${(avgLinePrice - 18.99).toFixed(2)} per line monthly`,
+        "No activation fees or hidden charges",
+        "Flexible data options to match your usage"
+      ],
+      pros: [
+        "Lower monthly cost",
+        "Same network quality",
+        "No contract required",
+        "Customer-first support"
+      ],
+      cons: [
+        "New carrier adjustment",
+        "May need to port your number"
+      ]
+    },
+    {
+      carrier: "US Mobile",
+      planName: "Lightspeed 5G",
+      monthlyPrice: 29.99,
+      originalPrice: 35,
+      network: networkPreference || "verizon",
+      features: [
+        "Unlimited talk & text",
+        "Unlimited high-speed data",
+        "25GB hotspot data",
+        "1 premium perk included",
+        "Premium network access"
+      ],
+      reasons: [
+        "Unlimited data with no slowdowns",
+        "Premium streaming included",
+        `Save approximately $${(avgLinePrice - 29.99).toFixed(2)} per line monthly`
+      ],
+      pros: [
+        "Lower monthly cost",
+        "Same network coverage",
+        "Premium perks included",
+        "Unlimited high-speed data"
+      ],
+      cons: [
+        "New carrier transition",
+        "May need physical SIM card"
+      ]
+    },
+    {
+      carrier: "US Mobile",
+      planName: "DarkStar 5G",
+      monthlyPrice: 39.99,
+      originalPrice: 45,
+      network: networkPreference || "verizon",
+      features: [
+        "Unlimited talk & text",
+        "Truly unlimited premium data",
+        "50GB hotspot data",
+        "3 premium perks included",
+        "International roaming included",
+        "Priority network access"
+      ],
+      reasons: [
+        "Maximum value with premium perks",
+        "International features included",
+        "No throttling or deprioritization",
+        `Save approximately $${(avgLinePrice - 39.99).toFixed(2)} per line monthly`
+      ],
+      pros: [
+        "Premium perks included",
+        "Lower overall cost",
+        "Same network quality",
+        "International features"
+      ],
+      cons: [
+        "Requires switching carriers",
+        "Higher price than basic plans"
+      ]
+    }
+  ];
+  
+  // Add carrier-specific recommendation
+  if (carrierType && carrierType !== "verizon") {
+    recommendations.push({
+      carrier: carrierType.charAt(0).toUpperCase() + carrierType.slice(1),
+      planName: "Value Plan",
+      monthlyPrice: avgLinePrice * 0.8, // 20% less than current average
+      originalPrice: avgLinePrice,
+      network: carrierType,
+      features: [
+        "Unlimited talk & text",
+        "Unlimited data",
+        "5G access where available",
+        "Mobile hotspot",
+        "No contract required"
+      ],
+      reasons: [
+        "Stay with your current carrier",
+        "Simplified bill structure",
+        "Potential savings with new customer promo"
+      ],
+      pros: [
+        "No need to change carriers",
+        "Familiar billing and support",
+        "Possible loyalty discounts"
+      ],
+      cons: [
+        "May not offer best overall value",
+        "Limited premium perks"
+      ]
+    });
+  }
+  
+  return recommendations;
+}
+
+// Helper function to generate personalized advice
+function generatePersonalizedAdvice(billData: any, networkPreference?: string) {
+  const linesCount = billData.phoneLines?.length || 1;
+  const totalAmount = billData.totalAmount || 0;
+  
+  if (linesCount >= 4) {
+    return "With your family plan of 4+ lines, you could benefit significantly from US Mobile's multi-line discounts. Their family plans offer premium network access at a fraction of the cost, with potential savings of 30-40% compared to traditional carriers.";
+  } else if (linesCount >= 2) {
+    return "For your 2-3 line account, US Mobile offers competitive pricing with the same premium network you currently use. Consider their Warp 5G or Lightspeed plans which include features like unlimited data and hotspot capabilities at lower prices.";
+  } else {
+    return "As a single line user, you're likely paying a premium with your current carrier. US Mobile's plans offer the same network quality with potential savings of $15-25 per month, plus no hidden fees or taxes.";
+  }
+}
+
+// Main function to analyze bill text using the best available API
+async function analyzeBillText(extractedText: string, networkPreference?: string, carrierType?: string) {
+  // Try Claude first
+  try {
+    console.log("Attempting bill analysis with Claude...");
+    return await analyzeBillWithClaude(extractedText, networkPreference, carrierType);
+  } catch (claudeError) {
+    console.error("Claude analysis failed, trying Gemini as fallback:", claudeError);
+    
+    // If Claude fails, try Gemini
+    try {
+      console.log("Attempting bill analysis with Gemini...");
+      return await analyzeBillWithGemini(extractedText, networkPreference, carrierType);
+    } catch (geminiError) {
+      console.error("Both Claude and Gemini analyses failed:", geminiError);
+      
+      // As a last resort, return a structured error response that includes partial data
+      const errorMessage = `AI analysis failed: ${claudeError.message}. Gemini fallback also failed: ${geminiError.message}`;
+      throw new Error(errorMessage);
+    }
   }
 }
 
@@ -426,7 +883,7 @@ serve(async (req) => {
       console.log("Text extracted successfully from PDF");
     }
     
-    // Analyze the bill using Our AI
+    // Analyze the bill using the best available AI
     const analysisResult = await analyzeBillText(extractedText, networkPreference, carrierType);
     console.log("Analysis complete");
     
