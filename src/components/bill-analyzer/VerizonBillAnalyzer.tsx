@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { BillAnalyzerContent } from './BillAnalyzerContent';
 import { ManualEntryForm } from './ManualEntryForm';
@@ -11,8 +12,9 @@ import { Label } from '@/components/ui/label';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
-export type NetworkPreference = 'verizon' | 'tmobile' | 'att' | null;
+export type NetworkPreference = 'verizon' | 'tmobile' | 'att' | 'usmobile' | null;
 
 const VerizonBillAnalyzer = () => {
   const { 
@@ -32,6 +34,7 @@ const VerizonBillAnalyzer = () => {
   const [showNetworkError, setShowNetworkError] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [billText, setBillText] = useState('');
+  const [carrierType, setCarrierType] = useState('verizon');
 
   const handleStartOver = () => {
     resetBillData();
@@ -47,6 +50,10 @@ const VerizonBillAnalyzer = () => {
     setShowNetworkError(false);
   };
 
+  const handleCarrierTypeChange = (value: string) => {
+    setCarrierType(value);
+  };
+
   const handleSubmitForm = (data: any) => {
     if (!networkPreference) {
       setShowNetworkError(true);
@@ -54,7 +61,7 @@ const VerizonBillAnalyzer = () => {
       return;
     }
     
-    addManualLineCharges({...data, networkPreference});
+    addManualLineCharges({...data, networkPreference, carrierType});
   };
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -73,7 +80,7 @@ const VerizonBillAnalyzer = () => {
         });
       }, 200);
 
-      handleFileChange(e).then(() => {
+      handleFileChange(e, carrierType).then(() => {
         clearInterval(progressInterval);
         setUploadProgress(100);
         setTimeout(() => setUploadProgress(0), 500);
@@ -92,11 +99,11 @@ const VerizonBillAnalyzer = () => {
     }
 
     if (!billText || billText.trim().length < 50) {
-      toast.error("Please paste your Verizon bill text. Make sure to include sufficient content for accurate analysis.");
+      toast.error("Please paste your bill text. Make sure to include sufficient content for accurate analysis.");
       return;
     }
 
-    await analyzeBillText(billText, networkPreference);
+    await analyzeBillText(billText, networkPreference, carrierType);
   };
 
   const handlePasteSample = () => {
@@ -112,12 +119,21 @@ const VerizonBillAnalyzer = () => {
       });
   };
 
+  const getAnalyzerTitle = () => {
+    if (billData?.carrierType) {
+      return `${billData.carrierType} Bill Analysis`;
+    } else if (carrierType) {
+      return `${carrierType.charAt(0).toUpperCase() + carrierType.slice(1)} Bill Analysis`;
+    }
+    return "Bill Analysis";
+  };
+
   if (billData) {
     return (
       <div className="flex flex-col w-full max-w-6xl mx-auto bg-white rounded-lg shadow">
         <div className="flex justify-between items-center px-6 pt-6">
           <div>
-            <h1 className="text-2xl font-bold">Bill Analysis</h1>
+            <h1 className="text-2xl font-bold">{getAnalyzerTitle()}</h1>
             {ocrProvider && (
               <div className="flex items-center gap-2 mt-1">
                 <Badge variant={ocrProvider === 'claude' ? "secondary" : "outline"}>
@@ -139,6 +155,7 @@ const VerizonBillAnalyzer = () => {
           billData={billData}
           calculateCarrierSavings={calculateCarrierSavings}
           networkPreference={networkPreference}
+          carrierType={billData.carrierType || carrierType}
         />
         
         {billData?.billVersion && (
@@ -156,7 +173,7 @@ const VerizonBillAnalyzer = () => {
         <div className="flex flex-col items-center justify-center p-10 space-y-8">
           <h2 className="text-2xl font-semibold text-gray-800">Choose Input Method</h2>
           <p className="text-gray-600 text-center max-w-md">
-            You can upload a Verizon bill PDF, paste the bill text, or manually enter your line charges.
+            You can upload a bill PDF, paste the bill text, or manually enter your line charges.
           </p>
           
           <div className="flex flex-col sm:flex-row gap-4 w-full max-w-md">
@@ -166,7 +183,7 @@ const VerizonBillAnalyzer = () => {
               variant="outline"
             >
               <Upload className="h-10 w-10 text-blue-500" />
-              <span className="font-medium">Upload Verizon Bill</span>
+              <span className="font-medium">Upload Bill</span>
             </Button>
             
             <Button 
@@ -205,50 +222,76 @@ const VerizonBillAnalyzer = () => {
             <Card className="w-full max-w-md">
               <CardContent className="pt-6">
                 <div className="space-y-6">
-                  <div className="flex items-center gap-2">
-                    <Signal className="h-5 w-5 text-blue-500" />
-                    <h3 className="text-lg font-medium">Select your network preference</h3>
-                    <span className="text-red-500">*</span>
+                  <div className="space-y-6">
+                    <div>
+                      <h3 className="text-lg font-medium mb-2">Select your bill carrier</h3>
+                      <Select 
+                        value={carrierType} 
+                        onValueChange={handleCarrierTypeChange}
+                      >
+                        <SelectTrigger className="w-full">
+                          <SelectValue placeholder="Select your carrier" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="verizon">Verizon</SelectItem>
+                          <SelectItem value="att">AT&T</SelectItem>
+                          <SelectItem value="tmobile">T-Mobile</SelectItem>
+                          <SelectItem value="sprint">Sprint</SelectItem>
+                          <SelectItem value="xfinity">Xfinity Mobile</SelectItem>
+                          <SelectItem value="visible">Visible</SelectItem>
+                          <SelectItem value="cricket">Cricket</SelectItem>
+                          <SelectItem value="metropcs">Metro by T-Mobile</SelectItem>
+                          <SelectItem value="boost">Boost Mobile</SelectItem>
+                          <SelectItem value="other">Other Carrier</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  
+                    <div className="flex items-center gap-2">
+                      <Signal className="h-5 w-5 text-blue-500" />
+                      <h3 className="text-lg font-medium">Select your network preference</h3>
+                      <span className="text-red-500">*</span>
+                    </div>
+                  
+                    {showNetworkError && (
+                      <div className="flex items-center gap-2 text-red-500 text-sm bg-red-50 p-2 rounded border border-red-200">
+                        <AlertTriangle size={16} />
+                        <span>Please select a network preference to continue</span>
+                      </div>
+                    )}
+                  
+                    <RadioGroup 
+                      value={networkPreference || ''} 
+                      onValueChange={handleNetworkPreferenceChange}
+                      className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2"
+                    >
+                      <div className="flex items-center space-x-2 border rounded-md p-4 hover:bg-gray-50">
+                        <RadioGroupItem value="verizon" id="verizon-upload" />
+                        <Label htmlFor="verizon-upload" className="font-medium cursor-pointer">
+                          Verizon
+                        </Label>
+                      </div>
+                    
+                      <div className="flex items-center space-x-2 border rounded-md p-4 hover:bg-gray-50">
+                        <RadioGroupItem value="tmobile" id="tmobile-upload" />
+                        <Label htmlFor="tmobile-upload" className="font-medium cursor-pointer">
+                          T-Mobile
+                        </Label>
+                      </div>
+                    
+                      <div className="flex items-center space-x-2 border rounded-md p-4 hover:bg-gray-50">
+                        <RadioGroupItem value="att" id="att-upload" />
+                        <Label htmlFor="att-upload" className="font-medium cursor-pointer">
+                          AT&T
+                        </Label>
+                      </div>
+                    </RadioGroup>
                   </div>
                   
-                  {showNetworkError && (
-                    <div className="flex items-center gap-2 text-red-500 text-sm bg-red-50 p-2 rounded border border-red-200">
-                      <AlertTriangle size={16} />
-                      <span>Please select a network preference to continue</span>
-                    </div>
-                  )}
-                  
-                  <RadioGroup 
-                    value={networkPreference || ''} 
-                    onValueChange={handleNetworkPreferenceChange}
-                    className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2"
-                  >
-                    <div className="flex items-center space-x-2 border rounded-md p-4 hover:bg-gray-50">
-                      <RadioGroupItem value="verizon" id="verizon-upload" />
-                      <Label htmlFor="verizon-upload" className="font-medium cursor-pointer">
-                        Verizon
-                      </Label>
-                    </div>
-                    
-                    <div className="flex items-center space-x-2 border rounded-md p-4 hover:bg-gray-50">
-                      <RadioGroupItem value="tmobile" id="tmobile-upload" />
-                      <Label htmlFor="tmobile-upload" className="font-medium cursor-pointer">
-                        T-Mobile
-                      </Label>
-                    </div>
-                    
-                    <div className="flex items-center space-x-2 border rounded-md p-4 hover:bg-gray-50">
-                      <RadioGroupItem value="att" id="att-upload" />
-                      <Label htmlFor="att-upload" className="font-medium cursor-pointer">
-                        AT&T
-                      </Label>
-                    </div>
-                  </RadioGroup>
-                  
                   <div className="space-y-4 pt-4">
-                    <h3 className="text-lg font-medium">Upload your Verizon bill</h3>
+                    <h3 className="text-lg font-medium">Upload your bill</h3>
                     <p className="text-sm text-gray-500">
-                      Upload your recent Verizon bill PDF to analyze your current charges and potential savings.
+                      Upload your recent bill PDF to analyze your current charges and potential savings.
                     </p>
                     
                     <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
@@ -319,49 +362,75 @@ const VerizonBillAnalyzer = () => {
             <Card className="w-full max-w-2xl">
               <CardContent className="pt-6">
                 <div className="space-y-6">
-                  <div className="flex items-center gap-2">
-                    <Signal className="h-5 w-5 text-blue-500" />
-                    <h3 className="text-lg font-medium">Select your network preference</h3>
-                    <span className="text-red-500">*</span>
+                  <div className="space-y-6">
+                    <div>
+                      <h3 className="text-lg font-medium mb-2">Select your bill carrier</h3>
+                      <Select 
+                        value={carrierType} 
+                        onValueChange={handleCarrierTypeChange}
+                      >
+                        <SelectTrigger className="w-full">
+                          <SelectValue placeholder="Select your carrier" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="verizon">Verizon</SelectItem>
+                          <SelectItem value="att">AT&T</SelectItem>
+                          <SelectItem value="tmobile">T-Mobile</SelectItem>
+                          <SelectItem value="sprint">Sprint</SelectItem>
+                          <SelectItem value="xfinity">Xfinity Mobile</SelectItem>
+                          <SelectItem value="visible">Visible</SelectItem>
+                          <SelectItem value="cricket">Cricket</SelectItem>
+                          <SelectItem value="metropcs">Metro by T-Mobile</SelectItem>
+                          <SelectItem value="boost">Boost Mobile</SelectItem>
+                          <SelectItem value="other">Other Carrier</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    
+                    <div className="flex items-center gap-2">
+                      <Signal className="h-5 w-5 text-blue-500" />
+                      <h3 className="text-lg font-medium">Select your network preference</h3>
+                      <span className="text-red-500">*</span>
+                    </div>
+                  
+                    {showNetworkError && (
+                      <div className="flex items-center gap-2 text-red-500 text-sm bg-red-50 p-2 rounded border border-red-200">
+                        <AlertTriangle size={16} />
+                        <span>Please select a network preference to continue</span>
+                      </div>
+                    )}
+                  
+                    <RadioGroup 
+                      value={networkPreference || ''} 
+                      onValueChange={handleNetworkPreferenceChange}
+                      className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2"
+                    >
+                      <div className="flex items-center space-x-2 border rounded-md p-4 hover:bg-gray-50">
+                        <RadioGroupItem value="verizon" id="verizon-text" />
+                        <Label htmlFor="verizon-text" className="font-medium cursor-pointer">
+                          Verizon
+                        </Label>
+                      </div>
+                    
+                      <div className="flex items-center space-x-2 border rounded-md p-4 hover:bg-gray-50">
+                        <RadioGroupItem value="tmobile" id="tmobile-text" />
+                        <Label htmlFor="tmobile-text" className="font-medium cursor-pointer">
+                          T-Mobile
+                        </Label>
+                      </div>
+                    
+                      <div className="flex items-center space-x-2 border rounded-md p-4 hover:bg-gray-50">
+                        <RadioGroupItem value="att" id="att-text" />
+                        <Label htmlFor="att-text" className="font-medium cursor-pointer">
+                          AT&T
+                        </Label>
+                      </div>
+                    </RadioGroup>
                   </div>
-                  
-                  {showNetworkError && (
-                    <div className="flex items-center gap-2 text-red-500 text-sm bg-red-50 p-2 rounded border border-red-200">
-                      <AlertTriangle size={16} />
-                      <span>Please select a network preference to continue</span>
-                    </div>
-                  )}
-                  
-                  <RadioGroup 
-                    value={networkPreference || ''} 
-                    onValueChange={handleNetworkPreferenceChange}
-                    className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2"
-                  >
-                    <div className="flex items-center space-x-2 border rounded-md p-4 hover:bg-gray-50">
-                      <RadioGroupItem value="verizon" id="verizon-text" />
-                      <Label htmlFor="verizon-text" className="font-medium cursor-pointer">
-                        Verizon
-                      </Label>
-                    </div>
-                    
-                    <div className="flex items-center space-x-2 border rounded-md p-4 hover:bg-gray-50">
-                      <RadioGroupItem value="tmobile" id="tmobile-text" />
-                      <Label htmlFor="tmobile-text" className="font-medium cursor-pointer">
-                        T-Mobile
-                      </Label>
-                    </div>
-                    
-                    <div className="flex items-center space-x-2 border rounded-md p-4 hover:bg-gray-50">
-                      <RadioGroupItem value="att" id="att-text" />
-                      <Label htmlFor="att-text" className="font-medium cursor-pointer">
-                        AT&T
-                      </Label>
-                    </div>
-                  </RadioGroup>
                   
                   <div className="space-y-4 pt-4">
                     <div className="flex flex-row justify-between items-center">
-                      <h3 className="text-lg font-medium">Paste your Verizon bill text</h3>
+                      <h3 className="text-lg font-medium">Paste your bill text</h3>
                       <Button 
                         onClick={handlePasteSample} 
                         variant="outline" 
@@ -373,11 +442,11 @@ const VerizonBillAnalyzer = () => {
                       </Button>
                     </div>
                     <p className="text-sm text-gray-500">
-                      Copy and paste the text from your Verizon bill below. Include as much detail as possible for the best analysis.
+                      Copy and paste the text from your bill below. Include as much detail as possible for the best analysis.
                     </p>
                     
                     <Textarea
-                      placeholder="Paste your Verizon bill text here... (e.g., 'Account: 526905159-00001, Invoice: 8776031257, Balance from last bill: $327.25...')"
+                      placeholder={`Paste your ${carrierType} bill text here... (e.g., 'Account: 526905159-00001, Invoice: 8776031257, Balance from last bill: $327.25...')`}
                       className="min-h-[300px] font-mono text-sm"
                       value={billText}
                       onChange={(e) => setBillText(e.target.value)}
@@ -432,6 +501,30 @@ const VerizonBillAnalyzer = () => {
             <Card className="mb-6">
               <CardContent className="pt-6">
                 <div className="space-y-4">
+                  <div>
+                    <h3 className="text-lg font-medium mb-2">Select your bill carrier</h3>
+                    <Select 
+                      value={carrierType} 
+                      onValueChange={handleCarrierTypeChange}
+                    >
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="Select your carrier" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="verizon">Verizon</SelectItem>
+                        <SelectItem value="att">AT&T</SelectItem>
+                        <SelectItem value="tmobile">T-Mobile</SelectItem>
+                        <SelectItem value="sprint">Sprint</SelectItem>
+                        <SelectItem value="xfinity">Xfinity Mobile</SelectItem>
+                        <SelectItem value="visible">Visible</SelectItem>
+                        <SelectItem value="cricket">Cricket</SelectItem>
+                        <SelectItem value="metropcs">Metro by T-Mobile</SelectItem>
+                        <SelectItem value="boost">Boost Mobile</SelectItem>
+                        <SelectItem value="other">Other Carrier</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  
                   <div className="flex items-center gap-2">
                     <Signal className="h-5 w-5 text-blue-500" />
                     <h3 className="text-lg font-medium">Which carrier works best in your area?</h3>
@@ -478,7 +571,7 @@ const VerizonBillAnalyzer = () => {
               </CardContent>
             </Card>
             
-            <ManualEntryForm onSubmit={handleSubmitForm} />
+            <ManualEntryForm onSubmit={handleSubmitForm} carrierType={carrierType} />
           </div>
         </div>
       )}

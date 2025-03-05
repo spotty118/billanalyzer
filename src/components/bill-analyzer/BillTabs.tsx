@@ -17,6 +17,7 @@ interface BillTabsProps {
     price: number;
   };
   networkPreference?: NetworkPreference;
+  carrierType?: string;
   activeTab?: string;
   onTabChange?: (tab: string) => void;
   formatCurrency: (value: number) => string;
@@ -26,6 +27,7 @@ export function BillTabs({
   billData, 
   calculateCarrierSavings, 
   networkPreference,
+  carrierType = "verizon",
   activeTab = "overview", 
   onTabChange,
   formatCurrency 
@@ -37,6 +39,12 @@ export function BillTabs({
     if (onTabChange) {
       onTabChange(value);
     }
+  };
+
+  const getCarrierName = () => {
+    if (billData?.carrierType) return billData.carrierType;
+    if (carrierType) return carrierType.charAt(0).toUpperCase() + carrierType.slice(1);
+    return "Carrier";
   };
 
   return (
@@ -77,10 +85,18 @@ export function BillTabs({
       
       <div className="card-gradient">
         <TabsContent value="overview" className="mt-0 space-y-6 animate-fade-in">
-          <OverviewTab billData={billData} formatCurrency={formatCurrency} />
+          <OverviewTab 
+            billData={billData} 
+            formatCurrency={formatCurrency} 
+            carrierType={carrierType}
+          />
         </TabsContent>
         <TabsContent value="line-items" className="mt-0 space-y-6 animate-fade-in">
-          <LineItemsTab billData={billData} formatCurrency={formatCurrency} />
+          <LineItemsTab 
+            billData={billData} 
+            formatCurrency={formatCurrency} 
+            carrierType={carrierType}
+          />
         </TabsContent>
         <TabsContent value="recommendations" className="mt-0 space-y-6 animate-fade-in">
           <RecommendationsTab 
@@ -88,6 +104,7 @@ export function BillTabs({
             formatCurrency={formatCurrency}
             calculateCarrierSavings={calculateCarrierSavings}
             networkPreference={networkPreference}
+            carrierType={carrierType}
           />
         </TabsContent>
         <TabsContent value="carrier-comparison" className="mt-0 space-y-6 animate-fade-in">
@@ -97,6 +114,7 @@ export function BillTabs({
             setActiveCarrierTab={setActiveCarrierTab}
             calculateCarrierSavings={calculateCarrierSavings}
             formatCurrency={formatCurrency}
+            carrierType={getCarrierName()}
           />
         </TabsContent>
       </div>

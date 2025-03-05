@@ -14,14 +14,16 @@ interface BillAnalyzerContentProps {
     price: number;
   };
   networkPreference?: NetworkPreference;
+  carrierType?: string;
 }
 
-const CustomBillTabs = ({ billData, calculateCarrierSavings, networkPreference, activeTab, onTabChange }: any) => {
+const CustomBillTabs = ({ billData, calculateCarrierSavings, networkPreference, carrierType, activeTab, onTabChange }: any) => {
   return (
     <BillTabs 
       billData={billData}
       calculateCarrierSavings={calculateCarrierSavings}
       networkPreference={networkPreference}
+      carrierType={carrierType}
       activeTab={activeTab}
       onTabChange={onTabChange}
       formatCurrency={formatCurrency}
@@ -33,6 +35,7 @@ export function BillAnalyzerContent({
   billData,
   calculateCarrierSavings,
   networkPreference,
+  carrierType = "verizon",
 }: BillAnalyzerContentProps) {
   const [activeTab, setActiveTab] = useState("overview");
   const isMobile = useMediaQuery("(max-width: 640px)");
@@ -66,6 +69,7 @@ export function BillAnalyzerContent({
         billData={billData} 
         calculateCarrierSavings={memoizedCalculateCarrierSavings}
         networkPreference={networkPreference}
+        carrierType={carrierType}
         activeTab={activeTab}
         onTabChange={handleTabChange}
       />

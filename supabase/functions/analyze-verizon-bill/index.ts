@@ -1,3 +1,4 @@
+
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 
 const CORS_HEADERS = {
@@ -97,7 +98,7 @@ function arrayBufferToBase64(buffer: ArrayBuffer): string {
   return base64;
 }
 
-async function analyzeBillText(extractedText: string, networkPreference?: string) {
+async function analyzeBillText(extractedText: string, networkPreference?: string, carrierType?: string) {
   if (!ANTHROPIC_API_KEY) {
     console.error("Missing Anthropic API key");
     throw new Error("Claude API key not configured");
@@ -106,8 +107,9 @@ async function analyzeBillText(extractedText: string, networkPreference?: string
   try {
     console.log("Sending extracted text to Claude API for analysis...");
     console.log("Text sample (first 200 chars):", extractedText.substring(0, 200));
+    console.log("Carrier type:", carrierType || "verizon");
     
-    const systemPrompt = `You are an expert Verizon bill analyzer. Analyze the provided Verizon bill text and extract key information into a structured JSON format.
+    const systemPrompt = `You are an expert mobile carrier bill analyzer. Analyze the provided ${carrierType || "mobile carrier"} bill text and extract key information into a structured JSON format.
 
 IMPORTANT: Your response must be a valid JSON object that can be parsed with JSON.parse(). Structure it like this:
 {
@@ -194,7 +196,7 @@ YOU MUST ensure your response contains ONLY valid JSON that can be parsed with J
           content: [
             {
               type: "text",
-              text: "Here is the text extracted from a Verizon bill. Please analyze it and extract the structured information according to the format specified:" + 
+              text: `Here is the text extracted from a ${carrierType || "mobile carrier"} bill. Please analyze it and extract the structured information according to the format specified:` + 
                   (networkPreference ? `\n\nThe customer's preferred network is: ${networkPreference}.\n\n` : "\n\n") + 
                   extractedText
             }
@@ -307,6 +309,11 @@ YOU MUST ensure your response contains ONLY valid JSON that can be parsed with J
         jsonData.networkPreference = networkPreference;
       }
       
+      // Add carrier type if provided
+      if (carrierType) {
+        jsonData.carrierType = carrierType;
+      }
+      
       // Add source information
       jsonData.analysisSource = "our-ai";
       jsonData.processingMethod = "text-extraction";
@@ -353,6 +360,7 @@ serve(async (req) => {
     let extractedText = "";
     let isDirectTextInput = false;
     let networkPreference = null;
+    let carrierType = "verizon"; // Default to Verizon
     
     // Check if this is a JSON request or form data
     const contentType = req.headers.get('content-type') || '';
@@ -374,6 +382,12 @@ serve(async (req) => {
         console.log(`Network preference provided: ${networkPreference}`);
       }
       
+      // Check if carrier type was provided
+      if (jsonData.carrierType) {
+        carrierType = jsonData.carrierType;
+        console.log(`Carrier type provided: ${carrierType}`);
+      }
+      
       isDirectTextInput = true;
       console.log(`Received text input, length: ${extractedText.length} characters`);
       
@@ -388,6 +402,13 @@ serve(async (req) => {
       if (networkPref && typeof networkPref === 'string') {
         networkPreference = networkPref;
         console.log(`Network preference provided: ${networkPreference}`);
+      }
+      
+      // Check if carrier type was provided in form data
+      const carrierPref = formData.get('carrierType');
+      if (carrierPref && typeof carrierPref === 'string') {
+        carrierType = carrierPref;
+        console.log(`Carrier type provided: ${carrierType}`);
       }
       
       if (!file || !(file instanceof File)) {
@@ -406,7 +427,7 @@ serve(async (req) => {
     }
     
     // Analyze the bill using Our AI
-    const analysisResult = await analyzeBillText(extractedText, networkPreference);
+    const analysisResult = await analyzeBillText(extractedText, networkPreference, carrierType);
     console.log("Analysis complete");
     
     // Include the processing method in the result

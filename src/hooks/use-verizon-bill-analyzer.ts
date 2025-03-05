@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -117,6 +118,7 @@ export const useVerizonBillAnalyzer = () => {
         billDate: new Date().toLocaleDateString(),
         dueDate: ''
       },
+      carrierType: data.carrierType || 'verizon',
       totalAmount: totalAmount,
       networkPreference: data.networkPreference,
       phoneLines: formattedLines,
@@ -148,7 +150,7 @@ export const useVerizonBillAnalyzer = () => {
     setOcrProvider(null);
   };
 
-  const processVerizonBill = async (file: File, networkPreference?: NetworkPreference): Promise<any> => {
+  const processCarrierBill = async (file: File, carrierType: string = 'verizon', networkPreference?: NetworkPreference): Promise<any> => {
     try {
       const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
       if (file.size > MAX_FILE_SIZE) {
@@ -157,6 +159,7 @@ export const useVerizonBillAnalyzer = () => {
       
       const formData = new FormData();
       formData.append('file', file);
+      formData.append('carrierType', carrierType);
       
       // Add network preference if provided
       if (networkPreference) {
@@ -165,7 +168,7 @@ export const useVerizonBillAnalyzer = () => {
       
       const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1nemZpb3VhbWlkYXFjdG5xbnJlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzkyMzE3NjQsImV4cCI6MjA1NDgwNzc2NH0._0hxm1UlSMt3wPx8JwaFDvGmpfjI3p5m0HDm6YfaL6Q';
       
-      console.log('Sending request to analyze bill with Claude OCR...');
+      console.log(`Sending request to analyze ${carrierType} bill with Claude OCR...`);
       const response = await fetch('https://mgzfiouamidaqctnqnre.supabase.co/functions/v1/analyze-verizon-bill', {
         method: 'POST',
         body: formData,
@@ -204,7 +207,8 @@ export const useVerizonBillAnalyzer = () => {
           accountNumber: `PROC-${Date.now().toString().substring(0, 6)}`,
           totalAmount: 0,
           phoneLines: [],
-          processingMethod: "direct-text-input"
+          processingMethod: "direct-text-input",
+          carrierType
         };
       }
       
@@ -243,7 +247,8 @@ export const useVerizonBillAnalyzer = () => {
       // Store OCR provider info
       setOcrProvider(analysisResponse.analysisSource || 'claude');
       
-      // Include network preference if provided
+      // Include carrier type and network preference
+      analysisResponse.carrierType = carrierType;
       if (networkPreference) {
         analysisResponse.networkPreference = networkPreference;
       }
@@ -255,16 +260,17 @@ export const useVerizonBillAnalyzer = () => {
     }
   };
 
-  const processBillText = async (text: string, networkPreference: NetworkPreference): Promise<any> => {
+  const processBillText = async (text: string, networkPreference: NetworkPreference, carrierType: string = 'verizon'): Promise<any> => {
     try {
       const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1nemZpb3VhbWlkYXFjdG5xbnJlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzkyMzE3NjQsImV4cCI6MjA1NDgwNzc2NH0._0hxm1UlSMt3wPx8JwaFDvGmpfjI3p5m0HDm6YfaL6Q';
       
-      console.log('Sending text to analyze with Claude...', text.substring(0, 100) + '...');
+      console.log(`Sending ${carrierType} bill text to analyze with Claude...`, text.substring(0, 100) + '...');
       const response = await fetch('https://mgzfiouamidaqctnqnre.supabase.co/functions/v1/analyze-verizon-bill', {
         method: 'POST',
         body: JSON.stringify({ 
           text, 
-          networkPreference 
+          networkPreference,
+          carrierType
         }),
         headers: {
           'apikey': supabaseAnonKey,
@@ -303,7 +309,8 @@ export const useVerizonBillAnalyzer = () => {
           accountNumber: `PROC-${Date.now().toString().substring(0, 6)}`,
           totalAmount: 0,
           phoneLines: [],
-          processingMethod: "direct-text-input"
+          processingMethod: "direct-text-input",
+          carrierType
         };
       }
       
@@ -342,10 +349,11 @@ export const useVerizonBillAnalyzer = () => {
         });
       }
       
-      // Ensure the response has the network preference
+      // Ensure the response has the carrier type and network preference
       const enrichedResponse = {
         ...analysisResponse,
-        networkPreference
+        networkPreference,
+        carrierType
       };
       
       return enrichedResponse;
@@ -375,12 +383,15 @@ export const useVerizonBillAnalyzer = () => {
                           analysis.phoneLines.reduce((sum: number, line: any) => sum + (line.monthlyTotal || 0), 0) : 
                           0);
       
+      const carrierType = analysis.carrierType || 'verizon';
+      
       const { error } = await supabase
         .from('bill_analyses')
         .insert({
           account_number: analysis.accountNumber,
           billing_period: billingPeriod,
           total_amount: totalAmount,
+          carrier_type: carrierType,
           analysis_data: analysis
         });
         
@@ -395,27 +406,28 @@ export const useVerizonBillAnalyzer = () => {
     }
   };
 
-  const analyzeBillText = async (text: string, networkPreference: NetworkPreference) => {
+  const analyzeBillText = async (text: string, networkPreference: NetworkPreference, carrierType: string = 'verizon') => {
     setIsLoading(true);
     setErrorMessage(null);
 
     try {
-      toast.info("Analyzing bill text with Our AI...");
-      const analysisResult = await processBillText(text, networkPreference);
+      toast.info(`Analyzing ${carrierType} bill text with Our AI...`);
+      const analysisResult = await processBillText(text, networkPreference, carrierType);
       
       if (!analysisResult || typeof analysisResult !== 'object') {
         throw new Error('Invalid analysis result received');
       }
       
-      // Add network preference to analysis result
-      const resultWithNetwork = {
+      // Add carrier type and network preference to analysis result
+      const resultWithCarrierInfo = {
         ...analysisResult,
-        networkPreference
+        networkPreference,
+        carrierType
       };
       
       // Ensure each phone line has proper details structure and calculated monthly total
-      if (resultWithNetwork.phoneLines && resultWithNetwork.phoneLines.length > 0) {
-        resultWithNetwork.phoneLines = resultWithNetwork.phoneLines.map((line: any) => {
+      if (resultWithCarrierInfo.phoneLines && resultWithCarrierInfo.phoneLines.length > 0) {
+        resultWithCarrierInfo.phoneLines = resultWithCarrierInfo.phoneLines.map((line: any) => {
           if (!line.details) {
             line.details = {};
           }
@@ -450,17 +462,17 @@ export const useVerizonBillAnalyzer = () => {
         });
       }
       
-      setBillData(resultWithNetwork);
+      setBillData(resultWithCarrierInfo);
       
       try {
-        await saveBillAnalysis(resultWithNetwork);
+        await saveBillAnalysis(resultWithCarrierInfo);
         console.log("Bill text analysis saved to database");
       } catch (dbError) {
         console.error("Error saving to database, but analysis completed:", dbError);
       }
       
       toast.success('Bill analysis completed successfully');
-      return resultWithNetwork;
+      return resultWithCarrierInfo;
     } catch (error) {
       console.error('Error processing bill text:', error);
       const errorMsg = error instanceof Error ? error.message : 'Unknown error';
@@ -472,7 +484,7 @@ export const useVerizonBillAnalyzer = () => {
     }
   };
 
-  const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>, carrierType: string = 'verizon') => {
     const file = event.target.files?.[0];
     if (!file) return;
     
@@ -487,9 +499,9 @@ export const useVerizonBillAnalyzer = () => {
     setErrorMessage(null);
 
     try {
-      toast.info("Analyzing bill with Our AI...");
+      toast.info(`Analyzing ${carrierType} bill with Our AI...`);
       const networkPreference = billData?.networkPreference || null;
-      const analysisResult = await processVerizonBill(file, networkPreference);
+      const analysisResult = await processCarrierBill(file, carrierType, networkPreference);
       
       if (!analysisResult || typeof analysisResult !== 'object') {
         throw new Error('Invalid analysis result received');
@@ -530,6 +542,11 @@ export const useVerizonBillAnalyzer = () => {
             monthlyTotal: line.monthlyTotal || total
           };
         });
+      }
+      
+      // Ensure carrier type is set
+      if (!analysisResult.carrierType) {
+        analysisResult.carrierType = carrierType;
       }
       
       setBillData(analysisResult);
