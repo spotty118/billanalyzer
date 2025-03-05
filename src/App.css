@@ -10,6 +10,40 @@ body {
   background-color: #f9fafb;
 }
 
+/* New global styles based on CarrierComparison */
+.app-container {
+  @apply max-w-7xl mx-auto px-4 py-6;
+}
+
+.page-section {
+  @apply card-gradient mb-6;
+}
+
+.section-title {
+  @apply section-header;
+}
+
+.data-card {
+  @apply content-card mb-4;
+}
+
+.data-card-header {
+  @apply card-header;
+}
+
+.data-card-content {
+  @apply p-5;
+}
+
+.feature-list {
+  @apply space-y-3 mt-4;
+}
+
+.button-primary {
+  @apply custom-button;
+}
+
+/* Keep original styling */
 .logo {
   height: 6em;
   padding: 1.5em;
@@ -53,17 +87,6 @@ body {
 
 .page-transition {
   animation: fadeIn 0.3s ease-in-out;
-}
-
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
 }
 
 /* Modern UI enhancements */

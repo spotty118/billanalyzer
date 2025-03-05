@@ -46,36 +46,36 @@ export function BillTabs({
       value={activeTab}
       onValueChange={handleTabChange}
     >
-      <div className="bg-white rounded-xl shadow-sm p-1 border border-gray-100">
-        <TabsList className={`${isMobile ? 'flex flex-wrap gap-1' : 'grid grid-cols-4'} w-full h-auto p-1 bg-gray-50 rounded-lg`}>
+      <div className="custom-tabs-container">
+        <TabsList className={`${isMobile ? 'flex flex-wrap gap-1' : 'grid grid-cols-4'} custom-tabs-list`}>
           <TabsTrigger 
             value="overview" 
-            className={`py-2 ${isMobile ? 'flex-1 text-sm' : 'py-3'} data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-sm rounded-md transition-all`}
+            className={`${isMobile ? 'flex-1 text-sm' : 'py-3'} custom-tab`}
           >
             Overview
           </TabsTrigger>
           <TabsTrigger 
             value="line-items" 
-            className={`py-2 ${isMobile ? 'flex-1 text-sm' : 'py-3'} data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-sm rounded-md transition-all`}
+            className={`${isMobile ? 'flex-1 text-sm' : 'py-3'} custom-tab`}
           >
             Line Items
           </TabsTrigger>
           <TabsTrigger 
             value="recommendations" 
-            className={`py-2 ${isMobile ? 'flex-1 text-sm' : 'py-3'} data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-sm rounded-md transition-all`}
+            className={`${isMobile ? 'flex-1 text-sm' : 'py-3'} custom-tab`}
           >
             Recommendations
           </TabsTrigger>
           <TabsTrigger 
             value="carrier-comparison" 
-            className={`py-2 ${isMobile ? 'flex-1 text-sm' : 'py-3'} data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-sm rounded-md transition-all`}
+            className={`${isMobile ? 'flex-1 text-sm' : 'py-3'} custom-tab`}
           >
             Carrier Comparison
           </TabsTrigger>
         </TabsList>
       </div>
       
-      <div className="bg-white p-4 sm:p-6 rounded-xl shadow-sm border border-gray-100">
+      <div className="card-gradient">
         <TabsContent value="overview" className="mt-0 space-y-6 animate-fade-in">
           <OverviewTab billData={billData} formatCurrency={formatCurrency} />
         </TabsContent>

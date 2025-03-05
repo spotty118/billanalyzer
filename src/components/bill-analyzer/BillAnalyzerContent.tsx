@@ -53,7 +53,7 @@ export function BillAnalyzerContent({
 
   if (!billData) {
     return (
-      <div className="bg-white p-4 sm:p-8 rounded-xl shadow-sm border border-gray-100 text-center">
+      <div className="card-gradient text-center">
         <p className="text-gray-500 text-lg">No bill data available.</p>
         <p className="text-gray-400 mt-2">Please upload a bill to analyze.</p>
       </div>
@@ -61,7 +61,7 @@ export function BillAnalyzerContent({
   }
 
   return (
-    <div className={`container mx-auto ${isMobile ? 'px-1 py-2' : 'py-6 px-4'} max-w-7xl animate-fade-in`}>
+    <div className={`app-container ${isMobile ? 'px-1 py-2' : 'py-6 px-4'} animate-fade-in`}>
       <CustomBillTabs 
         billData={billData} 
         calculateCarrierSavings={memoizedCalculateCarrierSavings}
