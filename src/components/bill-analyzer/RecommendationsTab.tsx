@@ -1,5 +1,4 @@
 
-import React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Check, ArrowRight, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -9,13 +8,20 @@ interface RecommendationsTabProps {
   formatCurrency: (value: number) => string;
   networkPreference?: string | null;
   carrierType?: string;
+  calculateCarrierSavings?: (carrierId: string) => {
+    monthlySavings: number;
+    annualSavings: number;
+    planName: string;
+    price: number;
+  };
 }
 
 export function RecommendationsTab({ 
   billData,
   formatCurrency,
   networkPreference,
-  carrierType = "verizon"
+  carrierType = "verizon",
+  calculateCarrierSavings
 }: RecommendationsTabProps) {
   const recommendations = billData?.recommendations || [];
   const insights = billData?.marketInsights || {};
@@ -267,7 +273,7 @@ export function RecommendationsTab({
                   <div className="space-y-2">
                     {Object.entries(insights.networkPerformance).map(([network, performance]) => (
                       <div key={network} className="text-sm">
-                        <span className="font-medium">{network.charAt(0).toUpperCase() + network.slice(1)}:</span> {performance}
+                        <span className="font-medium">{network.charAt(0).toUpperCase() + network.slice(1)}:</span> {performance as React.ReactNode}
                       </div>
                     ))}
                   </div>
