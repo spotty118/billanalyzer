@@ -261,20 +261,6 @@ export function RecommendationsTab({
     }
   }, [billData, calculateCarrierSavings, networkPreference, aiRecommendations, isLoadingAI]);
 
-  const getCarrierNetwork = (carrierId: string): string => {
-    const networkMap: Record<string, string> = {
-      "warp": "verizon",
-      "lightspeed": "tmobile",
-      "darkstar": "att",
-      "visible": "verizon",
-      "cricket": "att",
-      "straighttalk": "multi",
-      "total": "verizon"
-    };
-    
-    return networkMap[carrierId] || "";
-  };
-
   const getCarrierRank = (rec: any, recommendations: any[]): number => {
     if (rec.preferred) {
       let preferredRank = 1;
@@ -439,6 +425,12 @@ export function RecommendationsTab({
 
     return (
       <div className="space-y-8">
+        {/* Personal Advice Card at the top */}
+        <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 mb-6">
+          <h3 className="text-lg font-semibold mb-2">Personalized Advice</h3>
+          <p className="text-gray-700">{aiRecommendations.personalizedAdvice}</p>
+        </div>
+        
         <Card className="border border-blue-200 bg-blue-50/30">
           <CardHeader>
             <CardTitle className="text-blue-800">Market Insights</CardTitle>
@@ -494,11 +486,6 @@ export function RecommendationsTab({
             </div>
           </CardContent>
         </Card>
-        
-        <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
-          <h3 className="text-lg font-semibold mb-2">Personalized Advice</h3>
-          <p className="text-gray-700">{aiRecommendations.personalizedAdvice}</p>
-        </div>
 
         <div>
           <h3 className="text-lg font-semibold mb-4">AI-Powered Recommendations</h3>
