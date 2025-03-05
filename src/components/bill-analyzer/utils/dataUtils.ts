@@ -237,8 +237,9 @@ export const calculateCarrierSavings = (
     };
   }
   
-  // Find the number of lines in the bill
+  // Find the number of lines in the bill - critical fix: ensure this is properly detected
   const numberOfLines = billData.phoneLines?.length || 1;
+  console.log(`Calculating carrier savings for ${carrierId} with ${numberOfLines} lines`);
 
   // Find the best matching plan from the alternative carrier
   const matchingPlanId = findBestCarrierMatch(

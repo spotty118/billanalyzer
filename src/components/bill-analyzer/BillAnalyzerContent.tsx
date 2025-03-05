@@ -3,6 +3,7 @@ import { useState, useCallback } from 'react';
 import { BillTabs } from "@/components/bill-analyzer/BillTabs";
 import { NetworkPreference } from './VerizonBillAnalyzer';
 import { useMediaQuery } from '@/hooks/use-media-query';
+import { formatCurrency } from './utils/dataUtils';
 
 interface BillAnalyzerContentProps {
   billData: any;
@@ -23,6 +24,7 @@ const CustomBillTabs = ({ billData, calculateCarrierSavings, networkPreference, 
       networkPreference={networkPreference}
       activeTab={activeTab}
       onTabChange={onTabChange}
+      formatCurrency={formatCurrency}
     />
   );
 };

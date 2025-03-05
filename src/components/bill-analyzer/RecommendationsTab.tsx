@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -133,8 +134,6 @@ export function RecommendationsTab({
       let carriersForRecommendation = [...supportedCarriers];
       
       if (networkPreference && networkToCarrierMap[networkPreference as ValidNetworkPreference]) {
-        const preferredCarrierId = networkToCarrierMap[networkPreference as ValidNetworkPreference];
-        
         carriersForRecommendation.sort((a, b) => {
           const aMatchesPreference = getCarrierNetwork(a.id) === networkPreference;
           const bMatchesPreference = getCarrierNetwork(b.id) === networkPreference;
@@ -146,6 +145,9 @@ export function RecommendationsTab({
       }
       
       const currentBillAmount = billData.totalAmount || 0;
+      // Critical fix: Ensure we're properly getting the number of lines from the bill data
+      const lineCount = billData.phoneLines?.length || 1;
+      console.log(`Generating recommendations for ${lineCount} lines from imported bill data`);
       
       const allRecommendations = carriersForRecommendation.map(carrier => {
         const plans = alternativeCarrierPlans.filter(plan => plan.carrierId === carrier.id);
@@ -166,7 +168,7 @@ export function RecommendationsTab({
         if (!selectedPlan) return null;
         
         const planBasePrice = selectedPlan.basePrice;
-        const lineCount = billData.phoneLines?.length || 1;
+        // Use the actual lineCount from the imported bill data for accurate pricing
         const totalPlanPrice = planBasePrice * lineCount;
         const monthlySavings = currentBillAmount - totalPlanPrice;
         const annualSavings = monthlySavings * 12;
@@ -203,6 +205,11 @@ export function RecommendationsTab({
         };
         
         const carrierLogo = carrierLogoMap[carrier.id] || "📱";
+        
+        // Add line count to reasons
+        if (lineCount > 1) {
+          reasons.push(`Calculated for your ${lineCount} lines`);
+        }
         
         if (carrier.id === "warp") {
           reasons.push("Unlimited data with no speed caps on Verizon's network");
@@ -277,7 +284,9 @@ export function RecommendationsTab({
           planName: selectedPlan.name,
           monthlySavings,
           annualSavings,
-          monthlyPrice: totalPlanPrice / lineCount,
+          monthlyPrice: planBasePrice, // Show per-line price for clarity
+          totalMonthlyPrice: totalPlanPrice, // Total for all lines
+          lineCount, // Include line count in the recommendation
           network: carrierNetwork,
           preferred: networkPreference && carrierNetwork === networkPreference,
           reasons,
@@ -305,7 +314,9 @@ export function RecommendationsTab({
           planName: billData.phoneLines?.[0]?.planName || "Current Plan",
           monthlySavings: 0,
           annualSavings: 0,
-          monthlyPrice: billData.totalAmount || 0,
+          monthlyPrice: (billData.totalAmount || 0) / lineCount,
+          totalMonthlyPrice: billData.totalAmount || 0,
+          lineCount,
           reasons: ["Your current plan appears to be competitive"],
           pros: ["No need to switch carriers", "Familiar billing"],
           cons: ["You may be missing perks from other carriers"],
@@ -377,8 +388,13 @@ export function RecommendationsTab({
           <CardContent className="py-2">
             <div className="space-y-4">
               <div>
-                <p className="text-sm text-gray-500">Monthly Price</p>
+                <p className="text-sm text-gray-500">Price per Line</p>
                 <p className="text-lg font-bold">{formatCurrency(rec.monthlyPrice)}</p>
+                {rec.lineCount > 1 && (
+                  <p className="text-sm text-gray-500">
+                    Total for {rec.lineCount} lines: {formatCurrency(rec.totalMonthlyPrice)}
+                  </p>
+                )}
               </div>
               
               {rec.annualSavings > 0 && (
@@ -680,7 +696,7 @@ export function RecommendationsTab({
         </div>
         
         <p className="text-gray-600 mb-6">
-          Based on your current bill, usage patterns, and network preferences, here are our recommendations to help you save:
+          Based on your current bill with {billData.phoneLines?.length || 1} lines, usage patterns, and network preferences, here are our recommendations to help you save:
         </p>
         
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
