@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -306,7 +305,7 @@ export function RecommendationsTab({
     if (!topRecommendation) return null;
     
     return (
-      <Card className="border-2 border-blue-500 shadow-lg mb-6">
+      <Card className="border-2 border-blue-500 shadow-lg">
         <CardHeader className="pb-2 bg-blue-50">
           <div className="flex justify-between items-center">
             <div className="flex items-center gap-2">
@@ -648,9 +647,6 @@ export function RecommendationsTab({
         <p className="text-gray-600 mb-6">
           Based on your current bill with {billData.phoneLines?.length || 1} lines, usage patterns, and network preferences, here are our recommendations to help you save:
         </p>
-        
-        {/* Always show the QCI recommendation at the top */}
-        {renderQCIRecommendation()}
         
         {/* Show AI recommendations */}
         {renderAIRecommendations()}
