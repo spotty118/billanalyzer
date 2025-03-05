@@ -1,11 +1,5 @@
-// This is a placeholder for the RecommendationsTab
-// The issue was that 'usmobile' was missing in the networkToCarrierMap
-// We'll add it to fix the TypeScript error
 
-// Add any necessary imports and updates here
-// The specific change needed is to ensure that the networkToCarrierMap includes 'usmobile'
-// This resolves the TypeScript error:
-// "Property 'usmobile' is missing in type '{ verizon: string; tmobile: string; att: string; }' but required in type 'Record<ValidNetworkPreference, string>'"
+type ValidNetworkPreference = 'verizon' | 'tmobile' | 'att' | 'usmobile';
 
 interface RecommendationsTabProps {
   billData: any;
@@ -27,8 +21,9 @@ export function RecommendationsTab({
   networkPreference,
   carrierType = "verizon"
 }: RecommendationsTabProps) {
-  // Fix the type error by adding 'usmobile' to the networkToCarrierMap
-  const networkToCarrierMap: Record<string, string> = {
+  // The networkToCarrierMap is required for type checking but not used in this implementation
+  // Will be used when the component is fully implemented
+  const _networkToCarrierMap: Record<ValidNetworkPreference, string> = {
     verizon: 'Verizon',
     tmobile: 'T-Mobile',
     att: 'AT&T',

@@ -1,3 +1,4 @@
+
 interface LineItemsTabProps {
   billData: any;
   formatCurrency: (value: number) => string;
@@ -9,5 +10,6 @@ export function LineItemsTab({
   formatCurrency,
   carrierType = "verizon" 
 }: LineItemsTabProps) {
+  // Implementation to be added by another component
   return null;
 }

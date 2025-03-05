@@ -1,4 +1,3 @@
-
 import { Suspense, lazy } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { ErrorBoundary } from './components/ui/error-boundary';
@@ -9,7 +8,7 @@ import { ContentArea } from './components/layouts/ContentArea';
 import { SidebarProvider } from './contexts/SidebarContext';
 
 // Regular imports for main components
-import VerizonBillAnalyzer from './components/bill-analyzer/VerizonBillAnalyzer';
+import CarrierBillAnalyzer from './components/bill-analyzer/CarrierBillAnalyzer';
 
 // Lazy load admin components
 const AdminLogin = lazy(() => import('./pages/AdminLogin'));
@@ -39,11 +38,11 @@ function App() {
                     element={
                       <>
                         <PageHeader 
-                          title="Verizon Bill Analyzer" 
-                          description="Upload your Verizon bill to find potential savings"
+                          title="Carrier Bill Analyzer" 
+                          description="Upload your carrier bill to find potential savings"
                         />
                         <ContentArea>
-                          <VerizonBillAnalyzer />
+                          <CarrierBillAnalyzer />
                         </ContentArea>
                       </>
                     } 
