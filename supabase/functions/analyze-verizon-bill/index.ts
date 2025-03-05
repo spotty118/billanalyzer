@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 
 const CORS_HEADERS = {
@@ -438,9 +437,9 @@ Your response must be a valid JSON object that can be parsed with JSON.parse(). 
   ]
 }`;
 
-    // Set up the OpenRouter API request for Gemini Pro
+    // Set up the OpenRouter API request for Gemini
     const openRouterRequest = {
-      model: "google/gemini-pro",
+      model: "google/gemini-2.0-flash-thinking-exp:free",
       messages: [
         {
           role: "system", 
@@ -457,7 +456,7 @@ Your response must be a valid JSON object that can be parsed with JSON.parse(). 
       max_tokens: 4000
     };
     
-    console.log("Sending text to OpenRouter (Gemini Pro)...");
+    console.log("Sending text to OpenRouter with model: google/gemini-2.0-flash-thinking-exp:free");
     
     // Send request to OpenRouter API
     const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
@@ -465,7 +464,8 @@ Your response must be a valid JSON object that can be parsed with JSON.parse(). 
       headers: {
         "Content-Type": "application/json",
         "Authorization": `Bearer ${OPENROUTER_API_KEY}`,
-        "HTTP-Referer": "https://supabase.functions/analyze-verizon-bill"
+        "HTTP-Referer": "https://mgzfiouamidaqctnqnre.supabase.co",
+        "X-Title": "Wireless Bill Analyzer"
       },
       body: JSON.stringify(openRouterRequest)
     });
@@ -473,12 +473,15 @@ Your response must be a valid JSON object that can be parsed with JSON.parse(). 
     if (!response.ok) {
       const errorText = await response.text();
       console.error("OpenRouter API error response:", errorText);
+      console.error("OpenRouter API status:", response.status);
+      console.error("OpenRouter API statusText:", response.statusText);
       throw new Error(`OpenRouter API error: ${response.status} ${response.statusText}`);
     }
     
     // Parse the response from OpenRouter
     const openRouterResponse = await response.json();
-    console.log("OpenRouter (Gemini) analysis response received successfully");
+    console.log("OpenRouter analysis response received successfully");
+    console.log("Model used:", openRouterResponse.model || "Model info not available");
     
     // Extract the text content from OpenRouter's response
     const analysisText = openRouterResponse.choices[0].message.content;
@@ -599,11 +602,11 @@ Your response must be a valid JSON object that can be parsed with JSON.parse(). 
       }
       
       // Add source information
-      jsonData.analysisSource = "gemini";
+      jsonData.analysisSource = "gemini-2.0-flash-thinking";
       jsonData.processingMethod = "text-extraction";
       jsonData.extractionDate = new Date().toISOString();
       jsonData.meta = {
-        source: "gemini-ai"
+        source: "gemini-flash-thinking-ai"
       };
       
       console.log("Successfully parsed JSON data from Gemini's response");
