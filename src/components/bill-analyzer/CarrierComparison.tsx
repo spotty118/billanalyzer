@@ -58,35 +58,6 @@ export function CarrierComparison({
     return n + (s[(v - 20) % 10] || s[v] || s[0]);
   };
   
-  const generateComparisonData = (): ComparisonDataPoint[] => {
-    const data: ComparisonDataPoint[] = [];
-    const lineCount = billData.phoneLines?.length || 1;
-    for (let i = 1; i <= 5; i++) {
-      const carriers = supportedCarriers.map(carrier => {
-        const savings = calculateCarrierSavings(carrier.id);
-        const scaleFactor = i / lineCount;
-        const price = savings.price * scaleFactor;
-        const currentPrice = billData.totalAmount * scaleFactor;
-        return {
-          id: carrier.id,
-          name: carrier.name,
-          price: price,
-          saving: currentPrice - price
-        };
-      });
-      const entry: ComparisonDataPoint = {
-        lines: i,
-        current: billData.totalAmount * (i / lineCount)
-      };
-      carriers.forEach(carrier => {
-        entry[carrier.id] = carrier.price;
-        entry[`${carrier.id}Saving`] = carrier.saving;
-      });
-      data.push(entry);
-    }
-    return data;
-  };
-  
   // These variables are not being used currently but we'll keep them for future functionality
   // that might use this data to create visualizations or additional comparison features
   // const carrierSavingsData = supportedCarriers.map(carrier => {
@@ -99,6 +70,9 @@ export function CarrierComparison({
   //     price: savings.price
   //   };
   // }).sort((a, b) => b.annual - a.annual);
+  
+  // Removing the unused generateComparisonData function as it's not needed
+  // and commenting out its usage below
   
   // const priceComparisonData = generateComparisonData();
   
