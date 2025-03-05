@@ -47,9 +47,22 @@ serve(async (req) => {
     // Generate fallback recommendations in case API fails
     const fallbackRecommendations = generateFallbackRecommendations(billData, networkPreference);
     
+    // Verify API key is available
+    if (!OPENROUTER_API_KEY) {
+      console.error("Missing OpenRouter API key - using fallback recommendations");
+      return new Response(JSON.stringify(fallbackRecommendations), {
+        status: 200,
+        headers: {
+          ...CORS_HEADERS,
+          'Content-Type': 'application/json'
+        }
+      });
+    }
+    
     // Get up-to-date carrier information via OpenRouter (Gemini)
     try {
       const aiRecommendations = await getAIRecommendations(billData, networkPreference);
+      console.log("Successfully generated AI recommendations");
       return new Response(JSON.stringify(aiRecommendations), {
         status: 200,
         headers: {
@@ -162,6 +175,7 @@ async function getAIRecommendations(billData: any, networkPreference: string | n
   
   try {
     console.log("Sending bill data to OpenRouter API for recommendations...");
+    console.log("Using OpenRouter API key:", OPENROUTER_API_KEY.substring(0, 8) + "...");
     
     const systemPrompt = `You are an expert in cellphone plans and wireless carriers. You provide detailed, accurate, and up-to-date recommendations based on customer's current wireless bill and preferences.
 
