@@ -1,10 +1,10 @@
+
 import { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { CheckIcon, XIcon, RefreshCw } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { NetworkPreference } from './VerizonBillAnalyzer';
 import { alternativeCarrierPlans, supportedCarriers } from '@/config/alternativeCarriers';
 import { toast } from "sonner";
@@ -67,10 +67,9 @@ export function RecommendationsTab({
   calculateCarrierSavings,
   networkPreference
 }: RecommendationsTabProps) {
-  const [recommendations, setRecommendations] = useState<any[]>([]);
+  const [topRecommendation, setTopRecommendation] = useState<any | null>(null);
   const [aiRecommendations, setAiRecommendations] = useState<AIRecommendationsData | null>(null);
   const [isLoadingAI, setIsLoadingAI] = useState(false);
-  const [activeTab, setActiveTab] = useState("standard");
   const [progress, setProgress] = useState(0);
 
   const getOrdinalSuffix = (n: number): string => {
@@ -116,7 +115,6 @@ export function RecommendationsTab({
       }
       
       setAiRecommendations(data);
-      setActiveTab("ai");
       toast.success("Got fresh carrier recommendations!");
       
     } catch (error) {
@@ -128,217 +126,138 @@ export function RecommendationsTab({
     }
   };
 
-  const sortRecommendations = (recommendations: any[]) => {
-    return [...recommendations].sort((a, b) => {
-      if (a.preferred && !b.preferred) return -1;
-      if (!a.preferred && b.preferred) return 1;
+  const generateQCIRecommendation = () => {
+    if (billData) {
+      const lineCount = billData.phoneLines?.length || 1;
+      console.log(`Generating QCI-8 recommendation for ${lineCount} lines from imported bill data`);
       
-      if (a.preferred === b.preferred) {
-        const aScore = (a.pros.length * 2) - a.cons.length;
-        const bScore = (b.pros.length * 2) - b.cons.length;
-        
-        if (aScore !== bScore) {
-          return bScore - aScore;
-        }
-        
-        return b.annualSavings - a.annualSavings;
+      // First, determine the best carrier based on network preference
+      let bestCarrierId: string;
+      
+      if (networkPreference && networkToCarrierMap[networkPreference as ValidNetworkPreference]) {
+        bestCarrierId = networkToCarrierMap[networkPreference as ValidNetworkPreference];
+      } else {
+        // Default to the first supported carrier if no preference
+        bestCarrierId = supportedCarriers[0].id;
       }
       
-      return 0;
-    });
+      const carrier = supportedCarriers.find(c => c.id === bestCarrierId) || supportedCarriers[0];
+      const plans = alternativeCarrierPlans.filter(plan => plan.carrierId === carrier.id);
+      const selectedPlan = plans.find(plan => plan.name.includes('Premium')) || plans[0];
+      
+      if (!selectedPlan) return null;
+      
+      const currentBillAmount = billData.totalAmount || 0;
+      const planBasePrice = selectedPlan.basePrice;
+      const totalPlanPrice = planBasePrice * lineCount;
+      const monthlySavings = currentBillAmount - totalPlanPrice;
+      const annualSavings = monthlySavings * 12;
+      
+      const features: FeaturesList = selectedPlan.features || [];
+      
+      const networkMap: Record<string, string> = {
+        "warp": "verizon",
+        "lightspeed": "tmobile",
+        "darkstar": "att",
+        "visible": "verizon",
+        "cricket": "att",
+        "straighttalk": "multi",
+        "total": "verizon"
+      };
+      
+      const carrierNetwork = networkMap[carrier.id] || "verizon";
+      
+      const carrierLogoMap: Record<string, string> = {
+        "warp": "🌀",
+        "lightspeed": "⚡",
+        "darkstar": "★",
+        "visible": "👁️",
+        "cricket": "🦗",
+        "straighttalk": "💬",
+        "total": "📱"
+      };
+      
+      const carrierLogo = carrierLogoMap[carrier.id] || "📱";
+      
+      // Generate default reasons, pros, and cons
+      let reasons: string[] = [];
+      let pros: string[] = [];
+      let cons: string[] = [];
+      
+      if (lineCount > 1) {
+        reasons.push(`Calculated for your ${lineCount} lines`);
+      }
+      
+      if (carrier.id === "warp") {
+        reasons.push("QCI 8 Priority Data on Verizon's network");
+        reasons.push("Unlimited premium data with no speed caps");
+        pros.push("QCI 8 Priority Data (same as Verizon postpaid)");
+        pros.push("No contracts or hidden fees");
+        pros.push("Uses Verizon's reliable nationwide network");
+        if (networkPreference === 'verizon') {
+          pros.push("Optimized for your preferred network coverage");
+        }
+        cons.push("May have different coverage in some rural areas");
+      } else if (carrier.id === "lightspeed") {
+        reasons.push("QCI 7 Priority Data on T-Mobile's network");
+        reasons.push("Fast 5G speeds with premium data priority");
+        pros.push("QCI 7 Priority Data (higher than T-Mobile prepaid)");
+        pros.push("Great international options");
+        pros.push("Affordable pricing with premium features");
+        if (networkPreference === 'tmobile') {
+          pros.push("Optimized for your preferred network coverage");
+        }
+        cons.push("Coverage may vary in rural areas");
+      } else if (carrier.id === "darkstar") {
+        reasons.push("QCI 8 Priority Data on AT&T's network");
+        reasons.push("Reliable coverage with premium data priority");
+        pros.push("QCI 8 Priority Data (same as AT&T postpaid)");
+        pros.push("Premium data priority");
+        pros.push("Extensive hotspot data");
+        if (networkPreference === 'att') {
+          pros.push("Optimized for your preferred network coverage");
+        }
+        cons.push("Limited international roaming compared to other options");
+      }
+      
+      if (networkPreference && carrierNetwork === networkPreference) {
+        reasons.unshift(`Recommended for ${networkPreference.toUpperCase()} coverage in your area`);
+      }
+      
+      return {
+        carrier: carrier.name,
+        carrierId: carrier.id,
+        logo: carrierLogo,
+        planName: selectedPlan.name,
+        monthlySavings,
+        annualSavings,
+        monthlyPrice: planBasePrice,
+        totalMonthlyPrice: totalPlanPrice,
+        lineCount,
+        network: carrierNetwork,
+        preferred: networkPreference && carrierNetwork === networkPreference,
+        reasons,
+        pros,
+        cons,
+        features,
+        score: (pros.length * 2) - cons.length,
+        isQCI: true
+      };
+    }
+    
+    return null;
   };
 
   useEffect(() => {
-    if (billData) {
-      let carriersForRecommendation = [...supportedCarriers];
-      
-      if (networkPreference && networkToCarrierMap[networkPreference as ValidNetworkPreference]) {
-        carriersForRecommendation.sort((a, b) => {
-          const aMatchesPreference = getCarrierNetwork(a.id) === networkPreference;
-          const bMatchesPreference = getCarrierNetwork(b.id) === networkPreference;
-          
-          if (aMatchesPreference && !bMatchesPreference) return -1;
-          if (!aMatchesPreference && bMatchesPreference) return 1;
-          return 0;
-        });
-      }
-      
-      const currentBillAmount = billData.totalAmount || 0;
-      const lineCount = billData.phoneLines?.length || 1;
-      console.log(`Generating recommendations for ${lineCount} lines from imported bill data`);
-      
-      const allRecommendations = carriersForRecommendation.map(carrier => {
-        const plans = alternativeCarrierPlans.filter(plan => plan.carrierId === carrier.id);
-        let selectedPlan;
-        
-        if (carrier.id === "visible") {
-          selectedPlan = plans.find(plan => plan.id === "visible-plus") || plans[0];
-        } else if (carrier.id === "cricket") {
-          selectedPlan = plans.find(plan => plan.id === "cricket-unlimited") || plans[0];
-        } else if (carrier.id === "straighttalk") {
-          selectedPlan = plans.find(plan => plan.id === "straighttalk-unlimited-plus") || plans[0];
-        } else if (carrier.id === "total") {
-          selectedPlan = plans.find(plan => plan.id === "total-unlimited") || plans[0];
-        } else {
-          selectedPlan = plans.find(plan => plan.name.includes('Premium')) || plans[0];
-        }
-        
-        if (!selectedPlan) return null;
-        
-        const planBasePrice = selectedPlan.basePrice;
-        const totalPlanPrice = planBasePrice * lineCount;
-        const monthlySavings = currentBillAmount - totalPlanPrice;
-        const annualSavings = monthlySavings * 12;
-        
-        let features: FeaturesList = [];
-        if (selectedPlan) {
-          features = selectedPlan.features;
-        }
-        
-        let reasons: string[] = [];
-        let pros: string[] = [];
-        let cons: string[] = [];
-        
-        const networkMap: Record<string, string> = {
-          "warp": "verizon",
-          "lightspeed": "tmobile",
-          "darkstar": "att",
-          "visible": "verizon",
-          "cricket": "att",
-          "straighttalk": "multi",
-          "total": "verizon"
-        };
-        
-        const carrierNetwork = networkMap[carrier.id] || "verizon";
-        
-        const carrierLogoMap: Record<string, string> = {
-          "warp": "🌀",
-          "lightspeed": "⚡",
-          "darkstar": "★",
-          "visible": "👁️",
-          "cricket": "🦗",
-          "straighttalk": "💬",
-          "total": "📱"
-        };
-        
-        const carrierLogo = carrierLogoMap[carrier.id] || "📱";
-        
-        if (lineCount > 1) {
-          reasons.push(`Calculated for your ${lineCount} lines`);
-        }
-        
-        if (carrier.id === "warp") {
-          reasons.push("Unlimited data with no speed caps on Verizon's network");
-          pros.push("No contracts or hidden fees");
-          pros.push("Uses Verizon's reliable nationwide network");
-          if (networkPreference === 'verizon') {
-            pros.push("Optimized for your preferred network coverage");
-          }
-          cons.push("May have different coverage in some rural areas");
-        } else if (carrier.id === "lightspeed") {
-          reasons.push("Fast 5G speeds on T-Mobile's network");
-          pros.push("Great international options");
-          pros.push("Affordable pricing with premium features");
-          if (networkPreference === 'tmobile') {
-            pros.push("Optimized for your preferred network coverage");
-          }
-          cons.push("Coverage may vary in rural areas");
-        } else if (carrier.id === "darkstar") {
-          reasons.push("Reliable coverage on AT&T's network");
-          pros.push("Premium data priority");
-          pros.push("Extensive hotspot data");
-          if (networkPreference === 'att') {
-            pros.push("Optimized for your preferred network coverage");
-          }
-          cons.push("Limited international roaming compared to other options");
-        } else if (carrier.id === "visible") {
-          reasons.push("Simple, all-inclusive pricing on Verizon's network");
-          pros.push("No contracts, taxes and fees included");
-          pros.push("Party Pay available for multi-line discounts");
-          if (networkPreference === 'verizon') {
-            pros.push("Uses your preferred Verizon network");
-          }
-          cons.push("Customer service is app/chat based");
-          cons.push("Deprioritized during network congestion");
-        } else if (carrier.id === "cricket") {
-          reasons.push("AT&T network with HBO Max included");
-          pros.push("HBO Max streaming service included");
-          pros.push("Mexico & Canada usage included");
-          if (networkPreference === 'att') {
-            pros.push("Uses your preferred AT&T network");
-          }
-          cons.push("Speed capped at 8Mbps");
-          cons.push("SD video streaming by default");
-        } else if (carrier.id === "straighttalk") {
-          reasons.push("Choose your network (Verizon, AT&T, or T-Mobile)");
-          pros.push("Network flexibility - use the best in your area");
-          pros.push("Available at Walmart and other retailers");
-          if (networkPreference) {
-            pros.push(`Can use your preferred ${networkPreference.toUpperCase()} network`);
-          }
-          cons.push("Higher per-line cost than some alternatives");
-          cons.push("Limited international features");
-        } else if (carrier.id === "total") {
-          reasons.push("Verizon network with competitive pricing");
-          pros.push("Widely available at retail stores");
-          pros.push("International calling included");
-          if (networkPreference === 'verizon') {
-            pros.push("Uses your preferred Verizon network");
-          }
-          cons.push("Fewer premium features than postpaid plans");
-          cons.push("Limited customer service options");
-        }
-        
-        if (networkPreference && carrierNetwork === networkPreference) {
-          reasons.unshift(`Recommended for ${networkPreference.toUpperCase()} coverage in your area`);
-        }
-        
-        return {
-          carrier: carrier.name,
-          carrierId: carrier.id,
-          logo: carrierLogo,
-          planName: selectedPlan.name,
-          monthlySavings,
-          annualSavings,
-          monthlyPrice: planBasePrice,
-          totalMonthlyPrice: totalPlanPrice,
-          lineCount,
-          network: carrierNetwork,
-          preferred: networkPreference && carrierNetwork === networkPreference,
-          reasons,
-          pros,
-          cons,
-          features,
-          score: (pros.length * 2) - cons.length
-        };
-      }).filter(rec => rec !== null);
-      
-      const sortedRecommendations = sortRecommendations(allRecommendations);
-      
-      const topRecommendations = sortedRecommendations.slice(0, 5);
-      
-      setRecommendations(topRecommendations.length > 0 ? topRecommendations : [
-        {
-          carrier: "Current Plan",
-          carrierId: "current",
-          logo: "✓",
-          network: "verizon",
-          planName: billData.phoneLines?.[0]?.planName || "Current Plan",
-          monthlySavings: 0,
-          annualSavings: 0,
-          monthlyPrice: (billData.totalAmount || 0) / lineCount,
-          totalMonthlyPrice: billData.totalAmount || 0,
-          lineCount,
-          reasons: ["Your current plan appears to be competitive"],
-          pros: ["No need to switch carriers", "Familiar billing"],
-          cons: ["You may be missing perks from other carriers"],
-          features: []
-        }
-      ]);
-      
-      if (!aiRecommendations && !isLoadingAI) {
-        fetchAIRecommendations();
-      }
+    // Generate the top QCI recommendation
+    const qciRec = generateQCIRecommendation();
+    if (qciRec) {
+      setTopRecommendation(qciRec);
+    }
+    
+    // Fetch AI recommendations on initial load
+    if (!aiRecommendations && !isLoadingAI) {
+      fetchAIRecommendations();
     }
   }, [billData, calculateCarrierSavings, networkPreference, aiRecommendations, isLoadingAI]);
 
@@ -397,120 +316,104 @@ export function RecommendationsTab({
     }
   };
 
-  const renderStandardRecommendations = () => (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-      {recommendations.map((rec, index) => {
-        const actualRank = getCarrierRank(rec, recommendations);
-        
-        return (
-        <Card key={index} className={`border ${rec.preferred ? 'border-green-400 shadow-md' : 'border-gray-200'}`}>
-          <CardHeader className="pb-2">
-            <div className="flex justify-between items-center">
-              <div className="flex items-center gap-2">
-                <span className="text-2xl">{rec.logo}</span>
-                <CardTitle>{rec.carrier}</CardTitle>
-              </div>
-              <div className="flex gap-2">
-                {rec.preferred ? (
-                  <Badge className="bg-green-500 hover:bg-green-600">
-                    {actualRank === 1 ? "Best Network Match" : `${getOrdinalSuffix(actualRank)} Best Match`}
-                  </Badge>
-                ) : (
-                  <Badge className={
-                    actualRank === 1 ? "bg-blue-700 hover:bg-blue-800" : 
-                    actualRank === 2 ? "bg-blue-600 hover:bg-blue-700" : 
-                    actualRank === 3 ? "bg-blue-500 hover:bg-blue-600" : 
-                    actualRank === 4 ? "bg-blue-400 hover:bg-blue-500" : "bg-blue-300 hover:bg-blue-400"
-                  }>
-                    {getOrdinalSuffix(actualRank)} Best Value
-                  </Badge>
-                )}
-              </div>
+  const renderQCIRecommendation = () => {
+    if (!topRecommendation) return null;
+    
+    return (
+      <Card className="border-2 border-blue-500 shadow-lg mb-6">
+        <CardHeader className="pb-2 bg-blue-50">
+          <div className="flex justify-between items-center">
+            <div className="flex items-center gap-2">
+              <span className="text-2xl">{topRecommendation.logo}</span>
+              <CardTitle>{topRecommendation.carrier}</CardTitle>
             </div>
-            <CardDescription>{rec.planName}</CardDescription>
-          </CardHeader>
-          <CardContent className="py-2">
-            <div className="space-y-4">
-              <div>
-                <p className="text-sm text-gray-500">Price per Line</p>
-                <p className="text-lg font-bold">{formatCurrency(rec.monthlyPrice)}</p>
-                {rec.lineCount > 1 && (
-                  <p className="text-sm text-gray-500">
-                    Total for {rec.lineCount} lines: {formatCurrency(rec.totalMonthlyPrice)}
-                  </p>
-                )}
-              </div>
-              
-              {rec.annualSavings > 0 && (
-                <div>
-                  <p className="text-sm text-gray-500">Potential Savings</p>
-                  <p className="text-lg font-bold text-green-600">
-                    {formatCurrency(rec.monthlySavings)}/mo ({formatCurrency(rec.annualSavings)}/yr)
-                  </p>
-                </div>
+            <Badge className="bg-blue-600 hover:bg-blue-700">
+              QCI Priority Data Plan
+            </Badge>
+          </div>
+          <CardDescription className="font-medium">{topRecommendation.planName}</CardDescription>
+        </CardHeader>
+        <CardContent className="py-2">
+          <div className="space-y-4">
+            <div>
+              <p className="text-sm text-gray-500">Price per Line</p>
+              <p className="text-lg font-bold">{formatCurrency(topRecommendation.monthlyPrice)}</p>
+              {topRecommendation.lineCount > 1 && (
+                <p className="text-sm text-gray-500">
+                  Total for {topRecommendation.lineCount} lines: {formatCurrency(topRecommendation.totalMonthlyPrice)}
+                </p>
               )}
-              
+            </div>
+            
+            {topRecommendation.annualSavings > 0 && (
               <div>
-                <p className="text-sm font-medium">Why we recommend this:</p>
+                <p className="text-sm text-gray-500">Potential Savings</p>
+                <p className="text-lg font-bold text-green-600">
+                  {formatCurrency(topRecommendation.monthlySavings)}/mo ({formatCurrency(topRecommendation.annualSavings)}/yr)
+                </p>
+              </div>
+            )}
+            
+            <div>
+              <p className="text-sm font-medium">Why we recommend this:</p>
+              <ul className="mt-1 space-y-1 text-sm">
+                {topRecommendation.reasons.map((reason: string, i: number) => (
+                  <li key={i} className="flex items-start">
+                    <span className="mr-1.5 text-blue-500">•</span>
+                    <span>{reason}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+            
+            {topRecommendation.features && topRecommendation.features.length > 0 && (
+              <div>
+                <p className="text-sm font-medium text-blue-600">Included Features</p>
                 <ul className="mt-1 space-y-1 text-sm">
-                  {rec.reasons.map((reason: string, i: number) => (
+                  {topRecommendation.features.map((feature: string, i: number) => (
                     <li key={i} className="flex items-start">
-                      <span className="mr-1.5 text-blue-500">•</span>
-                      <span>{reason}</span>
+                      <span className="mr-1.5 text-blue-500">→</span>
+                      <span>{feature}</span>
                     </li>
                   ))}
                 </ul>
               </div>
-              
-              {rec.features && rec.features.length > 0 && (
-                <div>
-                  <p className="text-sm font-medium text-blue-600">Included Features</p>
-                  <ul className="mt-1 space-y-1 text-sm">
-                    {rec.features.map((feature: string, i: number) => (
-                      <li key={i} className="flex items-start">
-                        <span className="mr-1.5 text-blue-500">→</span>
-                        <span>{feature}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-              
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <p className="text-sm font-medium text-green-600">Pros</p>
-                  <ul className="mt-1 space-y-1 text-sm">
-                    {rec.pros.map((pro: string, i: number) => (
-                      <li key={i} className="flex items-start">
-                        <CheckIcon className="h-4 w-4 mr-1.5 text-green-500 flex-shrink-0" />
-                        <span>{pro}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-red-600">Cons</p>
-                  <ul className="mt-1 space-y-1 text-sm">
-                    {rec.cons.map((con: string, i: number) => (
-                      <li key={i} className="flex items-start">
-                        <XIcon className="h-4 w-4 mr-1.5 text-red-500 flex-shrink-0" />
-                        <span>{con}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
+            )}
+            
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <p className="text-sm font-medium text-green-600">Pros</p>
+                <ul className="mt-1 space-y-1 text-sm">
+                  {topRecommendation.pros.map((pro: string, i: number) => (
+                    <li key={i} className="flex items-start">
+                      <CheckIcon className="h-4 w-4 mr-1.5 text-green-500 flex-shrink-0" />
+                      <span>{pro}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+              <div>
+                <p className="text-sm font-medium text-red-600">Cons</p>
+                <ul className="mt-1 space-y-1 text-sm">
+                  {topRecommendation.cons.map((con: string, i: number) => (
+                    <li key={i} className="flex items-start">
+                      <XIcon className="h-4 w-4 mr-1.5 text-red-500 flex-shrink-0" />
+                      <span>{con}</span>
+                    </li>
+                  ))}
+                </ul>
               </div>
             </div>
-          </CardContent>
-          <CardFooter>
-            <Button className="w-full" variant={rec.preferred ? "default" : "outline"}>
-              Get More Details
-            </Button>
-          </CardFooter>
-        </Card>
-      )})}
-    </div>
-  );
+          </div>
+        </CardContent>
+        <CardFooter className="bg-blue-50">
+          <Button className="w-full">
+            Get More Details
+          </Button>
+        </CardFooter>
+      </Card>
+    );
+  };
 
   const renderAIRecommendations = () => {
     if (isLoadingAI) {
@@ -759,23 +662,11 @@ export function RecommendationsTab({
           Based on your current bill with {billData.phoneLines?.length || 1} lines, usage patterns, and network preferences, here are our recommendations to help you save:
         </p>
         
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid grid-cols-2 mb-6">
-            <TabsTrigger value="standard">Standard Recommendations</TabsTrigger>
-            <TabsTrigger value="ai" disabled={isLoadingAI && !aiRecommendations}>
-              AI-Powered Analysis
-              {isLoadingAI && <RefreshCw className="ml-2 h-3 w-3 animate-spin" />}
-            </TabsTrigger>
-          </TabsList>
-          
-          <TabsContent value="standard" className="mt-0">
-            {renderStandardRecommendations()}
-          </TabsContent>
-          
-          <TabsContent value="ai" className="mt-0">
-            {renderAIRecommendations()}
-          </TabsContent>
-        </Tabs>
+        {/* Always show the QCI recommendation at the top */}
+        {renderQCIRecommendation()}
+        
+        {/* Show AI recommendations */}
+        {renderAIRecommendations()}
       </div>
     </div>
   );
