@@ -1,5 +1,5 @@
+
 import React from 'react';
-// Add carrierType to the props interface
 
 interface CarrierComparisonProps {
   billData: any;
@@ -23,7 +23,6 @@ export function CarrierComparison({
   formatCurrency,
   carrierType = "verizon"
 }: CarrierComparisonProps) {
-  // Keep the existing implementation
-  // This is a placeholder for the existing code, which will be preserved by the AI
+  // Implementation to be added by another component
   return null;
 }

@@ -20,30 +20,90 @@ export function OverviewTab({ billData, formatCurrency, carrierType = "verizon" 
     return { id: planId, ...verizonPlansData[planId] };
   };
 
-  // Correct features for Verizon plans
-  const getCorrectPlanFeatures = (planName: string) => {
-    switch(planName) {
-      case 'Unlimited Welcome':
-        return [
-          'Unlimited talk, text & data', 
-          '5G access', 
-          'Mobile hotspot 5GB'
-        ];
-      case 'Unlimited Plus':
-        return [
-          'Unlimited talk, text & data', 
-          '5G Ultra Wideband', 
-          'Mobile hotspot 30GB'
-        ];
-      case 'Unlimited Ultimate':
-        return [
-          'Unlimited Premium Data', 
-          '5G Ultra Wideband', 
-          'Mobile hotspot 60GB'
-        ];
-      default:
-        return ['Unlimited talk, text & data'];
+  // Get carrier-specific plan features
+  const getCarrierPlanFeatures = (planName: string) => {
+    // Default features for all carriers
+    const defaultFeatures = ['Unlimited talk, text & data'];
+    
+    // If it's a Verizon bill
+    if (carrierType === 'verizon') {
+      switch(planName) {
+        case 'Unlimited Welcome':
+          return [
+            'Unlimited talk, text & data', 
+            '5G access', 
+            'Mobile hotspot 5GB'
+          ];
+        case 'Unlimited Plus':
+          return [
+            'Unlimited talk, text & data', 
+            '5G Ultra Wideband', 
+            'Mobile hotspot 30GB'
+          ];
+        case 'Unlimited Ultimate':
+          return [
+            'Unlimited Premium Data', 
+            '5G Ultra Wideband', 
+            'Mobile hotspot 60GB'
+          ];
+        default:
+          return defaultFeatures;
+      }
+    } 
+    // T-Mobile features
+    else if (carrierType === 'tmobile') {
+      switch(planName) {
+        case 'Go5G':
+          return [
+            'Unlimited talk, text & data', 
+            '5G access', 
+            'Mobile hotspot 5GB'
+          ];
+        case 'Go5G Plus':
+          return [
+            'Unlimited talk, text & data', 
+            '5G Ultra Capacity', 
+            'Mobile hotspot 40GB'
+          ];
+        case 'Go5G Next':
+          return [
+            'Unlimited Premium Data', 
+            '5G Ultra Capacity', 
+            'Mobile hotspot 50GB',
+            'Annual phone upgrades'
+          ];
+        default:
+          return defaultFeatures;
+      }
     }
+    // AT&T features
+    else if (carrierType === 'att') {
+      switch(planName) {
+        case 'Unlimited Starter':
+          return [
+            'Unlimited talk, text & data', 
+            '5G access', 
+            'Standard definition streaming'
+          ];
+        case 'Unlimited Extra':
+          return [
+            'Unlimited talk, text & data', 
+            '5G access', 
+            'Mobile hotspot 50GB'
+          ];
+        case 'Unlimited Premium':
+          return [
+            'Unlimited Premium Data', 
+            '5G access', 
+            'Mobile hotspot 100GB',
+            'HBO Max included'
+          ];
+        default:
+          return defaultFeatures;
+      }
+    }
+    
+    return defaultFeatures;
   };
 
   return (
@@ -72,7 +132,9 @@ export function OverviewTab({ billData, formatCurrency, carrierType = "verizon" 
               </li>
               <li className="flex justify-between items-center">
                 <span className="text-gray-600">Carrier:</span>
-                <span className="font-medium text-gray-800">{billData.carrier || billData.carrierName || 'Verizon'}</span>
+                <span className="font-medium text-gray-800">
+                  {billData.carrier || billData.carrierName || carrierType.charAt(0).toUpperCase() + carrierType.slice(1)}
+                </span>
               </li>
             </ul>
           </div>
@@ -113,7 +175,7 @@ export function OverviewTab({ billData, formatCurrency, carrierType = "verizon" 
             const planDetails = getPlanDetails(line.planName);
             const lineCount = billData.phoneLines?.length || 1;
             const price = planDetails ? getPlanPrice(planDetails.id, lineCount) : line.monthlyTotal || 0;
-            const correctFeatures = getCorrectPlanFeatures(line.planName);
+            const features = getCarrierPlanFeatures(line.planName);
             
             return (
               <div key={index} className="p-5 border border-gray-100 rounded-lg hover:shadow-md transition-shadow bg-gray-50">
@@ -142,14 +204,14 @@ export function OverviewTab({ billData, formatCurrency, carrierType = "verizon" 
                 <div className="mt-4 p-3 bg-white rounded-md shadow-sm">
                   <p className="text-sm font-medium text-gray-700 mb-2">Features:</p>
                   <ul className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                    {correctFeatures.map((feature, idx) => (
+                    {features.map((feature, idx) => (
                       <li key={idx} className="flex items-start text-sm">
                         <span className="text-primary mr-2 font-bold">•</span> {feature}
                       </li>
                     ))}
                   </ul>
                   <div className="mt-2 pt-2 border-t border-gray-100">
-                    <p className="text-xs text-gray-500 italic">Note: Streaming services like Disney+, Hulu, and ESPN+ are available as optional $10/month perks and are not included with plans.</p>
+                    <p className="text-xs text-gray-500 italic">Note: Streaming services may be available as optional add-ons and are not included with all plans.</p>
                   </div>
                 </div>
               </div>

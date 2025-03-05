@@ -1,9 +1,10 @@
-import { useState } from 'react';
+
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Plus, Trash, Save } from 'lucide-react';
-import { verizonPlansData, getPlanPrice } from '@/data/verizonPlans';
+import { getPlanPrice, getCarrierPlans } from '@/data/verizonPlans';
 
 interface LineCharge {
   phoneNumber: string;
@@ -33,24 +34,87 @@ interface ManualEntryFormProps {
 }
 
 export function ManualEntryForm({ onSubmit, carrierType = "verizon" }: ManualEntryFormProps) {
-  const [lines, setLines] = useState<LineCharge[]>([
-    {
+  const [lines, setLines] = useState<LineCharge[]>([]);
+  const [planOptions, setPlanOptions] = useState<string[]>([]);
+  const [defaultPlanId, setDefaultPlanId] = useState<string>('');
+  const [defaultPlanName, setDefaultPlanName] = useState<string>('');
+
+  // Update plans when carrier type changes
+  useEffect(() => {
+    const carrierPlans = getCarrierPlans(carrierType);
+    const planNames = Object.values(carrierPlans).map(plan => plan.name);
+    setPlanOptions(planNames);
+    
+    // Set default plan based on carrier
+    let defaultId = '';
+    switch (carrierType) {
+      case 'tmobile':
+        defaultId = 'go5g-plus';
+        break;
+      case 'att':
+        defaultId = 'unlimited-extra';
+        break;
+      case 'usmobile':
+        defaultId = 'unlimited-premium';
+        break;
+      case 'verizon':
+      default:
+        defaultId = 'unlimited-plus';
+        break;
+    }
+    
+    setDefaultPlanId(defaultId);
+    setDefaultPlanName(carrierPlans[defaultId]?.name || '');
+    
+    // Reset lines with new default plan
+    if (lines.length === 0) {
+      addInitialLine(defaultId, carrierPlans[defaultId]?.name || '');
+    } else {
+      // Update existing lines with new plan costs based on carrier
+      updateLinesPlanCosts(carrierType);
+    }
+  }, [carrierType]);
+  
+  const addInitialLine = (planId: string, planName: string) => {
+    const planCost = getPlanPrice(planId, 1, carrierType);
+    
+    setLines([{
       phoneNumber: '',
       deviceName: '',
-      planName: 'Unlimited Plus',
-      planCost: verizonPlansData['unlimited-plus'].prices[1],
+      planName: planName,
+      planCost: planCost,
       planDiscount: 0,
       planDiscountType: 'fixed'
-    }
-  ]);
-
-  const planOptions = Object.values(verizonPlansData).map(plan => plan.name);
+    }]);
+  };
+  
+  const updateLinesPlanCosts = (newCarrierType: string) => {
+    const carrierPlans = getCarrierPlans(newCarrierType);
+    const lineCount = lines.length;
+    
+    // Find matching plan names or use defaults
+    const updatedLines = lines.map(line => {
+      // Try to find a matching plan in the new carrier's plans
+      const planId = Object.keys(carrierPlans).find(
+        key => carrierPlans[key].name === line.planName
+      ) || defaultPlanId;
+      
+      const planName = carrierPlans[planId]?.name || defaultPlanName;
+      const planCost = getPlanPrice(planId, lineCount, newCarrierType);
+      
+      return {
+        ...line,
+        planName,
+        planCost
+      };
+    });
+    
+    setLines(updatedLines);
+  };
 
   const addLine = () => {
     const lineCount = lines.length + 1;
-    const defaultPlanId = 'unlimited-plus';
-    const defaultPlanName = verizonPlansData[defaultPlanId].name;
-    const planCost = getPlanPrice(defaultPlanId, lineCount);
+    const planCost = getPlanPrice(defaultPlanId, lineCount, carrierType);
     
     setLines([...lines, {
       phoneNumber: '',
@@ -96,14 +160,15 @@ export function ManualEntryForm({ onSubmit, carrierType = "verizon" }: ManualEnt
   };
 
   const updatePlanName = (index: number, planName: string) => {
-    const planId = Object.keys(verizonPlansData).find(
-      key => verizonPlansData[key].name === planName
+    const carrierPlans = getCarrierPlans(carrierType);
+    const planId = Object.keys(carrierPlans).find(
+      key => carrierPlans[key].name === planName
     );
     
     if (!planId) return;
     
     const lineCount = lines.length;
-    const planCost = getPlanPrice(planId, lineCount);
+    const planCost = getPlanPrice(planId, lineCount, carrierType);
     
     const updatedLines = [...lines];
     updatedLines[index] = {
@@ -142,9 +207,22 @@ export function ManualEntryForm({ onSubmit, carrierType = "verizon" }: ManualEnt
     onSubmit(formattedData);
   };
 
+  // Initialize with first line if empty
+  useEffect(() => {
+    if (lines.length === 0 && defaultPlanId && defaultPlanName) {
+      addInitialLine(defaultPlanId, defaultPlanName);
+    }
+  }, [defaultPlanId, defaultPlanName]);
+
+  if (lines.length === 0) {
+    return <div>Loading carrier plans...</div>;
+  }
+
   return (
     <div className="p-6 max-w-4xl mx-auto">
-      <h2 className="text-2xl font-semibold mb-6">Enter Your {carrierType.charAt(0).toUpperCase() + carrierType.slice(1)} Bill Details</h2>
+      <h2 className="text-2xl font-semibold mb-6">
+        Enter Your {carrierType.charAt(0).toUpperCase() + carrierType.slice(1)} Bill Details
+      </h2>
       
       <form onSubmit={handleSubmit} className="space-y-8">
         <div>
