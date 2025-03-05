@@ -65,7 +65,7 @@ export function CarrierComparison({
     }
   };
 
-  // Helper function to get ordinal suffix for ranking
+  // Helper function to get ordinal suffix for ranking (will be used in the plan details text)
   const getOrdinalSuffix = (n: number): string => {
     const s = ["th", "st", "nd", "rd"];
     const v = n % 100;
@@ -415,7 +415,7 @@ export function CarrierComparison({
                 </div>
                 
                 <p className="mt-4 text-sm text-blue-700">
-                  Showing plan details for {carrier.name} {standardPlan.name} (alternative carrier #{carrierIndex + 1} of {supportedCarriers.length})
+                  Showing plan details for {carrier.name} {standardPlan.name} (alternative carrier #{getOrdinalSuffix(carrierIndex + 1)} of {supportedCarriers.length})
                 </p>
               </TabsContent>
             );
