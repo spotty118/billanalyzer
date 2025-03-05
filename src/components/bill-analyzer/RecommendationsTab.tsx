@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -131,7 +130,6 @@ export function RecommendationsTab({
 
   useEffect(() => {
     if (billData) {
-      // Make sure we include ALL supported carriers, not filtering any out
       let carriersForRecommendation = [...supportedCarriers];
       
       if (networkPreference && networkToCarrierMap[networkPreference as ValidNetworkPreference]) {
@@ -148,11 +146,9 @@ export function RecommendationsTab({
       const currentBillAmount = billData.totalAmount || 0;
       
       const allRecommendations = carriersForRecommendation.map(carrier => {
-        // Make sure we're getting plans for all carriers, including straighttalk and total
         const plans = alternativeCarrierPlans.filter(plan => plan.carrierId === carrier.id);
         let selectedPlan;
         
-        // Ensure we have plan selection logic for all carriers
         if (carrier.id === "visible") {
           selectedPlan = plans.find(plan => plan.id === "visible-plus") || plans[0];
         } else if (carrier.id === "cricket") {
@@ -289,18 +285,13 @@ export function RecommendationsTab({
         };
       }).filter(rec => rec !== null);
       
-      // Update sorting to include ALL carriers, not just those with positive savings
       const sortedRecommendations = allRecommendations.sort((a, b) => {
-        // First prioritize preferred network
         if (a.preferred && !b.preferred) return -1;
         if (!a.preferred && b.preferred) return 1;
         
-        // Then sort by savings
         return b.annualSavings - a.annualSavings;
       });
       
-      // Take top 5 recommendations (increased from top X with positive savings)
-      // This ensures that straighttalk and total can appear in recommendations
       const topRecommendations = sortedRecommendations.slice(0, 5);
       
       setRecommendations(topRecommendations.length > 0 ? topRecommendations : [
@@ -329,7 +320,7 @@ export function RecommendationsTab({
   const renderStandardRecommendations = () => (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
       {recommendations.map((rec, index) => (
-        <Card key={index} className={`border ${index === 0 ? 'border-blue-400 shadow-md' : 'border-gray-200'}`}>
+        <Card key={index} className={`border ${index === 0 && rec.preferred ? 'border-blue-400 shadow-md' : 'border-gray-200'}`}>
           <CardHeader className="pb-2">
             <div className="flex justify-between items-center">
               <div className="flex items-center gap-2">
@@ -337,14 +328,15 @@ export function RecommendationsTab({
                 <CardTitle>{rec.carrier}</CardTitle>
               </div>
               <div className="flex gap-2">
-                {rec.preferred && (
+                {rec.preferred ? (
                   <Badge className="bg-green-500">Best Network Match</Badge>
-                )}
-                {!rec.preferred && (
-                  <Badge className={index === 0 ? "bg-blue-600" : 
-                             index === 1 ? "bg-blue-500" : 
-                             index === 2 ? "bg-blue-400" : "bg-blue-300"}>
-                    {getOrdinalSuffix(index + 1)} Best Value
+                ) : (
+                  <Badge className={
+                    index === 0 ? "bg-blue-600" : 
+                    index === 1 ? "bg-blue-500" : 
+                    index === 2 ? "bg-blue-400" : "bg-blue-300"
+                  }>
+                    {getOrdinalSuffix(index + (rec.preferred ? 0 : 1))} Best Value
                   </Badge>
                 )}
               </div>
@@ -420,7 +412,7 @@ export function RecommendationsTab({
             </div>
           </CardContent>
           <CardFooter>
-            <Button className="w-full" variant={index === 0 ? "default" : "outline"}>
+            <Button className="w-full" variant={index === 0 && rec.preferred ? "default" : "outline"}>
               Get More Details
             </Button>
           </CardFooter>
@@ -518,7 +510,7 @@ export function RecommendationsTab({
           <h3 className="text-lg font-semibold mb-4">AI-Powered Recommendations</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {aiRecommendations.recommendations.map((rec, index) => (
-              <Card key={index} className={`border ${index === 0 ? 'border-blue-400 shadow-md' : 'border-gray-200'}`}>
+              <Card key={index} className={`border ${index === 0 && networkPreference === rec.network ? 'border-blue-400 shadow-md' : 'border-gray-200'}`}>
                 <CardHeader className="pb-2">
                   <div className="flex justify-between items-center">
                     <div className="flex items-center gap-2">
@@ -533,10 +525,12 @@ export function RecommendationsTab({
                       {networkPreference === rec.network ? (
                         <Badge className="bg-green-500">Best Network Match</Badge>
                       ) : (
-                        <Badge className={index === 0 ? "bg-blue-600" : 
-                                 index === 1 ? "bg-blue-500" : 
-                                 index === 2 ? "bg-blue-400" : "bg-blue-300"}>
-                          {getOrdinalSuffix(index + 1)} Best Value
+                        <Badge className={
+                          index === 0 ? "bg-blue-600" : 
+                          index === 1 ? "bg-blue-500" : 
+                          index === 2 ? "bg-blue-400" : "bg-blue-300"
+                        }>
+                          {getOrdinalSuffix(index + (networkPreference === rec.network ? 0 : 1))} Best Value
                         </Badge>
                       )}
                     </div>
@@ -612,7 +606,7 @@ export function RecommendationsTab({
                   </div>
                 </CardContent>
                 <CardFooter>
-                  <Button className="w-full" variant={index === 0 ? "default" : "outline"}>
+                  <Button className="w-full" variant={index === 0 && networkPreference === rec.network ? "default" : "outline"}>
                     Get More Details
                   </Button>
                 </CardFooter>
