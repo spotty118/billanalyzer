@@ -243,7 +243,7 @@ YOU MUST ensure your response contains ONLY valid JSON that can be parsed with J
     
     // Set up the OpenRouter API request using Google's Gemini model
     const openRouterRequest = {
-      model: "google/gemini-2.0-flash-001",
+      model: "google/gemini-2.0-flash-thinking-exp:free",
       messages: [
         {
           role: "system",
@@ -259,7 +259,7 @@ YOU MUST ensure your response contains ONLY valid JSON that can be parsed with J
       response_format: { type: "json_object" } // Explicitly request JSON format
     };
     
-    console.log("Sending recommendation request to OpenRouter API (Gemini)...");
+    console.log("Sending recommendation request to OpenRouter API (Gemini Thinking Model)...");
     
     // Send request to OpenRouter API
     const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
@@ -314,7 +314,7 @@ YOU MUST ensure your response contains ONLY valid JSON that can be parsed with J
         ...jsonData,
         meta: {
           generatedAt: new Date().toISOString(),
-          source: "google/gemini-2.0-flash-001",
+          source: "google/gemini-2.0-flash-thinking-exp:free",
           billDataTimestamp: billData.extractionDate || new Date().toISOString()
         }
       };

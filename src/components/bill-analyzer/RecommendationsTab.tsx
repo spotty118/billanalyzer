@@ -21,7 +21,9 @@ interface RecommendationsTabProps {
   networkPreference?: NetworkPreference;
 }
 
-const networkToCarrierMap: Record<NetworkPreference, string> = {
+type ValidNetworkPreference = Exclude<NetworkPreference, null>;
+
+const networkToCarrierMap: Record<ValidNetworkPreference, string> = {
   verizon: "warp",
   tmobile: "lightspeed",
   att: "darkstar"
@@ -124,8 +126,8 @@ export function RecommendationsTab({
     if (billData) {
       let carriersForRecommendation = [...supportedCarriers];
       
-      if (networkPreference && networkToCarrierMap[networkPreference]) {
-        const preferredCarrierId = networkToCarrierMap[networkPreference];
+      if (networkPreference && networkToCarrierMap[networkPreference as ValidNetworkPreference]) {
+        const preferredCarrierId = networkToCarrierMap[networkPreference as ValidNetworkPreference];
         const preferredCarrierIndex = carriersForRecommendation.findIndex(c => c.id === preferredCarrierId);
         
         if (preferredCarrierIndex !== -1) {
