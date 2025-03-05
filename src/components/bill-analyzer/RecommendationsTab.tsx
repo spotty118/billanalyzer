@@ -570,8 +570,8 @@ export function RecommendationsTab({
         </p>
         
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid grid-cols-2 mb-6">
-            <TabsTrigger value="standard">Standard Recommendations</TabsTrigger>
+          <TabsList className="grid grid-cols-2 mb-6 px-[240px] mx-[240px] my-[19px] py-0">
+            
             <TabsTrigger value="ai" disabled={isLoadingAI && !aiRecommendations}>
               AI-Powered Analysis
               {isLoadingAI && <RefreshCw className="ml-2 h-3 w-3 animate-spin" />}
