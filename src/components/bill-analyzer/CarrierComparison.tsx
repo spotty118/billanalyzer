@@ -2,7 +2,7 @@
 import React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Check, Zap, Star, Lightbulb, Eye, CircleDot, SquareGantt, Smartphone } from "lucide-react";
+import { Check, Zap, Star, Lightbulb, Eye, CircleDot, Smartphone } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { alternativeCarrierPlans, supportedCarriers } from "@/config/alternativeCarriers";
 
@@ -55,7 +55,6 @@ export function CarrierComparison({
       'Lightbulb': <Lightbulb className="h-5 w-5" />,
       'Eye': <Eye className="h-5 w-5" />,
       'CircleDot': <CircleDot className="h-5 w-5" />,
-      'SquareGantt': <SquareGantt className="h-5 w-5" />,
       'Smartphone': <Smartphone className="h-5 w-5" />
     };
 

@@ -15,6 +15,35 @@ export function LineItemsTab({
   formatCurrency,
   carrierType = "verizon" 
 }: LineItemsTabProps) {
+  if (!billData || !billData.phoneLines || billData.phoneLines.length === 0) {
+    return (
+      <Card className="shadow-md">
+        <CardHeader>
+          <CardTitle className="flex items-center justify-between">
+            <span>Line Item Details - {carrierType.charAt(0).toUpperCase() + carrierType.slice(1)}</span>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger>
+                  <Info className="h-5 w-5 text-muted-foreground" />
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p className="max-w-sm">Breakdown of charges for each line on your account</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="text-center py-6">
+            <p className="text-muted-foreground">
+              No line items found in your bill data. Please upload a bill or enter line details.
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
   const renderPhoneDetails = () => {
     if (!billData?.phoneLines || billData.phoneLines.length === 0) {
       return (
