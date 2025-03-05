@@ -26,6 +26,10 @@ export function RecommendationsTab({
   const recommendations = billData?.recommendations || [];
   const insights = billData?.marketInsights || {};
   const advice = billData?.personalizedAdvice || '';
+  const meta = billData?.meta || {};
+  
+  // Check if we're using AI-generated recommendations
+  const isAIGenerated = meta?.source?.includes('gemini') || meta?.source?.includes('google');
   
   if (!billData || recommendations.length === 0) {
     return (
@@ -108,122 +112,175 @@ export function RecommendationsTab({
     window.open(url, '_blank');
   };
 
+  // Calculate potential savings if the function is provided
+  const getSavingsInfo = (carrier: string) => {
+    if (!calculateCarrierSavings) return null;
+    
+    try {
+      const savings = calculateCarrierSavings(carrier);
+      if (!savings) return null;
+      
+      return {
+        monthlySavings: formatCurrency(savings.monthlySavings),
+        annualSavings: formatCurrency(savings.annualSavings),
+        planName: savings.planName,
+        price: formatCurrency(savings.price)
+      };
+    } catch (error) {
+      console.error("Error calculating savings:", error);
+      return null;
+    }
+  };
+
   return (
     <div className="space-y-6">
       <Card className="shadow-md">
         <CardHeader>
-          <CardTitle>Recommended Plans</CardTitle>
+          <CardTitle className="flex items-center justify-between">
+            <span>Recommended Plans</span>
+            {isAIGenerated && (
+              <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full">
+                AI-Generated
+              </span>
+            )}
+          </CardTitle>
           <CardDescription>
             Based on your {carrierType.charAt(0).toUpperCase() + carrierType.slice(1)} usage patterns and preferences
           </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="space-y-6">
-            {recommendations.map((recommendation: any, index: number) => (
-              <div key={index} className="border rounded-lg p-4 space-y-4">
-                <div className="flex justify-between items-start">
-                  <div>
-                    <h3 className="text-lg font-bold">{recommendation.carrier}</h3>
-                    <p className="text-sm text-muted-foreground">{recommendation.planName} Plan</p>
-                    <div className="flex items-center text-sm text-blue-600 mt-1">
-                      <span>{recommendation.network?.charAt(0).toUpperCase() + recommendation.network?.slice(1) || 'Unknown'} Network</span>
+            {recommendations.map((recommendation: any, index: number) => {
+              const savingsInfo = getSavingsInfo(recommendation.carrier);
+              
+              return (
+                <div key={index} className="border rounded-lg p-4 space-y-4">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <h3 className="text-lg font-bold">{recommendation.carrier}</h3>
+                      <p className="text-sm text-muted-foreground">{recommendation.planName} Plan</p>
+                      <div className="flex items-center text-sm text-blue-600 mt-1">
+                        <span>{recommendation.network?.charAt(0).toUpperCase() + recommendation.network?.slice(1) || 'Unknown'} Network</span>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-lg font-bold">${recommendation.monthlyPrice}/mo</div>
+                      {recommendation.originalPrice && recommendation.originalPrice > recommendation.monthlyPrice && (
+                        <div className="text-sm line-through text-gray-400">${recommendation.originalPrice}/mo</div>
+                      )}
+                      
+                      {savingsInfo && (
+                        <div className="text-sm text-green-600 mt-1">
+                          Save {savingsInfo.monthlySavings}/mo
+                        </div>
+                      )}
                     </div>
                   </div>
-                  <div className="text-right">
-                    <div className="text-lg font-bold">${recommendation.monthlyPrice}/mo</div>
-                    {recommendation.originalPrice && recommendation.originalPrice > recommendation.monthlyPrice && (
-                      <div className="text-sm line-through text-gray-400">${recommendation.originalPrice}/mo</div>
-                    )}
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    {recommendation.features && recommendation.features.map((feature: string, idx: number) => (
+                      <div key={idx} className="flex items-center gap-2">
+                        <Check className="h-4 w-4 text-green-500" />
+                        <span className="text-sm">{feature}</span>
+                      </div>
+                    ))}
                   </div>
-                </div>
-                
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  {recommendation.features && recommendation.features.map((feature: string, idx: number) => (
-                    <div key={idx} className="flex items-center gap-2">
-                      <Check className="h-4 w-4 text-green-500" />
-                      <span className="text-sm">{feature}</span>
+                  
+                  {savingsInfo && (
+                    <div className="bg-green-50 p-3 rounded-md">
+                      <h4 className="text-sm font-medium text-green-800 mb-2">Potential Savings with {recommendation.carrier}</h4>
+                      <div className="text-sm text-green-700">
+                        <p>Monthly savings: {savingsInfo.monthlySavings}</p>
+                        <p>Annual savings: {savingsInfo.annualSavings}</p>
+                      </div>
                     </div>
-                  ))}
-                </div>
-                
-                {recommendation.reasons && recommendation.reasons.length > 0 && (
-                  <div className="bg-blue-50 p-3 rounded-md">
-                    <h4 className="text-sm font-medium text-blue-800 mb-2">Why this plan is recommended for you:</h4>
-                    <ul className="space-y-1">
-                      {recommendation.reasons.map((reason: string, idx: number) => (
-                        <li key={idx} className="text-sm text-blue-700 flex items-start gap-2">
-                          <ArrowRight className="h-4 w-4 mt-0.5 flex-shrink-0" />
-                          <span>{reason}</span>
-                        </li>
-                      ))}
-                    </ul>
+                  )}
+                  
+                  {recommendation.reasons && recommendation.reasons.length > 0 && (
+                    <div className="bg-blue-50 p-3 rounded-md">
+                      <h4 className="text-sm font-medium text-blue-800 mb-2">Why this plan is recommended for you:</h4>
+                      <ul className="space-y-1">
+                        {recommendation.reasons.map((reason: string, idx: number) => (
+                          <li key={idx} className="text-sm text-blue-700 flex items-start gap-2">
+                            <ArrowRight className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                            <span>{reason}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                  
+                  {(recommendation.pros?.length > 0 || recommendation.cons?.length > 0) && (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {recommendation.pros?.length > 0 && (
+                        <div>
+                          <h4 className="text-sm font-medium text-green-800 mb-1">Pros</h4>
+                          <ul className="space-y-1">
+                            {recommendation.pros.map((pro: string, idx: number) => (
+                              <li key={idx} className="text-sm flex items-start gap-2">
+                                <Check className="h-4 w-4 text-green-500 mt-0.5 flex-shrink-0" />
+                                <span>{pro}</span>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                      
+                      {recommendation.cons?.length > 0 && (
+                        <div>
+                          <h4 className="text-sm font-medium text-red-800 mb-1">Cons</h4>
+                          <ul className="space-y-1">
+                            {recommendation.cons.map((con: string, idx: number) => (
+                              <li key={idx} className="text-sm flex items-start gap-2">
+                                <span className="text-red-500 font-medium mt-0.5 flex-shrink-0">•</span>
+                                <span>{con}</span>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  
+                  <div className="pt-2 flex flex-wrap gap-2">
+                    <Button 
+                      variant="default" 
+                      onClick={() => handleViewPlan(recommendation.planName, recommendation.carrier)}
+                      className="flex-1"
+                    >
+                      View Plan
+                    </Button>
+                    <Button 
+                      variant="outline" 
+                      onClick={() => handleComparePlans(recommendation.planName, recommendation.carrier)}
+                      className="flex-1"
+                    >
+                      Compare Plans
+                    </Button>
+                    <Button 
+                      variant="ghost" 
+                      onClick={() => handleLearnMore(recommendation.carrier)}
+                      className="flex items-center gap-1"
+                    >
+                      <ExternalLink className="h-4 w-4" />
+                      Learn More
+                    </Button>
                   </div>
-                )}
-                
-                {(recommendation.pros?.length > 0 || recommendation.cons?.length > 0) && (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {recommendation.pros?.length > 0 && (
-                      <div>
-                        <h4 className="text-sm font-medium text-green-800 mb-1">Pros</h4>
-                        <ul className="space-y-1">
-                          {recommendation.pros.map((pro: string, idx: number) => (
-                            <li key={idx} className="text-sm flex items-start gap-2">
-                              <Check className="h-4 w-4 text-green-500 mt-0.5 flex-shrink-0" />
-                              <span>{pro}</span>
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    )}
-                    
-                    {recommendation.cons?.length > 0 && (
-                      <div>
-                        <h4 className="text-sm font-medium text-red-800 mb-1">Cons</h4>
-                        <ul className="space-y-1">
-                          {recommendation.cons.map((con: string, idx: number) => (
-                            <li key={idx} className="text-sm flex items-start gap-2">
-                              <span className="text-red-500 font-medium mt-0.5 flex-shrink-0">•</span>
-                              <span>{con}</span>
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    )}
-                  </div>
-                )}
-                
-                <div className="pt-2 flex flex-wrap gap-2">
-                  <Button 
-                    variant="default" 
-                    onClick={() => handleViewPlan(recommendation.planName, recommendation.carrier)}
-                    className="flex-1"
-                  >
-                    View Plan
-                  </Button>
-                  <Button 
-                    variant="outline" 
-                    onClick={() => handleComparePlans(recommendation.planName, recommendation.carrier)}
-                    className="flex-1"
-                  >
-                    Compare Plans
-                  </Button>
-                  <Button 
-                    variant="ghost" 
-                    onClick={() => handleLearnMore(recommendation.carrier)}
-                    className="flex items-center gap-1"
-                  >
-                    <ExternalLink className="h-4 w-4" />
-                    Learn More
-                  </Button>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
           
           {advice && (
             <div className="bg-amber-50 p-4 rounded-lg mt-6 border border-amber-200">
               <h3 className="font-medium text-amber-800 mb-2">Personalized Advice</h3>
               <p className="text-sm text-amber-700">{advice}</p>
+            </div>
+          )}
+          
+          {meta?.source && (
+            <div className="text-xs text-gray-500 text-right mt-4">
+              Data source: {meta.source}
             </div>
           )}
         </CardContent>
