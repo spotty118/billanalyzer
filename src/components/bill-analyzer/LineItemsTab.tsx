@@ -1,3 +1,4 @@
+
 import {
   BarChart,
   Bar,
@@ -13,9 +14,10 @@ import { prepareLineItemsData } from './utils/dataUtils';
 interface LineItemsTabProps {
   billData: any;
   formatCurrency: (value: number) => string;
+  carrierType?: string;
 }
 
-export function LineItemsTab({ billData, formatCurrency }: LineItemsTabProps) {
+export function LineItemsTab({ billData, formatCurrency, carrierType = "verizon" }: LineItemsTabProps) {
   if (!billData) return <div>No bill data available</div>;
 
   // Use the prepareLineItemsData utility to get data properly formatted

@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -30,9 +29,10 @@ interface ManualEntryFormProps {
       }
     }>
   }) => void;
+  carrierType?: string;
 }
 
-export function ManualEntryForm({ onSubmit }: ManualEntryFormProps) {
+export function ManualEntryForm({ onSubmit, carrierType = "verizon" }: ManualEntryFormProps) {
   const [lines, setLines] = useState<LineCharge[]>([
     {
       phoneNumber: '',
@@ -144,7 +144,7 @@ export function ManualEntryForm({ onSubmit }: ManualEntryFormProps) {
 
   return (
     <div className="p-6 max-w-4xl mx-auto">
-      <h2 className="text-2xl font-semibold mb-6">Enter Your Verizon Bill Details</h2>
+      <h2 className="text-2xl font-semibold mb-6">Enter Your {carrierType.charAt(0).toUpperCase() + carrierType.slice(1)} Bill Details</h2>
       
       <form onSubmit={handleSubmit} className="space-y-8">
         <div>

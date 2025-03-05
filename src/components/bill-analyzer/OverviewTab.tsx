@@ -4,9 +4,10 @@ import { verizonPlansData, getPlanPrice } from "@/data/verizonPlans";
 interface OverviewTabProps {
   billData: any;
   formatCurrency: (value: number) => string;
+  carrierType?: string;
 }
 
-export function OverviewTab({ billData, formatCurrency }: OverviewTabProps) {
+export function OverviewTab({ billData, formatCurrency, carrierType = "verizon" }: OverviewTabProps) {
   if (!billData) return <div>No bill data available</div>;
 
   // Helper function to get plan details using the plan name
