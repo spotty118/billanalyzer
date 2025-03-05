@@ -8,6 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { NetworkPreference } from './VerizonBillAnalyzer';
 import { alternativeCarrierPlans, supportedCarriers } from '@/config/alternativeCarriers';
 import { toast } from "sonner";
+
 interface RecommendationsTabProps {
   billData: any;
   formatCurrency: (value: number) => string;
@@ -19,13 +20,16 @@ interface RecommendationsTabProps {
   };
   networkPreference?: NetworkPreference;
 }
+
 type ValidNetworkPreference = Exclude<NetworkPreference, null>;
 const networkToCarrierMap: Record<ValidNetworkPreference, string> = {
   verizon: "warp",
   tmobile: "lightspeed",
   att: "darkstar"
 };
+
 type FeaturesList = string[];
+
 interface AIRecommendation {
   carrier: string;
   planName: string;
@@ -36,6 +40,7 @@ interface AIRecommendation {
   pros: string[];
   cons: string[];
 }
+
 interface AIRecommendationsData {
   recommendations: AIRecommendation[];
   marketInsights: {
@@ -54,6 +59,7 @@ interface AIRecommendationsData {
     billDataTimestamp: string;
   };
 }
+
 export function RecommendationsTab({
   billData,
   formatCurrency,
@@ -65,11 +71,13 @@ export function RecommendationsTab({
   const [isLoadingAI, setIsLoadingAI] = useState(false);
   const [activeTab, setActiveTab] = useState("standard");
   const [progress, setProgress] = useState(0);
+
   const getOrdinalSuffix = (n: number): string => {
     const s = ["th", "st", "nd", "rd"];
     const v = n % 100;
     return n + (s[(v - 20) % 10] || s[v] || s[0]);
   };
+
   const fetchAIRecommendations = async () => {
     setIsLoadingAI(true);
     setProgress(10);
@@ -109,6 +117,7 @@ export function RecommendationsTab({
       setProgress(100);
     }
   };
+
   const sortRecommendations = (recommendations: any[]) => {
     return [...recommendations].sort((a, b) => {
       if (a.preferred && !b.preferred) return -1;
@@ -124,6 +133,271 @@ export function RecommendationsTab({
       return 0;
     });
   };
+
+  const getCarrierNetwork = (carrierId: string): string => {
+    const networkMap: Record<string, string> = {
+      "warp": "verizon",
+      "lightspeed": "tmobile",
+      "darkstar": "att",
+      "visible": "verizon",
+      "cricket": "att",
+      "straighttalk": "multi",
+      "total": "verizon"
+    };
+    return networkMap[carrierId] || "";
+  };
+
+  const getCarrierRank = (rec: any, recommendations: any[]): number => {
+    if (rec.preferred) {
+      let preferredRank = 1;
+      const prefCarriers = recommendations.filter(r => r.preferred);
+      if (prefCarriers.length > 1) {
+        const sortedPrefCarriers = [...prefCarriers].sort((a, b) => {
+          const aScore = a.pros.length * 2 - a.cons.length;
+          const bScore = b.pros.length * 2 - b.cons.length;
+          if (aScore !== bScore) {
+            return bScore - aScore;
+          }
+          return b.annualSavings - a.annualSavings;
+        });
+        preferredRank = sortedPrefCarriers.findIndex(c => c.carrierId === rec.carrierId) + 1;
+      }
+      return preferredRank;
+    } else {
+      const nonPrefCarriers = recommendations.filter(r => !r.preferred);
+      let rank = 1;
+      const sortedNonPrefCarriers = [...nonPrefCarriers].sort((a, b) => {
+        const aScore = a.pros.length * 2 - a.cons.length;
+        const bScore = b.pros.length * 2 - b.cons.length;
+        if (aScore !== bScore) {
+          return bScore - aScore;
+        }
+        return b.annualSavings - a.annualSavings;
+      });
+      rank = sortedNonPrefCarriers.findIndex(c => c.carrierId === rec.carrierId) + 1;
+      return rank;
+    }
+  };
+
+  const renderStandardRecommendations = () => <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      {recommendations.map((rec, index) => {
+      const actualRank = getCarrierRank(rec, recommendations);
+      return <Card key={index} className={`border ${rec.preferred ? 'border-green-400 shadow-md' : 'border-gray-200'}`}>
+          <CardHeader className="pb-2">
+            <div className="flex justify-between items-center">
+              <div className="flex items-center gap-2">
+                <span className="text-2xl">{rec.logo}</span>
+                <CardTitle>{rec.carrier}</CardTitle>
+              </div>
+              <div className="flex gap-2">
+                {rec.preferred ? <Badge className="bg-green-500 hover:bg-green-600">
+                    {actualRank === 1 ? "Best Network Match" : `${getOrdinalSuffix(actualRank)} Best Match`}
+                  </Badge> : <Badge className={actualRank === 1 ? "bg-blue-700 hover:bg-blue-800" : actualRank === 2 ? "bg-blue-600 hover:bg-blue-700" : actualRank === 3 ? "bg-blue-500 hover:bg-blue-600" : actualRank === 4 ? "bg-blue-400 hover:bg-blue-500" : "bg-blue-300 hover:bg-blue-400"}>
+                    {getOrdinalSuffix(actualRank)} Best Value
+                  </Badge>}
+              </div>
+            </div>
+            <CardDescription>{rec.planName}</CardDescription>
+          </CardHeader>
+          <CardContent className="py-2">
+            <div className="space-y-4">
+              <div>
+                <p className="text-sm text-gray-500">Price per Line</p>
+                <p className="text-lg font-bold">{formatCurrency(rec.monthlyPrice)}</p>
+                {rec.lineCount > 1 && <p className="text-sm text-gray-500">
+                    Total for {rec.lineCount} lines: {formatCurrency(rec.totalMonthlyPrice)}
+                  </p>}
+              </div>
+              
+              {rec.annualSavings > 0 && <div>
+                  <p className="text-sm text-gray-500">Potential Savings</p>
+                  <p className="text-lg font-bold text-green-600">
+                    {formatCurrency(rec.monthlySavings)}/mo ({formatCurrency(rec.annualSavings)}/yr)
+                  </p>
+                </div>}
+              
+              <div>
+                <p className="text-sm font-medium">Why we recommend this:</p>
+                <ul className="mt-1 space-y-1 text-sm">
+                  {rec.reasons.map((reason: string, i: number) => <li key={i} className="flex items-start">
+                      <span className="mr-1.5 text-blue-500">•</span>
+                      <span>{reason}</span>
+                    </li>)}
+                </ul>
+              </div>
+              
+              {rec.features && rec.features.length > 0 && <div>
+                  <p className="text-sm font-medium text-blue-600">Included Features</p>
+                  <ul className="mt-1 space-y-1 text-sm">
+                    {rec.features.map((feature: string, i: number) => <li key={i} className="flex items-start">
+                        <span className="mr-1.5 text-blue-500">→</span>
+                        <span>{feature}</span>
+                      </li>)}
+                  </ul>
+                </div>}
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-sm font-medium text-green-600">Pros</p>
+                  <ul className="mt-1 space-y-1 text-sm">
+                    {rec.pros.map((pro: string, i: number) => <li key={i} className="flex items-start">
+                        <CheckIcon className="h-4 w-4 mr-1.5 text-green-500 flex-shrink-0" />
+                        <span>{pro}</span>
+                      </li>)}
+                  </ul>
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-red-600">Cons</p>
+                  <ul className="mt-1 space-y-1 text-sm">
+                    {rec.cons.map((con: string, i: number) => <li key={i} className="flex items-start">
+                        <XIcon className="h-4 w-4 mr-1.5 text-red-500 flex-shrink-0" />
+                        <span>{con}</span>
+                      </li>)}
+                  </ul>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+          <CardFooter>
+            <Button className="w-full" variant={rec.preferred ? "default" : "outline"}>
+              Get More Details
+            </Button>
+          </CardFooter>
+        </Card>;
+    })}
+    </div>;
+
+  const renderAIRecommendations = () => {
+    if (isLoadingAI) {
+      return <div className="flex flex-col items-center justify-center p-10 space-y-4">
+          <Progress value={progress} className="w-full" />
+          <p className="text-gray-500">Getting the latest carrier data and generating recommendations...</p>
+        </div>;
+    }
+    if (!aiRecommendations) {
+      return <div className="flex flex-col items-center justify-center p-10 space-y-4">
+          <p className="text-gray-500">No AI recommendations available. Click refresh to get the latest data.</p>
+          <Button onClick={fetchAIRecommendations} className="mt-4">
+            <RefreshCw className="mr-2 h-4 w-4" />
+            Get AI Recommendations
+          </Button>
+        </div>;
+    }
+    return <div className="space-y-8">
+        
+        
+        <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+          <h3 className="text-lg font-semibold mb-2">Personalized Advice</h3>
+          <p className="text-gray-700">{aiRecommendations.personalizedAdvice}</p>
+        </div>
+
+        <div>
+          <h3 className="text-lg font-semibold mb-4">AI-Powered Recommendations</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {aiRecommendations.recommendations.map((rec, index) => {
+            const isPreferred = networkPreference === rec.network;
+            const aiRecs = aiRecommendations.recommendations.map(r => ({
+              preferred: networkPreference === r.network,
+              pros: r.pros,
+              cons: r.cons,
+              carrierId: r.carrier,
+              annualSavings: billData.totalAmount * 12 - r.monthlyPrice * 12
+            }));
+            const actualRec = {
+              ...rec,
+              preferred: isPreferred,
+              carrierId: rec.carrier
+            };
+            const actualRank = getCarrierRank(actualRec, aiRecs);
+            return <Card key={index} className={`border ${isPreferred ? 'border-green-400 shadow-md' : 'border-gray-200'}`}>
+                  <CardHeader className="pb-2">
+                    <div className="flex justify-between items-center">
+                      <div className="flex items-center gap-2">
+                        <span className="text-2xl">{rec.network === 'verizon' ? '🌀' : rec.network === 'tmobile' ? '⚡' : rec.network === 'att' ? '★' : '📱'}</span>
+                        <CardTitle>{rec.carrier}</CardTitle>
+                      </div>
+                      <div className="flex gap-2">
+                        {isPreferred ? <Badge className="bg-green-500 hover:bg-green-600">
+                            {actualRank === 1 ? "Best Network Match" : `${getOrdinalSuffix(actualRank)} Best Match`}
+                          </Badge> : <Badge className={actualRank === 1 ? "bg-blue-700 hover:bg-blue-800" : actualRank === 2 ? "bg-blue-600 hover:bg-blue-700" : actualRank === 3 ? "bg-blue-500 hover:bg-blue-600" : actualRank === 4 ? "bg-blue-400 hover:bg-blue-500" : "bg-blue-300 hover:bg-blue-400"}>
+                            {getOrdinalSuffix(actualRank)} Best Value
+                          </Badge>}
+                      </div>
+                    </div>
+                    <CardDescription>{rec.planName}</CardDescription>
+                  </CardHeader>
+                  <CardContent className="py-2">
+                    <div className="space-y-4">
+                      <div>
+                        <p className="text-sm text-gray-500">Monthly Price</p>
+                        <p className="text-lg font-bold">{formatCurrency(rec.monthlyPrice)}</p>
+                      </div>
+                      
+                      {billData.totalAmount > rec.monthlyPrice && <div>
+                          <p className="text-sm text-gray-500">Potential Monthly Savings</p>
+                          <p className="text-lg font-bold text-green-600">
+                            {formatCurrency(billData.totalAmount - rec.monthlyPrice)}/mo
+                          </p>
+                        </div>}
+                      
+                      <div>
+                        <p className="text-sm font-medium">Why AI recommends this:</p>
+                        <ul className="mt-1 space-y-1 text-sm">
+                          {rec.reasons.map((reason: string, i: number) => <li key={i} className="flex items-start">
+                              <span className="mr-1.5 text-blue-500">•</span>
+                              <span>{reason}</span>
+                            </li>)}
+                        </ul>
+                      </div>
+                      
+                      {rec.features && rec.features.length > 0 && <div>
+                          <p className="text-sm font-medium text-blue-600">Included Features</p>
+                          <ul className="mt-1 space-y-1 text-sm">
+                            {rec.features.map((feature: string, i: number) => <li key={i} className="flex items-start">
+                                <span className="mr-1.5 text-blue-500">→</span>
+                                <span>{feature}</span>
+                              </li>)}
+                          </ul>
+                        </div>}
+                      
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <p className="text-sm font-medium text-green-600">Pros</p>
+                          <ul className="mt-1 space-y-1 text-sm">
+                            {rec.pros.map((pro: string, i: number) => <li key={i} className="flex items-start">
+                                <CheckIcon className="h-4 w-4 mr-1.5 text-green-500 flex-shrink-0" />
+                                <span>{pro}</span>
+                              </li>)}
+                          </ul>
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium text-red-600">Cons</p>
+                          <ul className="mt-1 space-y-1 text-sm">
+                            {rec.cons.map((con: string, i: number) => <li key={i} className="flex items-start">
+                                <XIcon className="h-4 w-4 mr-1.5 text-red-500 flex-shrink-0" />
+                                <span>{con}</span>
+                              </li>)}
+                          </ul>
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                  <CardFooter>
+                    <Button className="w-full" variant={isPreferred ? "default" : "outline"}>
+                      Get More Details
+                    </Button>
+                  </CardFooter>
+                </Card>;
+          })}
+          </div>
+        </div>
+        
+        {aiRecommendations.meta && <div className="text-xs text-gray-400 text-right mt-4">
+            Data updated: {new Date(aiRecommendations.meta.generatedAt).toLocaleString()}
+          </div>}
+      </div>;
+  };
+
   useEffect(() => {
     if (billData) {
       let carriersForRecommendation = [...supportedCarriers];
@@ -294,266 +568,7 @@ export function RecommendationsTab({
       }
     }
   }, [billData, calculateCarrierSavings, networkPreference, aiRecommendations, isLoadingAI]);
-  const getCarrierNetwork = (carrierId: string): string => {
-    const networkMap: Record<string, string> = {
-      "warp": "verizon",
-      "lightspeed": "tmobile",
-      "darkstar": "att",
-      "visible": "verizon",
-      "cricket": "att",
-      "straighttalk": "multi",
-      "total": "verizon"
-    };
-    return networkMap[carrierId] || "";
-  };
-  const getCarrierRank = (rec: any, recommendations: any[]): number => {
-    if (rec.preferred) {
-      let preferredRank = 1;
-      const prefCarriers = recommendations.filter(r => r.preferred);
-      if (prefCarriers.length > 1) {
-        const sortedPrefCarriers = [...prefCarriers].sort((a, b) => {
-          const aScore = a.pros.length * 2 - a.cons.length;
-          const bScore = b.pros.length * 2 - b.cons.length;
-          if (aScore !== bScore) {
-            return bScore - aScore;
-          }
-          return b.annualSavings - a.annualSavings;
-        });
-        preferredRank = sortedPrefCarriers.findIndex(c => c.carrierId === rec.carrierId) + 1;
-      }
-      return preferredRank;
-    } else {
-      const nonPrefCarriers = recommendations.filter(r => !r.preferred);
-      let rank = 1;
-      const sortedNonPrefCarriers = [...nonPrefCarriers].sort((a, b) => {
-        const aScore = a.pros.length * 2 - a.cons.length;
-        const bScore = b.pros.length * 2 - b.cons.length;
-        if (aScore !== bScore) {
-          return bScore - aScore;
-        }
-        return b.annualSavings - a.annualSavings;
-      });
-      rank = sortedNonPrefCarriers.findIndex(c => c.carrierId === rec.carrierId) + 1;
-      return rank;
-    }
-  };
-  const renderStandardRecommendations = () => <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-      {recommendations.map((rec, index) => {
-      const actualRank = getCarrierRank(rec, recommendations);
-      return <Card key={index} className={`border ${rec.preferred ? 'border-green-400 shadow-md' : 'border-gray-200'}`}>
-          <CardHeader className="pb-2">
-            <div className="flex justify-between items-center">
-              <div className="flex items-center gap-2">
-                <span className="text-2xl">{rec.logo}</span>
-                <CardTitle>{rec.carrier}</CardTitle>
-              </div>
-              <div className="flex gap-2">
-                {rec.preferred ? <Badge className="bg-green-500 hover:bg-green-600">
-                    {actualRank === 1 ? "Best Network Match" : `${getOrdinalSuffix(actualRank)} Best Match`}
-                  </Badge> : <Badge className={actualRank === 1 ? "bg-blue-700 hover:bg-blue-800" : actualRank === 2 ? "bg-blue-600 hover:bg-blue-700" : actualRank === 3 ? "bg-blue-500 hover:bg-blue-600" : actualRank === 4 ? "bg-blue-400 hover:bg-blue-500" : "bg-blue-300 hover:bg-blue-400"}>
-                    {getOrdinalSuffix(actualRank)} Best Value
-                  </Badge>}
-              </div>
-            </div>
-            <CardDescription>{rec.planName}</CardDescription>
-          </CardHeader>
-          <CardContent className="py-2">
-            <div className="space-y-4">
-              <div>
-                <p className="text-sm text-gray-500">Price per Line</p>
-                <p className="text-lg font-bold">{formatCurrency(rec.monthlyPrice)}</p>
-                {rec.lineCount > 1 && <p className="text-sm text-gray-500">
-                    Total for {rec.lineCount} lines: {formatCurrency(rec.totalMonthlyPrice)}
-                  </p>}
-              </div>
-              
-              {rec.annualSavings > 0 && <div>
-                  <p className="text-sm text-gray-500">Potential Savings</p>
-                  <p className="text-lg font-bold text-green-600">
-                    {formatCurrency(rec.monthlySavings)}/mo ({formatCurrency(rec.annualSavings)}/yr)
-                  </p>
-                </div>}
-              
-              <div>
-                <p className="text-sm font-medium">Why we recommend this:</p>
-                <ul className="mt-1 space-y-1 text-sm">
-                  {rec.reasons.map((reason: string, i: number) => <li key={i} className="flex items-start">
-                      <span className="mr-1.5 text-blue-500">•</span>
-                      <span>{reason}</span>
-                    </li>)}
-                </ul>
-              </div>
-              
-              {rec.features && rec.features.length > 0 && <div>
-                  <p className="text-sm font-medium text-blue-600">Included Features</p>
-                  <ul className="mt-1 space-y-1 text-sm">
-                    {rec.features.map((feature: string, i: number) => <li key={i} className="flex items-start">
-                        <span className="mr-1.5 text-blue-500">→</span>
-                        <span>{feature}</span>
-                      </li>)}
-                  </ul>
-                </div>}
-              
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <p className="text-sm font-medium text-green-600">Pros</p>
-                  <ul className="mt-1 space-y-1 text-sm">
-                    {rec.pros.map((pro: string, i: number) => <li key={i} className="flex items-start">
-                        <CheckIcon className="h-4 w-4 mr-1.5 text-green-500 flex-shrink-0" />
-                        <span>{pro}</span>
-                      </li>)}
-                  </ul>
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-red-600">Cons</p>
-                  <ul className="mt-1 space-y-1 text-sm">
-                    {rec.cons.map((con: string, i: number) => <li key={i} className="flex items-start">
-                        <XIcon className="h-4 w-4 mr-1.5 text-red-500 flex-shrink-0" />
-                        <span>{con}</span>
-                      </li>)}
-                  </ul>
-                </div>
-              </div>
-            </div>
-          </CardContent>
-          <CardFooter>
-            <Button className="w-full" variant={rec.preferred ? "default" : "outline"}>
-              Get More Details
-            </Button>
-          </CardFooter>
-        </Card>;
-    })}
-    </div>;
-  const renderAIRecommendations = () => {
-    if (isLoadingAI) {
-      return <div className="flex flex-col items-center justify-center p-10 space-y-4">
-          <Progress value={progress} className="w-full" />
-          <p className="text-gray-500">Getting the latest carrier data and generating recommendations...</p>
-        </div>;
-    }
-    if (!aiRecommendations) {
-      return <div className="flex flex-col items-center justify-center p-10 space-y-4">
-          <p className="text-gray-500">No AI recommendations available. Click refresh to get the latest data.</p>
-          <Button onClick={fetchAIRecommendations} className="mt-4">
-            <RefreshCw className="mr-2 h-4 w-4" />
-            Get AI Recommendations
-          </Button>
-        </div>;
-    }
-    return <div className="space-y-8">
-        
-        
-        <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
-          <h3 className="text-lg font-semibold mb-2">Personalized Advice</h3>
-          <p className="text-gray-700">{aiRecommendations.personalizedAdvice}</p>
-        </div>
 
-        <div>
-          <h3 className="text-lg font-semibold mb-4">AI-Powered Recommendations</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {aiRecommendations.recommendations.map((rec, index) => {
-            const isPreferred = networkPreference === rec.network;
-            const aiRecs = aiRecommendations.recommendations.map(r => ({
-              preferred: networkPreference === r.network,
-              pros: r.pros,
-              cons: r.cons,
-              carrierId: r.carrier,
-              annualSavings: billData.totalAmount * 12 - r.monthlyPrice * 12
-            }));
-            const actualRec = {
-              ...rec,
-              preferred: isPreferred,
-              carrierId: rec.carrier
-            };
-            const actualRank = getCarrierRank(actualRec, aiRecs);
-            return <Card key={index} className={`border ${isPreferred ? 'border-green-400 shadow-md' : 'border-gray-200'}`}>
-                  <CardHeader className="pb-2">
-                    <div className="flex justify-between items-center">
-                      <div className="flex items-center gap-2">
-                        <span className="text-2xl">{rec.network === 'verizon' ? '🌀' : rec.network === 'tmobile' ? '⚡' : rec.network === 'att' ? '★' : '📱'}</span>
-                        <CardTitle>{rec.carrier}</CardTitle>
-                      </div>
-                      <div className="flex gap-2">
-                        {isPreferred ? <Badge className="bg-green-500 hover:bg-green-600">
-                            {actualRank === 1 ? "Best Network Match" : `${getOrdinalSuffix(actualRank)} Best Match`}
-                          </Badge> : <Badge className={actualRank === 1 ? "bg-blue-700 hover:bg-blue-800" : actualRank === 2 ? "bg-blue-600 hover:bg-blue-700" : actualRank === 3 ? "bg-blue-500 hover:bg-blue-600" : actualRank === 4 ? "bg-blue-400 hover:bg-blue-500" : "bg-blue-300 hover:bg-blue-400"}>
-                            {getOrdinalSuffix(actualRank)} Best Value
-                          </Badge>}
-                      </div>
-                    </div>
-                    <CardDescription>{rec.planName}</CardDescription>
-                  </CardHeader>
-                  <CardContent className="py-2">
-                    <div className="space-y-4">
-                      <div>
-                        <p className="text-sm text-gray-500">Monthly Price</p>
-                        <p className="text-lg font-bold">{formatCurrency(rec.monthlyPrice)}</p>
-                      </div>
-                      
-                      {billData.totalAmount > rec.monthlyPrice && <div>
-                          <p className="text-sm text-gray-500">Potential Monthly Savings</p>
-                          <p className="text-lg font-bold text-green-600">
-                            {formatCurrency(billData.totalAmount - rec.monthlyPrice)}/mo
-                          </p>
-                        </div>}
-                      
-                      <div>
-                        <p className="text-sm font-medium">Why AI recommends this:</p>
-                        <ul className="mt-1 space-y-1 text-sm">
-                          {rec.reasons.map((reason: string, i: number) => <li key={i} className="flex items-start">
-                              <span className="mr-1.5 text-blue-500">•</span>
-                              <span>{reason}</span>
-                            </li>)}
-                        </ul>
-                      </div>
-                      
-                      {rec.features && rec.features.length > 0 && <div>
-                          <p className="text-sm font-medium text-blue-600">Included Features</p>
-                          <ul className="mt-1 space-y-1 text-sm">
-                            {rec.features.map((feature: string, i: number) => <li key={i} className="flex items-start">
-                                <span className="mr-1.5 text-blue-500">→</span>
-                                <span>{feature}</span>
-                              </li>)}
-                          </ul>
-                        </div>}
-                      
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <p className="text-sm font-medium text-green-600">Pros</p>
-                          <ul className="mt-1 space-y-1 text-sm">
-                            {rec.pros.map((pro: string, i: number) => <li key={i} className="flex items-start">
-                                <CheckIcon className="h-4 w-4 mr-1.5 text-green-500 flex-shrink-0" />
-                                <span>{pro}</span>
-                              </li>)}
-                          </ul>
-                        </div>
-                        <div>
-                          <p className="text-sm font-medium text-red-600">Cons</p>
-                          <ul className="mt-1 space-y-1 text-sm">
-                            {rec.cons.map((con: string, i: number) => <li key={i} className="flex items-start">
-                                <XIcon className="h-4 w-4 mr-1.5 text-red-500 flex-shrink-0" />
-                                <span>{con}</span>
-                              </li>)}
-                          </ul>
-                        </div>
-                      </div>
-                    </div>
-                  </CardContent>
-                  <CardFooter>
-                    <Button className="w-full" variant={isPreferred ? "default" : "outline"}>
-                      Get More Details
-                    </Button>
-                  </CardFooter>
-                </Card>;
-          })}
-          </div>
-        </div>
-        
-        {aiRecommendations.meta && <div className="text-xs text-gray-400 text-right mt-4">
-            Data updated: {new Date(aiRecommendations.meta.generatedAt).toLocaleString()}
-          </div>}
-      </div>;
-  };
   if (!billData) return <div>No bill data available</div>;
   return <div className="space-y-6">
       <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
@@ -570,8 +585,8 @@ export function RecommendationsTab({
         </p>
         
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid grid-cols-2 mb-6 px-[240px] mx-[240px] my-[19px] py-0">
-            
+          <TabsList className="grid w-full max-w-md mx-auto mb-6">
+            <TabsTrigger value="standard">Standard Recommendations</TabsTrigger>
             <TabsTrigger value="ai" disabled={isLoadingAI && !aiRecommendations}>
               AI-Powered Analysis
               {isLoadingAI && <RefreshCw className="ml-2 h-3 w-3 animate-spin" />}
