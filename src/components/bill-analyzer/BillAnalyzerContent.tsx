@@ -2,6 +2,7 @@
 import { useState, useCallback } from 'react';
 import { BillTabs } from "@/components/bill-analyzer/BillTabs";
 import { NetworkPreference } from './VerizonBillAnalyzer';
+import { useMediaQuery } from '@/hooks/use-media-query';
 
 interface BillAnalyzerContentProps {
   billData: any;
@@ -15,7 +16,6 @@ interface BillAnalyzerContentProps {
 }
 
 const CustomBillTabs = ({ billData, calculateCarrierSavings, networkPreference, activeTab, onTabChange }: any) => {
-  console.log("CustomBillTabs - calculateCarrierSavings available:", !!calculateCarrierSavings);
   return (
     <BillTabs 
       billData={billData}
@@ -33,7 +33,7 @@ export function BillAnalyzerContent({
   networkPreference,
 }: BillAnalyzerContentProps) {
   const [activeTab, setActiveTab] = useState("overview");
-  console.log("BillAnalyzerContent - calculateCarrierSavings available:", !!calculateCarrierSavings);
+  const isMobile = useMediaQuery("(max-width: 640px)");
 
   const handleTabChange = (tab: string) => {
     setActiveTab(tab);
@@ -51,7 +51,7 @@ export function BillAnalyzerContent({
 
   if (!billData) {
     return (
-      <div className="bg-white p-8 rounded-xl shadow-sm border border-gray-100 text-center">
+      <div className="bg-white p-4 sm:p-8 rounded-xl shadow-sm border border-gray-100 text-center">
         <p className="text-gray-500 text-lg">No bill data available.</p>
         <p className="text-gray-400 mt-2">Please upload a bill to analyze.</p>
       </div>
@@ -59,7 +59,7 @@ export function BillAnalyzerContent({
   }
 
   return (
-    <div className="container mx-auto py-8 max-w-7xl animate-fade-in">
+    <div className={`container mx-auto py-4 ${isMobile ? 'px-1' : 'py-8'} max-w-7xl animate-fade-in`}>
       <CustomBillTabs 
         billData={billData} 
         calculateCarrierSavings={memoizedCalculateCarrierSavings}

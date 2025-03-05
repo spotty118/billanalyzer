@@ -185,3 +185,36 @@ body {
 .modern-table tbody tr:last-child td {
   border-bottom: none;
 }
+
+/* Mobile-specific styles */
+@media (max-width: 640px) {
+  .modern-content {
+    padding: 1rem;
+  }
+  
+  .modern-section, 
+  .modern-card {
+    padding: 1rem;
+    margin-bottom: 1rem;
+  }
+  
+  .modern-table th,
+  .modern-table td {
+    padding: 0.75rem 0.5rem;
+    font-size: 0.875rem;
+  }
+  
+  /* Mobile tab navigation */
+  .mobile-tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem;
+  }
+  
+  .mobile-tab-trigger {
+    flex: 1;
+    min-width: 40%;
+    font-size: 0.8125rem;
+    padding: 0.5rem 0.25rem;
+  }
+}

@@ -7,6 +7,7 @@ import { RecommendationsTab } from "./RecommendationsTab";
 import { CarrierComparison } from "./CarrierComparison";
 import { formatCurrency } from "./utils/dataUtils";
 import { NetworkPreference } from './VerizonBillAnalyzer';
+import { useMediaQuery } from "@/hooks/use-media-query";
 
 interface BillTabsProps {
   billData: any;
@@ -29,6 +30,7 @@ export function BillTabs({
   onTabChange 
 }: BillTabsProps) {
   const [activeCarrierTab, setActiveCarrierTab] = useState("warp");
+  const isMobile = useMediaQuery("(max-width: 640px)");
   
   const handleTabChange = (value: string) => {
     if (onTabChange) {
@@ -44,35 +46,35 @@ export function BillTabs({
       onValueChange={handleTabChange}
     >
       <div className="bg-white rounded-xl shadow-sm p-1 border border-gray-100">
-        <TabsList className="grid grid-cols-4 w-full h-auto p-1 bg-gray-50 rounded-lg">
+        <TabsList className={`${isMobile ? 'flex flex-wrap gap-1' : 'grid grid-cols-4'} w-full h-auto p-1 bg-gray-50 rounded-lg`}>
           <TabsTrigger 
             value="overview" 
-            className="py-3 data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-sm rounded-md transition-all"
+            className={`py-2 ${isMobile ? 'flex-1 text-sm' : 'py-3'} data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-sm rounded-md transition-all`}
           >
             Overview
           </TabsTrigger>
           <TabsTrigger 
             value="line-items" 
-            className="py-3 data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-sm rounded-md transition-all"
+            className={`py-2 ${isMobile ? 'flex-1 text-sm' : 'py-3'} data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-sm rounded-md transition-all`}
           >
             Line Items
           </TabsTrigger>
           <TabsTrigger 
             value="recommendations" 
-            className="py-3 data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-sm rounded-md transition-all"
+            className={`py-2 ${isMobile ? 'flex-1 text-sm' : 'py-3'} data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-sm rounded-md transition-all`}
           >
             Recommendations
           </TabsTrigger>
           <TabsTrigger 
             value="carrier-comparison" 
-            className="py-3 data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-sm rounded-md transition-all"
+            className={`py-2 ${isMobile ? 'flex-1 text-sm' : 'py-3'} data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-sm rounded-md transition-all`}
           >
             Carrier Comparison
           </TabsTrigger>
         </TabsList>
       </div>
       
-      <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+      <div className="bg-white p-4 sm:p-6 rounded-xl shadow-sm border border-gray-100">
         <TabsContent value="overview" className="mt-0 space-y-6 animate-fade-in">
           <OverviewTab billData={billData} formatCurrency={formatCurrency} />
         </TabsContent>
