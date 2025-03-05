@@ -17,12 +17,6 @@ interface CarrierComparisonProps {
   formatCurrency: (value: number) => string;
 }
 
-interface ComparisonDataPoint {
-  lines: number;
-  current: number;
-  [key: string]: number;
-}
-
 export function CarrierComparison({
   billData,
   activeCarrierTab,
@@ -51,30 +45,11 @@ export function CarrierComparison({
     }
   };
 
-  // Helper function to get ordinal suffix for ranking (will be used in the plan details text)
   const getOrdinalSuffix = (n: number): string => {
     const s = ["th", "st", "nd", "rd"];
     const v = n % 100;
     return n + (s[(v - 20) % 10] || s[v] || s[0]);
   };
-  
-  // These variables are not being used currently but we'll keep them for future functionality
-  // that might use this data to create visualizations or additional comparison features
-  // const carrierSavingsData = supportedCarriers.map(carrier => {
-  //   const savings = calculateCarrierSavings(carrier.id);
-  //   return {
-  //     id: carrier.id,
-  //     name: carrier.name,
-  //     monthly: savings.monthlySavings,
-  //     annual: savings.annualSavings,
-  //     price: savings.price
-  //   };
-  // }).sort((a, b) => b.annual - a.annual);
-  
-  // Removing the unused generateComparisonData function as it's not needed
-  // and commenting out its usage below
-  
-  // const priceComparisonData = generateComparisonData();
   
   const standardizeCarrierPricing = (carrierId: string) => {
     const matchedPlanId = findBestCarrierMatch(carrierId);
