@@ -1,0 +1,15 @@
+billanalyzer/
+├── extractors/
+│   ├── __init__.py
+│   └── pdf_extractor.py
+├── models/
+│   ├── __init__.py
+│   └── bill.py
+├── parsers/
+│   ├── __init__.py
+│   └── generic_parser.py
+├── cli/
+│   ├── __init__.py
+│   └── main.py
+├── billanalyzer.py  (to be replaced or removed - will become the entry point via cli/main.py)
+└── README.md       (if exists, otherwise create one)
