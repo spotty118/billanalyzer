@@ -1,3 +1,4 @@
+
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 
 const CORS_HEADERS = {
@@ -352,7 +353,7 @@ async function analyzeBillWithGemini(extractedText: string, networkPreference?: 
     
     const systemPrompt = `You are an expert mobile carrier bill analyzer. Analyze the provided ${carrierType || "mobile carrier"} bill text and extract key information into a structured JSON format, following these guidelines exactly.
 
-Your response must be a valid JSON object that can be parsed with JSON.parse(). Structure it like this:
+IMPORTANT: Your response must be ONLY a valid JSON object without any additional text. The JSON must match this structure:
 {
   "accountInfo": {
     "customerName": string,
@@ -394,48 +395,12 @@ Your response must be a valid JSON object that can be parsed with JSON.parse(). 
     "Services & Add-ons": number,
     "Taxes & Fees": number,
     "Discounts & Credits": number
-  },
-  "recommendations": [
-    {
-      "carrier": string,
-      "planName": string,
-      "monthlyPrice": number,
-      "originalPrice": number,
-      "network": string,
-      "features": [string],
-      "reasons": [string],
-      "pros": [string],
-      "cons": [string]
-    }
-  ],
-  "marketInsights": {
-    "currentPromos": [string],
-    "trendingPlans": [string],
-    "networkPerformance": {
-      "verizon": string,
-      "tmobile": string,
-      "att": string
-    }
-  },
-  "personalizedAdvice": string,
-  "perks": [
-    {
-      "name": string,
-      "description": string,
-      "monthlyValue": number,
-      "includedWith": string
-    }
-  ],
-  "promotions": [
-    {
-      "name": string,
-      "description": string,
-      "monthlyValue": number,
-      "remainingMonths": number,
-      "appliedTo": string
-    }
-  ]
-}`;
+  }
+}
+
+DO NOT add any explanations, comments, or text before or after the JSON.
+DO NOT wrap the JSON in code blocks or quotation marks.
+Just output a raw, valid JSON object.`;
 
     // Set up the OpenRouter API request for Gemini
     const openRouterRequest = {
@@ -483,37 +448,100 @@ Your response must be a valid JSON object that can be parsed with JSON.parse(). 
     console.log("OpenRouter analysis response received successfully");
     console.log("Model used:", openRouterResponse.model || "Model info not available");
     
+    if (!openRouterResponse.choices || openRouterResponse.choices.length === 0) {
+      console.error("OpenRouter API response missing choices:", JSON.stringify(openRouterResponse));
+      throw new Error("Invalid response from OpenRouter API: No choices returned");
+    }
+    
     // Extract the text content from OpenRouter's response
-    const analysisText = openRouterResponse.choices[0].message.content;
+    const analysisText = openRouterResponse.choices[0].message.content || "";
     console.log("Analysis text length:", analysisText.length);
     console.log("Analysis text sample:", analysisText.substring(0, 500));
+    
+    if (!analysisText || analysisText.trim().length === 0) {
+      console.error("Empty response content from Gemini");
+      throw new Error("Gemini returned an empty response");
+    }
     
     try {
       // Try to parse the response as JSON
       let jsonData;
       
-      // First attempt: direct parsing
+      // Clean the text by removing markdown code blocks or any extra text
+      let cleanedText = analysisText.trim();
+      
+      // Remove markdown code blocks if present
+      cleanedText = cleanedText.replace(/```json\s+/g, "").replace(/```/g, "");
+      
+      // Try direct parsing first
       try {
-        jsonData = JSON.parse(analysisText);
-      } catch (parseError) {
-        console.log("Direct JSON parsing failed, attempting to extract JSON from text");
+        jsonData = JSON.parse(cleanedText);
+        console.log("Successfully parsed JSON directly");
+      } catch (directParseError) {
+        console.log("Direct JSON parsing failed:", directParseError.message);
+        console.log("Attempting to extract JSON with regex");
         
-        // Second attempt: find JSON in the text with regex
-        const jsonMatch = analysisText.match(/\{[\s\S]*\}/);
-        if (jsonMatch) {
-          jsonData = JSON.parse(jsonMatch[0]);
-        } else {
-          throw new Error("Unable to extract JSON from Gemini's response");
+        // Try to find JSON object pattern in the text
+        const jsonMatches = cleanedText.match(/(\{[\s\S]*\})/g);
+        if (jsonMatches && jsonMatches.length > 0) {
+          try {
+            // Try each match until one works
+            for (const match of jsonMatches) {
+              try {
+                jsonData = JSON.parse(match);
+                console.log("Successfully parsed JSON using regex match");
+                break;
+              } catch (err) {
+                console.log("Failed to parse JSON match:", match.substring(0, 100) + "...");
+              }
+            }
+          } catch (err) {
+            console.error("Error parsing extracted JSON:", err);
+          }
+        }
+        
+        // If still not parsed, create a fallback simple structure
+        if (!jsonData) {
+          console.log("Creating fallback JSON structure");
+          jsonData = {
+            accountInfo: {
+              customerName: "Extracted from bill",
+              accountNumber: "",
+              billingPeriod: "",
+              billDate: "",
+              dueDate: ""
+            },
+            totalAmount: 0,
+            phoneLines: [],
+            chargesByCategory: {
+              "Plan Charges": 0,
+              "Device Payments": 0,
+              "Services & Add-ons": 0,
+              "Taxes & Fees": 0,
+              "Discounts & Credits": 0
+            }
+          };
+          
+          // Try to extract at least some information from the bill text
+          const accountNumberMatch = extractedText.match(/Account:?\s*([A-Za-z0-9\-]+)/i);
+          if (accountNumberMatch) {
+            jsonData.accountInfo.accountNumber = accountNumberMatch[1];
+          }
+          
+          const totalAmountMatch = extractedText.match(/Total.*?\$([0-9\.]+)/i);
+          if (totalAmountMatch) {
+            jsonData.totalAmount = parseFloat(totalAmountMatch[1]);
+          }
         }
       }
       
-      // Add recommendations if they don't exist
+      // Add recommendations if missing
       if (!jsonData.recommendations) {
         // Generate some generic recommendations based on the bill data
         jsonData.recommendations = generateRecommendations(jsonData, networkPreference, carrierType);
       }
       
-      // Add market insights if they don't exist
+      // Add market insights if missing
       if (!jsonData.marketInsights) {
         jsonData.marketInsights = {
           currentPromos: [
@@ -534,7 +562,7 @@ Your response must be a valid JSON object that can be parsed with JSON.parse(). 
         };
       }
       
-      // Add personalized advice if it doesn't exist
+      // Add personalized advice if missing
       if (!jsonData.personalizedAdvice) {
         jsonData.personalizedAdvice = generatePersonalizedAdvice(jsonData, networkPreference);
       }
@@ -615,8 +643,35 @@ Your response must be a valid JSON object that can be parsed with JSON.parse(). 
       return jsonData;
     } catch (jsonError) {
       console.error("Error parsing JSON from Gemini response:", jsonError);
-      console.error("Gemini response content:", analysisText.substring(0, 500) + "...");
-      throw new Error("Failed to parse JSON from Gemini's response");
+      console.error("Gemini response content sample:", analysisText.substring(0, 1000) + "...");
+      
+      // Instead of failing, return a basic structure with error info
+      return {
+        accountInfo: {
+          customerName: "Error Processing Bill",
+          accountNumber: `ERROR-${Date.now()}`,
+          billingPeriod: "",
+          billDate: new Date().toISOString(),
+          dueDate: ""
+        },
+        errorInfo: {
+          source: "gemini-parsing-error",
+          message: jsonError.message,
+          responsePreview: analysisText.substring(0, 500)
+        },
+        totalAmount: 0,
+        phoneLines: [],
+        chargesByCategory: {
+          "Plan Charges": 0,
+          "Device Payments": 0,
+          "Services & Add-ons": 0,
+          "Taxes & Fees": 0,
+          "Discounts & Credits": 0
+        },
+        processingError: true,
+        analysisSource: "gemini-2.0-flash-thinking-error-recovery",
+        recommendations: generateRecommendations({ phoneLines: [] }, networkPreference, carrierType)
+      };
     }
   } catch (error) {
     console.error("Error using Gemini for analysis:", error);
@@ -788,8 +843,34 @@ async function analyzeBillText(extractedText: string, networkPreference?: string
       console.error("Both Claude and Gemini analyses failed:", geminiError);
       
       // As a last resort, return a structured error response that includes partial data
-      const errorMessage = `AI analysis failed: ${claudeError.message}. Gemini fallback also failed: ${geminiError.message}`;
-      throw new Error(errorMessage);
+      return {
+        accountInfo: {
+          customerName: "Error Processing Bill",
+          accountNumber: `ERROR-${Date.now()}`,
+          billingPeriod: "",
+          billDate: new Date().toISOString(),
+          dueDate: ""
+        },
+        errorInfo: {
+          claudeError: claudeError.message,
+          geminiError: geminiError.message,
+          timestamp: new Date().toISOString()
+        },
+        totalAmount: 0,
+        phoneLines: [],
+        chargesByCategory: {
+          "Plan Charges": 0,
+          "Device Payments": 0,
+          "Services & Add-ons": 0,
+          "Taxes & Fees": 0,
+          "Discounts & Credits": 0
+        },
+        processingError: true,
+        analysisSource: "error-recovery",
+        recommendations: generateRecommendations({ phoneLines: [] }, networkPreference, carrierType),
+        networkPreference: networkPreference || "verizon",
+        carrierType: carrierType || "verizon"
+      };
     }
   }
 }
