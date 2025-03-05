@@ -2,8 +2,8 @@ import { ArrowLeftRight, AlertCircle, Check, Star, Zap, Lightbulb, Eye, CircleDo
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supportedCarriers, findBestCarrierMatch, alternativeCarrierPlans } from "@/config/alternativeCarriers";
-import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { verizonPlansData } from "@/data/verizonPlans";
+
 interface CarrierComparisonProps {
   billData: any;
   activeCarrierTab: string;
@@ -16,11 +16,13 @@ interface CarrierComparisonProps {
   };
   formatCurrency: (value: number) => string;
 }
+
 interface ComparisonDataPoint {
   lines: number;
   current: number;
   [key: string]: number;
 }
+
 export function CarrierComparison({
   billData,
   activeCarrierTab,
@@ -55,6 +57,7 @@ export function CarrierComparison({
     const v = n % 100;
     return n + (s[(v - 20) % 10] || s[v] || s[0]);
   };
+  
   const generateComparisonData = (): ComparisonDataPoint[] => {
     const data: ComparisonDataPoint[] = [];
     const lineCount = billData.phoneLines?.length || 1;
@@ -83,17 +86,22 @@ export function CarrierComparison({
     }
     return data;
   };
-  const carrierSavingsData = supportedCarriers.map(carrier => {
-    const savings = calculateCarrierSavings(carrier.id);
-    return {
-      id: carrier.id,
-      name: carrier.name,
-      monthly: savings.monthlySavings,
-      annual: savings.annualSavings,
-      price: savings.price
-    };
-  }).sort((a, b) => b.annual - a.annual);
-  const priceComparisonData = generateComparisonData();
+  
+  // These variables are not being used currently but we'll keep them for future functionality
+  // that might use this data to create visualizations or additional comparison features
+  // const carrierSavingsData = supportedCarriers.map(carrier => {
+  //   const savings = calculateCarrierSavings(carrier.id);
+  //   return {
+  //     id: carrier.id,
+  //     name: carrier.name,
+  //     monthly: savings.monthlySavings,
+  //     annual: savings.annualSavings,
+  //     price: savings.price
+  //   };
+  // }).sort((a, b) => b.annual - a.annual);
+  
+  // const priceComparisonData = generateComparisonData();
+  
   const standardizeCarrierPricing = (carrierId: string) => {
     const matchedPlanId = findBestCarrierMatch(carrierId);
     const carrierPlan = alternativeCarrierPlans.find(p => p.id === matchedPlanId);
@@ -110,6 +118,7 @@ export function CarrierComparison({
       dataPriorityLevel: carrierPlan.dataPriorityLevel
     };
   };
+  
   return <div className="space-y-6">
       <div className="bg-gradient-to-r from-sky-50 to-indigo-50 border-2 border-blue-100 rounded-lg p-6">
         <h3 className="text-xl font-bold text-blue-800 mb-4">
@@ -294,18 +303,12 @@ export function CarrierComparison({
                   </div>
                 </div>
                 
-                
-                
-                
-                
                 <p className="mt-4 text-sm text-blue-700">
                   Showing plan details for {carrier.name} {standardPlan.name} (alternative carrier #{getOrdinalSuffix(carrierIndex + 1)} of {supportedCarriers.length})
                 </p>
               </TabsContent>;
         })}
         </Tabs>
-        
-        
       </div>
     </div>;
 }
