@@ -558,16 +558,14 @@ export function RecommendationsTab({
   return <div className="space-y-6">
       <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
         <div className="flex justify-between items-center mb-4">
-          <h3 className="text-lg font-bold">Personalized Recommendations</h3>
+          
           <Button variant="outline" size="sm" onClick={fetchAIRecommendations} disabled={isLoadingAI}>
             <RefreshCw className={`mr-2 h-4 w-4 ${isLoadingAI ? 'animate-spin' : ''}`} />
             {isLoadingAI ? 'Updating...' : 'Refresh Data'}
           </Button>
         </div>
         
-        <p className="text-gray-600 mb-6">
-          Based on your current bill with {billData.phoneLines?.length || 1} lines, usage patterns, and network preferences, here are our recommendations to help you save:
-        </p>
+        
         
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList className="grid w-full max-w-md mx-auto mb-6">
